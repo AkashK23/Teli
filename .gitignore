@@ -1,0 +1,8 @@
+# Ignore Python virtual environments
+venv/
+
+# Ignore firebase service key
+backend/serviceAccountKey.json
+
+# Ignore pycache files
+backend/__pycache__/

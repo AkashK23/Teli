@@ -2,6 +2,8 @@ from flask import Flask, jsonify, request
 import firebase_admin
 from firebase_admin import credentials, firestore
 from flask_cors import CORS
+from pydantic import BaseModel, EmailStr, ValidationError
+from werkzeug.exceptions import BadRequest
 
 app = Flask(__name__)
 
@@ -17,12 +19,25 @@ db = firestore.client()
 
 @app.route("/")
 def hello():
-    return jsonify({"message": "Hello from Flask!"})
+    return jsonify({"message": "Hello from Teli!"})
+
+class AddUserRequest(BaseModel):
+    name: str
+    email: EmailStr
 
 @app.route("/add_user", methods=["POST"])
 def add_user():
-    data = request.json  # Get data from request body
-    user_ref = db.collection("users").add(data)  # Add data to Firestore
+    try:
+        # Validate and parse request
+        req_data = AddUserRequest.model_validate(request.get_json())
+    except ValidationError as e:
+        # If validation fails, return 400 with error details
+        return jsonify({"errors": e.errors()}), 400
+
+    # Now safe to use validated data
+    user_data = req_data.model_dump()
+    print(user_data)
+    user_ref = db.collection("users").add(user_data)
     return jsonify({"message": "User added successfully!", "id": user_ref[1].id})
 
 @app.route('/get_users', methods=['GET'])
@@ -44,4 +59,4 @@ def get_users():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(port=5001, debug=True)
