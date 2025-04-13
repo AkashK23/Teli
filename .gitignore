@@ -1,5 +1,5 @@
 # Ignore Python virtual environments
-venv/
+backend/venv/
 
 # Ignore firebase service key
 backend/serviceAccountKey.json
