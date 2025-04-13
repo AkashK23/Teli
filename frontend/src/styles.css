@@ -1,0 +1,121 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+}
+
+.container {
+    margin: 1rem;
+    text-align: left;
+}
+
+.nav {
+    background-color: #333;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 2rem;
+    padding: 0 1rem;
+    font-size: 1.25rem;
+}
+
+.site-title {
+    font-size: 3rem;
+}
+
+.nav ul {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    display: flex;
+    gap: 1rem;
+}
+
+.nav a {
+    color: inherit;
+    text-decoration: none;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: .25rem;
+}
+
+.nav li.active {
+    background-color: #555;
+}
+
+.nav li:hover {
+    background-color: #777;
+}
+
+.headings {
+    font-size: 2rem;
+}
+
+.show-icon {
+    width: 150px;
+    height: 220px;
+}
+
+.scroll-container {
+    overflow: auto;
+    white-space: nowrap;
+    padding: 10px;
+  }
+  
+.scroll-container img {
+    padding: 10px;
+}
+
+.review-icon {
+    width: 100px;
+    height: 145px;
+    padding: 10px;
+}
+
+.review-card {
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+    width: 50%;
+    margin-bottom: 1rem;
+}
+
+.review-card:hover {
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+}
+
+
+.review-container {
+    text-align: left;
+    display: flex;
+    align-items: center;
+}
+
+.review-avatar {
+    width: 75px;
+    height: 75px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #ccc;
+    margin-left: 1rem;
+}
+
+.review-text {
+    padding-left: 10px;
+    font-size: 1rem;
+    white-space: nowrap;
+}
+
+.review-subtitle {
+    font-size: 1rem;
+    color: rgb(117, 117, 117);
+}
+
+.review-score {
+    font-size: 2.5rem;
+    padding-left: 350px;
+    padding-right: 25px;
+}
