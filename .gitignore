@@ -4,5 +4,8 @@ venv/
 # Ignore firebase service key
 backend/serviceAccountKey.json
 
+# ignore auth token
+backend/authorizationToken.txt
+
 # Ignore pycache files
 backend/__pycache__/
