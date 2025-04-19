@@ -13,7 +13,7 @@ export default function Home() {
     
 
   return (
-    <div>
+    <div className="page-container">
         <h1 className="headings">You're Watching</h1>
           <div className="scroll-container">
             <img src="https://m.media-amazon.com/images/M/MV5BZjQwYzBlYzUtZjhhOS00ZDQ0LWE0NzAtYTk4MjgzZTNkZWEzXkEyXkFqcGc@._V1_.jpg" alt="The Office" className="show-icon"/>
@@ -36,37 +36,78 @@ export default function Home() {
             <img src="https://m.media-amazon.com/images/M/MV5BMDRiNTBlY2EtZmRiZC00Mzc4LTljZDctNWQ5ZGY2NjUwNjE4XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" alt="Daredevil Born Again" className="show-icon"/>
         </div>
         <h1 className="headings">Recent Activity</h1>
-        <div className="review-card">
-          <div className="review-container">
-          <img src="https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg" className="review-avatar"/>
-            <div className="review-text">
-                <h4 className="review-title"><b>The Office</b></h4> 
-                <h4 className="review-subtitle"><b>See Review</b></h4> 
+        <div className="review-container">
+          <div className="review-card">
+            <div className="review-card-content">
+              <img
+                src="https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
+                className="review-avatar"
+              />
+              <div className="review-text">
+                <h4 className="review-title">
+                  <b>The Office</b>
+                </h4>
+                <h4 className="review-subtitle">
+                  <b>See Review</b>
+                </h4>
               </div>
-            <h4 className="review-score"><b>9</b></h4> 
-            <img src="https://m.media-amazon.com/images/M/MV5BZjQwYzBlYzUtZjhhOS00ZDQ0LWE0NzAtYTk4MjgzZTNkZWEzXkEyXkFqcGc@._V1_.jpg" alt="The Office" className="review-icon"/>
+              <h4 className="review-score">
+                <b>9</b>
+              </h4>
+              <img
+                src="https://m.media-amazon.com/images/M/MV5BZjQwYzBlYzUtZjhhOS00ZDQ0LWE0NzAtYTk4MjgzZTNkZWEzXkEyXkFqcGc@._V1_.jpg"
+                alt="The Office"
+                className="review-icon"
+              />
+            </div>
           </div>
-        </div>
-        <div className="review-card">
-          <div className="review-container">
-          <img src="https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg" className="review-avatar"/>
-            <div className="review-text">
-                <h4 className="review-title"><b>Friends</b></h4> 
-                <h4 className="review-subtitle"><b>See Review</b></h4> 
+          <div className="review-card">
+            <div className="review-card-content">
+              <img
+                src="https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
+                className="review-avatar"
+              />
+              <div className="review-text">
+                <h4 className="review-title">
+                  <b>Friends</b>
+                </h4>
+                <h4 className="review-subtitle">
+                  <b>See Review</b>
+                </h4>
               </div>
-            <h4 className="review-score"><b>7</b></h4> 
-            <img src="https://m.media-amazon.com/images/M/MV5BOTU2YmM5ZjctOGVlMC00YTczLTljM2MtYjhlNGI5YWMyZjFkXkEyXkFqcGc@._V1_QL75_UY281_CR1,0,190,281_.jpg" alt="Friends" className="review-icon"/>
+              <h4 className="review-score">
+                <b>7</b>
+              </h4>
+              <img
+                src="https://m.media-amazon.com/images/M/MV5BOTU2YmM5ZjctOGVlMC00YTczLTljM2MtYjhlNGI5YWMyZjFkXkEyXkFqcGc@._V1_QL75_UY281_CR1,0,190,281_.jpg"
+                alt="Friends"
+                className="review-icon"
+              />
+            </div>
           </div>
-        </div>
-        <div className="review-card">
-          <div className="review-container">
-          <img src="https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg" className="review-avatar"/>
-            <div className="review-text">
-                <h4 className="review-title"><b>The Boys</b></h4> 
-                <h4 className="review-subtitle"><b>See Review</b></h4> 
+          <div className="review-card">
+            <div className="review-card-content">
+              <img
+                src="https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
+                className="review-avatar"
+              />
+              <div className="review-text">
+                <h4 className="review-title">
+                  <b>The Boys</b>
+                </h4>
+                <h4 className="review-subtitle">
+                  <b>See Review</b>
+                </h4>
               </div>
-            <h4 className="review-score"><b>8</b></h4> 
-            <img src="https://m.media-amazon.com/images/M/MV5BMWJlN2U5MzItNjU4My00NTM2LWFjOWUtOWFiNjg3ZTMxZDY1XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" alt="The Boys" className="review-icon"/>
+              <h4 className="review-score">
+                <b>7</b>
+              </h4>
+              <img
+                src="https://m.media-amazon.com/images/M/MV5BMWJlN2U5MzItNjU4My00NTM2LWFjOWUtOWFiNjg3ZTMxZDY1XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg"
+                alt="The Boys"
+                className="review-icon"
+              />
+            </div>
           </div>
         </div>
     </div>
