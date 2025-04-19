@@ -40,7 +40,6 @@ def add_user():
 
     # Now safe to use validated data
     user_data = req_data.model_dump()
-    print(user_data)
     user_ref = db.collection("users").add(user_data)
     return jsonify({"message": "User added successfully!", "id": user_ref[1].id})
 
@@ -71,17 +70,14 @@ TVDB_BASE_URL = "https://api4.thetvdb.com/v4"
 
 @app.route("/shows/search", methods=["GET"])
 def search_shows():
-    print("here")
     query = request.args.get("query")
     if not query:
         return jsonify({"error": "Missing 'query' parameter"}), 400
-    print(TVDB_API_KEY)
     headers = {
         "accept": "application/json",
         "Authorization": f"{TVDB_API_KEY}"
-        }
-    print(headers)
-    url = f"{TVDB_BASE_URL}/search?query={query}&type=series&limit=1"
+    }
+    url = f"{TVDB_BASE_URL}/search?query={query}&type=series&limit=10"
 
     try:
         response = requests.get(url, headers=headers)
@@ -89,12 +85,63 @@ def search_shows():
         wanted_fields = [
             "name", 
             "overview", 
-            "thumbnail", 
             "image_url", 
             "links", 
             "network", 
             "primary_language", 
             "year", 
+            "tvdb_id"]
+
+        filtered_data = [
+            {field: item[field] for field in wanted_fields if field in item}
+            for item in response.json()["data"]
+        ]
+        result = {"data": filtered_data}
+        return jsonify(result), 200
+    except requests.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route("/shows/filter", methods=["GET"])
+def filter_shows():
+    # Required parameters
+    country = request.args.get("country")
+    lang = request.args.get("lang")
+
+    if not country or not lang:
+        return jsonify({
+            "error": "Missing required parameters: 'country' and 'lang' are required."
+        }), 400
+
+    # Optional filters
+    params = {
+        "company": request.args.get("company"),
+        "contentRatingId": request.args.get("contentRatingId"),
+        "country": country,
+        "genre": request.args.get("genre"),
+        "lang": lang,
+        "sort": request.args.get("sort", "name"),
+        "sortType": request.args.get("sortType", "asc"),
+        "year": request.args.get("year")
+    }
+
+    clean_params = {k: v for k, v in params.items() if v is not None}
+
+    headers = {
+        "accept": "application/json",
+        "Authorization": f"{TVDB_API_KEY}"
+    }
+
+    try:
+        url = f"{TVDB_BASE_URL}/series/filter"
+        response = requests.get(url, headers=headers, params=clean_params)
+        response.raise_for_status()
+        wanted_fields = [
+            "name", 
+            "overview", 
+            "image", 
+            "primary_language", 
+            "firstAired",
+            "lastAired",
             "id"]
 
         filtered_data = [
@@ -105,6 +152,51 @@ def search_shows():
         return jsonify(result), 200
     except requests.RequestException as e:
         return jsonify({"error": str(e)}), 500
+    
+def fetch_tvdb_data(endpoint: str, name_filter: str = None, filter_key: str = "name"):
+    headers = {
+        "accept": "application/json",
+        "Authorization": f"{TVDB_API_KEY}"
+    }
+    url = f"{TVDB_BASE_URL}{endpoint}"
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+
+        data = response.json().get("data", [])
+
+        if name_filter:
+            data = [
+                item for item in data
+                if name_filter.lower() in item.get(filter_key, "").lower()
+            ]
+
+        return jsonify({"data": data}), 200
+
+    except requests.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/content-ratings", methods=["GET"])
+def get_content_ratings():
+    response = fetch_tvdb_data("/content/ratings", request.args.get("name"))
+    return response
+
+@app.route("/genres", methods=["GET"])
+def get_genres():
+    response = fetch_tvdb_data("/genres", request.args.get("name"))
+    return response
+
+@app.route("/languages", methods=["GET"])
+def get_languages():
+    response = fetch_tvdb_data("/languages", request.args.get("name"))
+    return response
+
+@app.route("/countries", methods=["GET"])
+def get_countries():
+    response = fetch_tvdb_data("/countries", request.args.get("name"))
+    return response
+
 
 class AddRatingRequest(BaseModel):
     user_id: str
