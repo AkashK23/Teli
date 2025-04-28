@@ -103,14 +103,12 @@ def search_shows():
     
 @app.route("/shows/filter", methods=["GET"])
 def filter_shows():
-    # Required parameters
+    query = request.args.get("query", "").lower().strip()
     country = request.args.get("country")
     lang = request.args.get("lang")
 
     if not country or not lang:
-        return jsonify({
-            "error": "Missing required parameters: 'country' and 'lang' are required."
-        }), 400
+        return jsonify({"error": "Missing required parameters: 'country' and 'lang' are required."}), 400
 
     # Optional filters
     params = {
@@ -132,26 +130,28 @@ def filter_shows():
     }
 
     try:
-        url = f"{TVDB_BASE_URL}/series/filter"
-        response = requests.get(url, headers=headers, params=clean_params)
+        response = requests.get(f"{TVDB_BASE_URL}/series/filter", headers=headers, params=clean_params)
         response.raise_for_status()
-        wanted_fields = [
-            "name", 
-            "overview", 
-            "image", 
-            "primary_language", 
-            "firstAired",
-            "lastAired",
-            "id"]
+        data = response.json()["data"]
 
+        # Filter by query (search term) if provided
+        if query:
+            data = [item for item in data if query in item.get("name", "").lower()]
+
+        wanted_fields = [
+            "name", "overview", "image", "primary_language", 
+            "firstAired", "lastAired", "id"
+        ]
         filtered_data = [
             {field: item[field] for field in wanted_fields if field in item}
-            for item in response.json()["data"]
+            for item in data
         ]
-        result = {"data": filtered_data}
-        return jsonify(result), 200
+
+        return jsonify({"data": filtered_data}), 200
+
     except requests.RequestException as e:
         return jsonify({"error": str(e)}), 500
+
     
 def fetch_tvdb_data(endpoint: str, name_filter: str = None, filter_key: str = "name"):
     headers = {
