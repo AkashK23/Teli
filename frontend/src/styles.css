@@ -293,6 +293,19 @@ body {
     text-align: left;
 }
 
+.profile-bio {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 32.5rem;
+}
+
+.bio-content {
+  font-size: 1em;
+  color: #333;
+}
+
+
 .content-wrapper {
     max-width: 1000px; /* or match your filters' container width */
     margin: 0 auto;
@@ -364,4 +377,13 @@ body {
   .search-result:hover .search-result-img {
     transform: scale(1.05);
   }
+  
+  .search-results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+
   

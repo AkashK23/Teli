@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Link } from 'react-router-dom';
 
 interface MultiSelectProps {
   label: string;
-  options: (string | { label: string; years: string[] })[]; // Updated type to support groups
+  options: (string | { label: string; years: string[] })[];
   selected: string[];
   setSelected: (values: string[]) => void;
 }
@@ -20,7 +20,9 @@ const MultiSelectDropdown: React.FC<MultiSelectProps> = ({ label, options, selec
     );
   };
 
-
+  useEffect(() => {
+    setIsOpen(false);
+  }, [selected]);
 
   return (
     <div className="multi-select-container">
@@ -110,9 +112,9 @@ export default function Browse() {
   const [year, setYear] = useState<string[]>([]);
   const [service, setService] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("");
-  const [searchTerm, setSearchTerm] = useState(""); // ← search state
-  const [searchedShow, setSearchedShow] = useState<any>(null); // Store search result
-
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchedShows, setSearchedShows] = useState<any[]>([]);
+  const [searchNames, setSearchNames] = useState<string[]>([]);
 
   const tvGenres = [
     "Action", "Adventure", "Animation", "Biography", "Comedy", "Crime", "Documentary", "Drama", 
@@ -125,20 +127,51 @@ export default function Browse() {
     "Paramount+", "YouTube", "Tubi", "Crunchyroll"
   ];
 
-  // Create decades sorted from latest to earliest with years reversed within each decade
   const decades = Array.from({ length: 11 }, (_, i) => {
     const start = 1920 + i * 10;
-    const years = Array.from({ length: 10 }, (_, j) => (start + j).toString()).reverse(); // Reverse years within the decade
-    const label = `${start + 9}s`; // Update label to display in "X0s" format
+    const years = Array.from({ length: 10 }, (_, j) => (start + j).toString()).reverse();
+    const label = `${start + 9}s`;
     return { label, years };
   });
 
-  // Ensure the decades are ordered from latest to earliest
   const sortedDecades = decades.sort((a, b) => {
     const startA = parseInt(a.label.split('s')[0]);
     const startB = parseInt(b.label.split('s')[0]);
-    return startB - startA; // Change the order to descending
+    return startB - startA;
   });
+
+  const fetchFilteredShows = async () => {
+    try {
+      const response = await axios.get("http://127.0.0.1:5001/shows/filter", {
+        params: {
+          genre: genre.join(","),
+          year: year[0],
+          company: service[0],
+          country: "USA",
+          lang: "eng",
+          sort: sortBy || "name",
+          sortType: "asc",
+          names: searchNames.join(",")
+        }
+      });
+      setSearchedShows(response.data.data);
+      const names = response.data.data.map((show: any) => show.name);
+      setSearchNames(names);
+      if (response.data.data?.length > 0) {
+        console.log("Names:", names);
+      }
+    } catch (error) {
+      console.error("Error fetching filtered shows:", error);
+      setSearchedShows([]);
+      setSearchNames([]);
+    }
+  };
+
+  useEffect(() => {
+    if (searchNames.length > 0) {
+      fetchFilteredShows();
+    }
+  }, [genre, year, service, sortBy]);
 
   const searchShows = async () => {
     if (!searchTerm.trim()) return;
@@ -148,58 +181,65 @@ export default function Browse() {
       });
       console.log("Search results:", response.data);
       if (response.data?.data?.length > 0) {
-        setSearchedShow(response.data.data[0]); // store the first match
+        setSearchedShows(response.data.data);
+        const names = response.data.data.map((show: any) => show.name);
+        setSearchNames(names);
+        console.log("First show's genres:", response.data.data[0].genres);
       } else {
-        setSearchedShow(null); // clear if no match
+        setSearchedShows([]);
+        setSearchNames([]);
       }
     } catch (error) {
       console.error("Error fetching shows:", error);
-      setSearchedShow(null);
+      setSearchedShows([]);
+      setSearchNames([]);
     }
   };
-  
-  
-  
-  
 
   return (
     <div className="content-wrapper">
-        <div className="search-bar-container">
-            <input
-            type="text"
-            className="search-bar"
-            placeholder="Search titles..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                searchShows();
-                }
-            }}
-            />
-        </div>
+      <div className="search-bar-container">
+        <input
+          type="text"
+          className="search-bar"
+          placeholder="Search titles..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              searchShows();
+            }
+          }}
+        />
+      </div>
 
-        <div className="filters-row">
-            <MultiSelectDropdown label="Genre" options={tvGenres} selected={genre} setSelected={setGenre} />
-            <MultiSelectDropdown label="Year" options={sortedDecades} selected={year} setSelected={setYear} />
-            <MultiSelectDropdown label="Service" options={streamingServices} selected={service} setSelected={setService} />
-            <SortByDropdown selected={sortBy} setSelected={setSortBy} />
-        </div>
+      <div className="filters-row">
+        <MultiSelectDropdown label="Genre" options={tvGenres} selected={genre} setSelected={setGenre} />
+        <MultiSelectDropdown label="Year" options={sortedDecades} selected={year} setSelected={setYear} />
+        <MultiSelectDropdown label="Service" options={streamingServices} selected={service} setSelected={setService} />
+        <SortByDropdown selected={sortBy} setSelected={setSortBy} />
+      </div>
 
-        {searchedShow && searchedShow.image_url && (
-        <Link to={`/show/${encodeURIComponent(searchedShow.name)}`} className="search-result-link">
-          <div className="search-result">
-            <img
-              src={searchedShow.image_url}
-              alt={searchedShow.name}
-              className="search-result-img"
-            />
-            <p>{searchedShow.name}</p>
-          </div>
-        </Link>
+      {searchedShows.length > 0 && (
+        <div className="search-results-grid">
+          {searchedShows.map((show) => (
+            <Link
+              to={`/show/${encodeURIComponent(show.name)}`}
+              key={show.id || show.name}
+              className="search-result-link"
+            >
+              <div className="search-result">
+                <img
+                  src={show.image_url || show.image}
+                  alt={show.name}
+                  className="search-result-img"
+                />
+                <p>{show.name}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
       )}
-        </div>
-
-
+    </div>
   );
 }
