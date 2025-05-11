@@ -50,9 +50,3 @@ def real_db():
     # Only use for integration tests
     from firebase_db import db
     yield db
-
-# Optional fixture for providing mock TVDB authorization token
-@pytest.fixture(scope="module", autouse=True)
-def mock_tvdb_token():
-    with patch('tmdb_routes.get_tmdb_authorization_token', return_value="mock_token"):
-        yield

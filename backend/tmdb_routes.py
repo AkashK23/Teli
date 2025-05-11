@@ -65,10 +65,7 @@ def search_shows():
     if page < 1:
         page = 1
     
-    headers = {
-        "accept": "application/json",
-        "Authorization": f"{TMDB_API_KEY}"
-    }
+    headers = get_tmdb_headers()
     url = f"{TMDB_BASE_URL}/search/tv?query={query}&include_adult=false&page={page}"
     
     try:
@@ -113,7 +110,6 @@ def extract_wanted_fields(response_json, wanted_fields):
         filtered_item = {field: result.get(field, "") for field in wanted_fields}
         filtered_data.append(filtered_item)
     return filtered_data
-
     
 @tmdb.route("/shows/filter", methods=["GET"])
 def filter_shows():
@@ -158,10 +154,7 @@ def filter_shows():
 
     clean_params = {k: v for k, v in params.items() if v is not None}
 
-    headers = {
-        "accept": "application/json",
-        "Authorization": f"{TMDB_API_KEY}"
-    }
+    headers = get_tmdb_headers()
 
     try:
         url = f"{TMDB_BASE_URL}/discover/tv"
@@ -205,10 +198,7 @@ def fetch_tvdb_data(endpoint: str, name_filter: str = None, filter_key: str = "n
     if not TMDB_API_KEY:
         return jsonify({"error": "TVDB API key not available"}), 503
         
-    headers = {
-        "accept": "application/json",
-        "Authorization": f"{TMDB_API_KEY}"
-    }
+    headers = get_tmdb_headers()
     url = f"{TMDB_BASE_URL}{endpoint}"
 
     try:
@@ -239,10 +229,7 @@ def fetch_tvdb_data(endpoint: str, name_filter: str = None, filter_key: str = "n
 @tmdb.route("/shows/content-ratings/<series_id>", methods=["GET"])
 def get_content_ratings(series_id):
     url = f"{TMDB_BASE_URL}/discover/tv/{series_id}/content_ratings"
-    headers = {
-        "accept": "application/json",
-        "Authorization": f"{TMDB_API_KEY}"
-    }
+    headers = get_tmdb_headers()
     try:
         response = requests.get(url, headers=headers)
         if response.status_code == 401:
@@ -262,10 +249,7 @@ def get_content_ratings(series_id):
 @tmdb.route("/shows/<series_id>", methods=["GET"])
 def get_show_details(series_id):
     url = f"{TMDB_BASE_URL}/tv/{series_id}"
-    headers = {
-        "accept": "application/json",
-        "Authorization": f"{TMDB_API_KEY}"
-    }
+    headers = get_tmdb_headers()
     try:
         response = requests.get(url, headers=headers)
         if response.status_code == 401:
@@ -289,14 +273,12 @@ def get_show_details(series_id):
             "last_air_date", 
             "last_episode_to_air", 
             "name",
-
             "next_episode_to_air",
             "networks", 
             "number_of_episodes", 
             "number_of_seasons", 
             "origin_country", 
             "original_language",
-            
             "original_name",
             "overview", 
             "poster_path", 
