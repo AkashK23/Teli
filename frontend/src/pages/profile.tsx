@@ -11,6 +11,7 @@ export default function Profile() {
   const [userInfo, setUserInfo] = useState<any>(null);
   const [following, setFollowing] = useState<any[]>([]);
   const [followers, setFollowers] = useState<any[]>([]);
+  const [ratings, setRatings] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -24,8 +25,12 @@ export default function Profile() {
         setFollowing(following_backend.data.following.length);
 
         const followers_backend = await axios.get(`http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/followers`);
-        console.log(followers_backend.data.followers.length);
+        // console.log(followers_backend.data.followers.length);
         setFollowers(followers_backend.data.followers.length);
+
+        const ratings_backend = await axios.get(`http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/ratings`);
+        console.log(ratings_backend.data);
+        setRatings(ratings_backend.data);
       } catch (err) {
         console.error("Failed to fetch user:", err);
       }
@@ -69,6 +74,33 @@ export default function Profile() {
 
     fetchAllShows();
   }, []);
+
+  useEffect(() => {
+    const fetchImagesForRatings = async () => {
+      const updatedRatings = await Promise.all(ratings.map(async (rating) => {
+        try {
+          const res = await axios.get("http://localhost:5001/shows/search", {
+            params: { query: rating.show_name }
+          });
+          const showData = res.data.data?.[0];
+          return {
+            ...rating,
+            image_url: showData?.image_url || showData?.thumbnail || null
+          };
+        } catch (err) {
+          console.error("Failed to fetch image for:", rating.show_name);
+          return { ...rating, image_url: null };
+        }
+      }));
+  
+      setRatings(updatedRatings);
+    };
+  
+    if (ratings.length > 0) {
+      fetchImagesForRatings();
+    }
+  }, [ratings]);
+  
 
   return (
     <div>
@@ -118,6 +150,29 @@ export default function Profile() {
           {watchingShows.map(show => (
             <img key={show.id} src={show.image_url || show.thumbnail} alt={show.name} className="show-icon" />
           ))}
+        </div>
+      </div>
+
+      <div className="favorite-shows">
+        <h3 className="shows-label">Recent Reviews</h3>
+        <div className="user-ratings">
+          <div className="rating-cards-container">
+            {ratings.map((rating: any) => (
+              <div className="rating-card" key={rating.show_id}>
+                <img
+                  src={rating.image_url}
+                  alt={rating.show_name}
+                  className="rating-show-img"
+                  />
+
+                <div className="rating-details">
+                  <h4>{rating.show_name}</h4>
+                  <p><b>Rating:</b> {rating.score}/10</p>
+                  <p>{rating.comment}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

@@ -108,19 +108,36 @@ const SortByDropdown: React.FC<{ selected: string; setSelected: (value: string) 
 };
 
 export default function Browse() {
+  interface CodeLabel {
+    code: string;
+    label: string;
+  }
+
   const [genre, setGenre] = useState<string[]>([]);
+  const [genres, setGenres] = useState<string[]>([]);
   const [year, setYear] = useState<string[]>([]);
   const [service, setService] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchedShows, setSearchedShows] = useState<any[]>([]);
   const [searchNames, setSearchNames] = useState<string[]>([]);
+  const [countries, setCountries] = useState<string[]>([]);
+  const [country, setCountry] = useState<string[]>(["United States of America"]);
+  const [languages, setLanguages] = useState<string[]>([]);
+  const [language, setLanguage] = useState<string[]>(["English"]);
+  const [countryOptions, setCountryOptions] = useState<CodeLabel[]>([]);
+  const [languageOptions, setLanguageOptions] = useState<CodeLabel[]>([]);
+  const [popularShows, setPopularShows] = useState<any[]>([]);
+  const showsToDisplay = searchedShows.length > 0 ? searchedShows : popularShows;
 
-  const tvGenres = [
-    "Action", "Adventure", "Animation", "Biography", "Comedy", "Crime", "Documentary", "Drama", 
-    "Family", "Fantasy", "Game-Show", "History", "Horror", "Music", "Musical", "Mystery", 
-    "News", "Reality-TV", "Romance", "Sci-Fi", "Sport", "Talk-Show", "Thriller", "War", "Western"
-  ];
+
+
+
+  // const tvGenres = [
+  //   "Action", "Adventure", "Animation", "Biography", "Comedy", "Crime", "Documentary", "Drama", 
+  //   "Family", "Fantasy", "Game-Show", "History", "Horror", "Music", "Musical", "Mystery", 
+  //   "News", "Reality-TV", "Romance", "Sci-Fi", "Sport", "Talk-Show", "Thriller", "War", "Western"
+  // ];
 
   const streamingServices = [
     "Netflix", "Hulu", "Amazon Prime Video", "Disney+", "HBO Max", "Apple TV+", "Peacock", 
@@ -140,6 +157,9 @@ export default function Browse() {
     return startB - startA;
   });
 
+  const getCodeFromLabel = (label: string, options: CodeLabel[]) =>
+    options.find((opt) => opt.label === label)?.code || "";
+  
   const fetchFilteredShows = async () => {
     try {
       const response = await axios.get("http://127.0.0.1:5001/shows/filter", {
@@ -147,31 +167,28 @@ export default function Browse() {
           genre: genre.join(","),
           year: year[0],
           company: service[0],
-          country: "USA",
-          lang: "eng",
-          sort: sortBy || "name",
-          sortType: "asc",
+          country: getCodeFromLabel(country[0], countryOptions),
+          lang: getCodeFromLabel(language[0], languageOptions),
+          sort: sortBy || "score",
+          sortType: "desc",
           names: searchNames.join(",")
         }
       });
       setSearchedShows(response.data.data);
       const names = response.data.data.map((show: any) => show.name);
       setSearchNames(names);
-      if (response.data.data?.length > 0) {
-        console.log("Names:", names);
-      }
     } catch (error) {
       console.error("Error fetching filtered shows:", error);
-      setSearchedShows([]);
-      setSearchNames([]);
     }
   };
+  
+  
 
   useEffect(() => {
-    if (searchNames.length > 0) {
-      fetchFilteredShows();
-    }
-  }, [genre, year, service, sortBy]);
+    console.log("Filters changed:", { genre, year, service, country, sortBy });
+    fetchFilteredShows();
+  }, [genre, year, service, country, sortBy]);
+  
 
   const searchShows = async () => {
     if (!searchTerm.trim()) return;
@@ -196,6 +213,59 @@ export default function Browse() {
     }
   };
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const genres_backend = await axios.get(`http://localhost:5001/genres`);
+        const genreNames = genres_backend.data.data.map((genre: any) => genre.name);
+        setGenres(genreNames); 
+        console.log(genreNames);
+
+        const countryRes = await axios.get("http://localhost:5001/countries");
+        const langRes = await axios.get("http://localhost:5001/languages");
+
+        const countries = countryRes.data.data.map((item: any) => ({
+          code: item.id,
+          label: item.name
+        }));
+        const languages = langRes.data.data.map((item: any) => ({
+          code: item.id,
+          label: item.name
+        }));
+
+        setCountryOptions(countries);
+        setLanguageOptions(languages);
+      } catch (err) {
+        console.error("Failed to fetch user:", err);
+      }
+    };
+  
+    fetchData();
+  }, []); // <== empty array here
+
+  useEffect(() => {
+    const fetchPopularShows = async () => {
+      try {
+        const res = await axios.get("http://127.0.0.1:5001/shows/filter", {
+          params: {
+            country: "usa",
+            lang: "eng",
+            sort: "score",
+            sortType: "desc"
+          }
+        });
+        setPopularShows(res.data.data || []);
+      } catch (error) {
+        console.error("Error fetching default shows:", error);
+        setPopularShows([]);
+      }
+    };
+  
+    fetchPopularShows();
+  }, []);
+  
+  
+
   return (
     <div className="content-wrapper">
       <div className="search-bar-container">
@@ -214,15 +284,18 @@ export default function Browse() {
       </div>
 
       <div className="filters-row">
-        <MultiSelectDropdown label="Genre" options={tvGenres} selected={genre} setSelected={setGenre} />
+        <MultiSelectDropdown label="Genre" options={genres} selected={genre} setSelected={setGenre} />
         <MultiSelectDropdown label="Year" options={sortedDecades} selected={year} setSelected={setYear} />
         <MultiSelectDropdown label="Service" options={streamingServices} selected={service} setSelected={setService} />
+        <MultiSelectDropdown label="Country" options={countryOptions.map((c) => c.label)} selected={country} setSelected={setCountry}/>
+        <MultiSelectDropdown label="Language" options={languageOptions.map((l) => l.label)} selected={language} setSelected={setLanguage}/>
+
         <SortByDropdown selected={sortBy} setSelected={setSortBy} />
       </div>
 
-      {searchedShows.length > 0 && (
+      {showsToDisplay.length > 0 && (
         <div className="search-results-grid">
-          {searchedShows.map((show) => (
+          {showsToDisplay.map((show) => (
             <Link
               to={`/show/${encodeURIComponent(show.name)}`}
               key={show.id || show.name}
@@ -240,6 +313,7 @@ export default function Browse() {
           ))}
         </div>
       )}
+
     </div>
   );
 }

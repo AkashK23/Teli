@@ -151,8 +151,8 @@ def get_tvdb_authorization_token():
         logger.error(f"Error reading TVDB token: {e}")
         return None
 
-TVDB_API_KEY = get_tvdb_authorization_token()
-TVDB_BASE_URL = "https://api4.thetvdb.com/v4"
+TMDB_API_KEY = get_tvdb_authorization_token()
+TVDB_BASE_URL = "https://api.themoviedb.org/3"
 
 def handle_tvdb_api_error(error, api_name="TVDB API", default_status=500):
     # Specific error mapping for known exception types
@@ -181,25 +181,20 @@ def handle_tvdb_api_error(error, api_name="TVDB API", default_status=500):
 @app.route("/shows/search", methods=["GET"])
 def search_shows():
     query = request.args.get("query")
-    limit = request.args.get("limit", default=10, type=int)
+    page = request.args.get("page", default=1, type=int)
     
     if not query:
         return jsonify({"error": "Missing 'query' parameter"}), 400
     
-    if not TVDB_API_KEY:
-        return jsonify({"error": "TVDB API key not available"}), 503
-    
     # Ensure limit is within reasonable bounds
-    if limit < 1:
-        limit = 1
-    elif limit > 50:  # Setting a maximum limit to prevent abuse
-        limit = 50
+    if page < 1:
+        page = 1
     
     headers = {
         "accept": "application/json",
-        "Authorization": f"{TVDB_API_KEY}"
+        "Authorization": f"{TMDB_API_KEY}"
     }
-    url = f"{TVDB_BASE_URL}/search?query={query}&type=series&limit={limit}"
+    url = f"{TVDB_BASE_URL}/search/tv?query={query}&include_adult=false&page={page}"
     
     try:
         response = requests.get(url, headers=headers)
@@ -209,60 +204,92 @@ def search_shows():
         elif response.status_code != 200:
             logger.error(f"TVDB API error: {response.status_code}")
             return jsonify({"error": f"TVDB API returned status {response.status_code}"}), 500
-        
         response.raise_for_status()
         wanted_fields = [
-            "name", 
+            "backdrop_path",
+            "genre_ids",
+            "id",
+            "origin_country",
+            "original_language", 
+            "original_name",
             "overview", 
-            "image_url", 
-            "links", 
-            "network", 
-            "primary_language", 
-            "year", 
-            "tvdb_id"]
-        
-        filtered_data = [
-            {field: item.get(field, "") for field in wanted_fields}
-            for item in response.json().get("data", [])
-        ]
-        result = {"data": filtered_data}
+            "popularity", 
+            "poster_path", 
+            "first_air_date", 
+            "name"]
+        response_data = response.json()
+        total_pages = response_data["total_pages"]
+        total_results = response_data["total_results"]
+        filtered_data = extract_wanted_fields(response_data, wanted_fields)
+        result = {
+            "results": filtered_data,
+            "total_pages": total_pages,
+            "total_results": total_results
+        }
         return jsonify(result), 200
     except Exception as e:
         return handle_tvdb_api_error(e)
+
+def extract_wanted_fields(response_json, wanted_fields):
+    results = response_json.get("results")
+    filtered_data = []
+    for result in results:
+        filtered_item = {field: result.get(field, "") for field in wanted_fields}
+        filtered_data.append(filtered_item)
+    
+    return filtered_data
+
     
 @app.route("/shows/filter", methods=["GET"])
 def filter_shows():
-    query = request.args.get("query", "").lower().strip()
-    country = request.args.get("country")
-    lang = request.args.get("lang")
-
-    if not country or not lang:
-        return jsonify({"error": "Missing required parameters: 'country' and 'lang' are required."}), 400
-
-    if not TVDB_API_KEY:
+    if not TMDB_API_KEY:
         return jsonify({"error": "TVDB API key not available"}), 503
 
     # Optional filters
     params = {
-        "company": request.args.get("company"),
-        "contentRatingId": request.args.get("contentRatingId"),
-        "country": country,
-        "genre": request.args.get("genre"),
-        "lang": lang,
-        "sort": request.args.get("sort", "name"),
-        "sortType": request.args.get("sortType", "asc"),
-        "year": request.args.get("year")
+        "air_date.gte": request.args.get("air_date.gte"),
+        "air_date.lte": request.args.get("air_date.lte"),
+        "first_air_date_year": request.args.get("first_air_date_year"),
+        "first_air_date.gte": request.args.get("first_air_date.gte"),
+        "include_adult": request.args.get("include_adult", False),
+        "include_null_first_air_dates": request.args.get("include_null_first_air_dates", False),
+        "language": request.args.get("language", "en-US"),
+        "page": request.args.get("page", 1),
+        "screened_theatrically": request.args.get("screened_theatrically"),
+        "sort_by": request.args.get("sort_by", "popularity.desc"),
+        "timezone": request.args.get("timezone"),
+        "vote_average.gte": request.args.get("vote_average.gte"),
+        "vote_average.lte": request.args.get("vote_average.lte"),
+        "vote_count.gte": request.args.get("vote_count.gte"),
+        "vote_count.lte": request.args.get("vote_count.lte"),
+        "watch_region": request.args.get("watch_region"),
+        "with_companies": request.args.get("with_companies"),
+        "with_genres": request.args.get("with_genres"),
+        "with_keywords": request.args.get("with_keywords"),
+        "with_networks": request.args.get("with_networks"),
+        "with_origin_country": request.args.get("with_origin_country"),
+        "with_original_language": request.args.get("with_original_language"),
+        "with_runtime.gte": request.args.get("with_runtime.gte"),
+        "with_runtime.lte": request.args.get("with_runtime.lte"),
+        "with_status": request.args.get("with_status"),
+        "with_watch_monetization_types": request.args.get("with_watch_monetization_types"),
+        "with_watch_providers": request.args.get("with_watch_providers"),
+        "without_companies": request.args.get("without_companies"),
+        "without_genres": request.args.get("without_genres"),
+        "without_keywords": request.args.get("without_keywords"),
+        "without_watch_providers": request.args.get("without_watch_providers"),
+        "with_type": request.args.get("with_type"),
     }
 
     clean_params = {k: v for k, v in params.items() if v is not None}
 
     headers = {
         "accept": "application/json",
-        "Authorization": f"{TVDB_API_KEY}"
+        "Authorization": f"{TMDB_API_KEY}"
     }
 
     try:
-        url = f"{TVDB_BASE_URL}/series/filter"
+        url = f"{TVDB_BASE_URL}/discover/tv"
         response = requests.get(url, headers=headers, params=clean_params)
         if response.status_code == 401:
             logger.error("TVDB authentication failed")
@@ -272,33 +299,40 @@ def filter_shows():
             return jsonify({"error": f"TVDB API returned status {response.status_code}"}), 500
             
         response.raise_for_status()
-        data = response.json()["data"]
-
-        # Filter by query (search term) if provided
-        if query:
-            data = [item for item in data if query in item.get("name", "").lower()]
-
         wanted_fields = [
-            "name", "overview", "image", "primary_language", 
-            "firstAired", "lastAired", "id"
-        ]
-        filtered_data = [
-            {field: item.get(field, "") for field in wanted_fields}
-            for item in response.json().get("data", [])
-        ]
-        result = {"data": filtered_data}
+            "backdrop_path",
+            "genre_ids",
+            "id",
+            "origin_country",
+            "original_language", 
+            "original_name",
+            "overview", 
+            "popularity", 
+            "poster_path", 
+            "first_air_date", 
+            "name"]
+
+        response_data = response.json()
+        total_pages = response_data["total_pages"]
+        total_results = response_data["total_results"]
+        filtered_data = extract_wanted_fields(response_data, wanted_fields)
+        result = {
+            "results": filtered_data,
+            "total_pages": total_pages,
+            "total_results": total_results
+            }
         return jsonify(result), 200
     except Exception as e:
         # This will now catch ALL exceptions, not just request-related ones
         return handle_tvdb_api_error(e)
     
 def fetch_tvdb_data(endpoint: str, name_filter: str = None, filter_key: str = "name"):
-    if not TVDB_API_KEY:
+    if not TMDB_API_KEY:
         return jsonify({"error": "TVDB API key not available"}), 503
         
     headers = {
         "accept": "application/json",
-        "Authorization": f"{TVDB_API_KEY}"
+        "Authorization": f"{TMDB_API_KEY}"
     }
     url = f"{TVDB_BASE_URL}{endpoint}"
 
@@ -324,24 +358,78 @@ def fetch_tvdb_data(endpoint: str, name_filter: str = None, filter_key: str = "n
     except Exception as e:
         return handle_tvdb_api_error(e)
 
-@app.route("/content-ratings", methods=["GET"])
-def get_content_ratings():
-    response = fetch_tvdb_data("/content/ratings", request.args.get("name"))
-    return response
+@app.route("/shows/content-ratings/<series_id>", methods=["GET"])
+def get_content_ratings(series_id):
+    url = f"{TVDB_BASE_URL}/discover/tv/{series_id}/content_ratings"
+    headers = {
+        "accept": "application/json",
+        "Authorization": f"{TMDB_API_KEY}"
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 401:
+            logger.error("TVDB authentication failed")
+            return jsonify({"error": "TVDB API authentication failed"}), 503
+        elif response.status_code != 200:
+            logger.error(f"TVDB API error: {response.status_code}")
+            return jsonify({"error": f"TVDB API returned status {response.status_code}"}), 500
+            
+        response.raise_for_status()
+
+        data = response.json()
+        return jsonify(data), 200
+    except Exception as e:
+        return handle_tvdb_api_error(e)
+
+@app.route("/shows/<series_id>", methods=["GET"])
+def get_show_details(series_id):
+    url = f"{TVDB_BASE_URL}/tv/{series_id}"
+    headers = {
+        "accept": "application/json",
+        "Authorization": f"{TMDB_API_KEY}"
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 401:
+            logger.error("TVDB authentication failed")
+            return jsonify({"error": "TVDB API authentication failed"}), 503
+        elif response.status_code != 200:
+            logger.error(f"TVDB API error: {response.status_code}")
+            return jsonify({"error": f"TVDB API returned status {response.status_code}"}), 500
+            
+        response.raise_for_status()
+        result = response.json()
+        wanted_fields = [
+            "backdrop_path",
+            "genre_ids",
+            "id",
+            "origin_country",
+            "original_language", 
+            "original_name",
+            "overview", 
+            "popularity", 
+            "poster_path", 
+            "first_air_date", 
+            "name"]
+        
+        filtered_item = {field: result.get(field, "") for field in wanted_fields}
+        return jsonify(filtered_item), 200
+    except Exception as e:
+        return handle_tvdb_api_error(e)
 
 @app.route("/genres", methods=["GET"])
 def get_genres():
-    response = fetch_tvdb_data("/genres", request.args.get("name"))
+    response = fetch_tvdb_data("/genre/tv/list?language=en", request.args.get("name"))
     return response
 
 @app.route("/languages", methods=["GET"])
 def get_languages():
-    response = fetch_tvdb_data("/languages", request.args.get("name"))
+    response = fetch_tvdb_data("/configuration/languages", request.args.get("name"))
     return response
 
 @app.route("/countries", methods=["GET"])
 def get_countries():
-    response = fetch_tvdb_data("/countries", request.args.get("name"))
+    response = fetch_tvdb_data("/configuration/countries", request.args.get("name"))
     return response
 
 class AddRatingRequest(BaseModel):

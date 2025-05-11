@@ -218,88 +218,81 @@ class TestWatchlistEndpoints:
         assert response.status_code == 400
         assert "errors" in response.get_json()
 
-@pytest.mark.usefixtures("setup_test_data")
-class TestTVDBEndpoints:
-    @patch('app.requests.get')
-    def test_search_shows(self, mock_get, get_client):
+class TestTMDBEndpoints:
+    def test_search_shows(self, get_client):
         client = get_client
-        
-        # Mock the response from TVDB API
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "data": [
-                {
-                    "name": "Breaking Bad",
-                    "overview": "A high school chemistry teacher...",
-                    "image_url": "http://example.com/image.jpg",
-                    "links": {"url": "http://example.com"},
-                    "network": "AMC",
-                    "primary_language": "eng",
-                    "year": "2008",
-                    "tvdb_id": "81189"
-                }
-            ]
-        }
-        mock_get.return_value = mock_response
-        
-        response = client.get("/shows/search?query=breaking")
+        query = "breaking bad"
+        response = client.get(f"/shows/search?query={query}")
         assert response.status_code == 200
-        data = response.get_json()["data"]
-        assert len(data) > 0
-        assert "name" in data[0]
+        response_json = response.get_json()
+        assert "total_pages" in response_json
+        assert "total_results" in response_json
+        results = response.get_json()["results"]
+        assert len(results) > 0
+        first_result = results[0]
+        assert first_result["name"].lower() == "breaking bad"
+        assert first_result["id"] == 1396
+        assert "genre_ids" in first_result
+        assert "origin_country" in first_result
+        assert "original_language" in first_result
+        assert "original_name" in first_result
+        assert "overview" in first_result
+        assert "popularity" in first_result
+        assert "poster_path" in first_result
+        assert "backdrop_path" in first_result
+        assert "first_air_date" in first_result
+    
+    def test_filter_shows(self, get_client):
+        client = get_client
+        query_params = {
+            "air_date.gte": "2020-01-01",
+            "air_date.lte": "2021-12-31",
+            "first_air_date_year": 2021,
+            "first_air_date.gte": "2021-01-01",
+            "first_air_date.lte": "2021-12-31",
+            "include_adult": "false",
+            "include_null_first_air_dates": "false",
+            "language": "en-US",
+            "page": 1,
+            "sort_by": "popularity.desc",
+            "with_original_language": "en",
+            "with_runtime.gte": 20,
+            "with_runtime.lte": 60
+        }
+        response = client.get("/shows/filter", query_string=query_params)
+        assert response.status_code == 200
+        response_json = response.get_json()
+        assert "results" in response_json
+        assert "total_pages" in response_json
+        assert "total_results" in response_json
+
+        for result in response_json["results"]:
+            # Check that essential fields exist
+            assert "backdrop_path" in result
+            assert "first_air_date" in result
+            assert "genre_ids" in result
+            assert "id" in result
+            assert "name" in result
+            assert "origin_country" in result
+            assert "original_language" in result
+            assert "original_name" in result
+            assert "overview" in result
+            assert "popularity" in result
+            assert "poster_path" in result
+
+            # Validate filters
+            if result["first_air_date"]:
+                assert "2021-01-01" <= result["first_air_date"] <= "2021-12-31"
+            assert result["original_language"] == "en"
+
+        popularities = [r["popularity"] for r in response_json["results"] if "popularity" in r]
+        assert popularities == sorted(popularities, reverse=True)
     
     def test_search_shows_missing_query(self, get_client):
         client = get_client
         response = client.get("/shows/search")
         assert response.status_code == 400
         assert "error" in response.get_json()
-    
-    @patch('app.requests.get')
-    def test_filter_shows(self, mock_get, get_client):
-        client = get_client
-        
-        # Mock the response from TVDB API
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "data": [
-                {
-                    "name": "Breaking Bad",
-                    "overview": "A high school chemistry teacher...",
-                    "image": "http://example.com/image.jpg",
-                    "primary_language": "eng",
-                    "firstAired": "2008-01-20",
-                    "lastAired": "2013-09-29",
-                    "id": "81189"
-                }
-            ]
-        }
-        mock_get.return_value = mock_response
-        
-        response = client.get("/shows/filter?country=us&lang=eng")
-        assert response.status_code == 200
-        data = response.get_json()["data"]
-        assert len(data) > 0
-        assert "name" in data[0]
-    
-    def test_filter_shows_missing_required_params(self, get_client):
-        client = get_client
-        response = client.get("/shows/filter")
-        assert response.status_code == 400
-        assert "error" in response.get_json()
-    
-    @patch('app.requests.get')
-    def test_get_content_ratings(self, mock_get, get_client):
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"data": [{"id": 1, "name": "TV-MA"}]}
-        mock_get.return_value = mock_response
-        
-        client = get_client
-        response = client.get("/content-ratings")
-        assert response.status_code == 200
-        assert "data" in response.get_json()
     
     @patch('app.requests.get')
     def test_get_genres(self, mock_get, get_client):
