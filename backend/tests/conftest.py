@@ -3,7 +3,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 import os
 from unittest.mock import patch, MagicMock
-from app import app as flask_app
+from app import create_app
 
 # Mock Firebase setup for testing
 @pytest.fixture(scope="session")
@@ -33,13 +33,14 @@ def mock_firebase():
 
 @pytest.fixture(scope="module")
 def get_client():
-    flask_app.config["TESTING"] = True
-    with flask_app.test_client() as client:
+    app = create_app()
+    app.config["TESTING"] = True
+    with app.test_client() as client:
         yield client
 
 @pytest.fixture(scope="module")
 def get_db():
-    from app import db
+    from firebase_db import db
     yield db
 
 # Optional fixture to use a real database for integration tests
@@ -47,11 +48,11 @@ def get_db():
 def real_db():
     # This uses the real Firestore connection from the app
     # Only use for integration tests
-    from app import db
+    from firebase_db import db
     yield db
 
 # Optional fixture for providing mock TVDB authorization token
 @pytest.fixture(scope="module", autouse=True)
 def mock_tvdb_token():
-    with patch('app.get_tvdb_authorization_token', return_value="mock_token"):
+    with patch('tmdb_routes.get_tmdb_authorization_token', return_value="mock_token"):
         yield

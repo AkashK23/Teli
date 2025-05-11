@@ -294,41 +294,26 @@ class TestTMDBEndpoints:
         assert response.status_code == 400
         assert "error" in response.get_json()
     
-    @patch('app.requests.get')
-    def test_get_genres(self, mock_get, get_client):
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"data": [{"id": 1, "name": "Drama"}]}
-        mock_get.return_value = mock_response
-        
+    def test_get_genres(self, get_client):
         client = get_client
         response = client.get("/genres")
         assert response.status_code == 200
-        assert "data" in response.get_json()
+        json_response = response.get_json()
+        assert "data" in json_response
     
-    @patch('app.requests.get')
-    def test_get_languages(self, mock_get, get_client):
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"data": [{"id": "eng", "name": "English"}]}
-        mock_get.return_value = mock_response
-        
+    def test_get_languages(self, get_client):
         client = get_client
         response = client.get("/languages")
         assert response.status_code == 200
-        assert "data" in response.get_json()
+        json_response = response.get_json()
+        assert "data" in json_response
     
-    @patch('app.requests.get')
-    def test_get_countries(self, mock_get, get_client):
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"data": [{"id": "us", "name": "United States"}]}
-        mock_get.return_value = mock_response
-        
+    def test_get_countries(self, get_client):
         client = get_client
         response = client.get("/countries")
         assert response.status_code == 200
-        assert "data" in response.get_json()
+        json_response = response.get_json()
+        assert "data" in json_response
 
 class TestRatingEndpoints:
     def test_add_rating(self, get_client, setup_test_data):
