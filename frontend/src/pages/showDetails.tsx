@@ -3,25 +3,23 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 
 export default function ShowDetails() {
-  const { title } = useParams();
+  const { id } = useParams();
   const [showData, setShowData] = useState<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get(`http://localhost:5001/shows/search?query=${encodeURIComponent(title || '')}`);
-        if (Array.isArray(res.data.data) && res.data.data.length > 0) {
-          setShowData(res.data.data[0]);
-        } else {
-          console.warn("No show found with that title.");
-        }
+        console.log("ID: ",id)
+        const res = await axios.get(`http://localhost:5001/shows/${id}`);
+        console.log("Res: ",res)
+        setShowData(res.data);
       } catch (err) {
         console.error("Failed to fetch show details:", err);
       }
     };
 
     fetchData();
-  }, [title]);
+  }, [id]);
 
   if (!showData) return <div>Loading...</div>;
 
@@ -36,14 +34,16 @@ export default function ShowDetails() {
         }}
       >
         <img
-          src={showData.image_url}
+          src={`https://image.tmdb.org/t/p/w500${showData.poster_path}`}
           alt={showData.name}
           style={{ width: '300px', borderRadius: '10px' }}
         />
         <div>
           <h1 style={{ marginBottom: '1rem' }}>{showData.name}</h1>
-          <p><strong>Year:</strong> {showData.year}</p>
-          <p><strong>Network:</strong> {showData.network}</p>
+          <p>{showData.first_air_date?.slice(0, 4)}-{showData.last_air_date?.slice(0, 4)}</p>
+          {showData.networks?.[0]?.name && (
+            <p><strong>Network:</strong> {showData.networks[0].name}</p>
+          )}
           <p><strong>Overview:</strong> {showData.overview || 'No description available.'}</p>
         </div>
       </div>

@@ -121,14 +121,12 @@ export default function Browse() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchedShows, setSearchedShows] = useState<any[]>([]);
   const [searchNames, setSearchNames] = useState<string[]>([]);
-  const [countries, setCountries] = useState<string[]>([]);
   const [country, setCountry] = useState<string[]>(["United States of America"]);
-  const [languages, setLanguages] = useState<string[]>([]);
   const [language, setLanguage] = useState<string[]>(["English"]);
   const [countryOptions, setCountryOptions] = useState<CodeLabel[]>([]);
   const [languageOptions, setLanguageOptions] = useState<CodeLabel[]>([]);
+  const [genreOptions, setGenreOptions] = useState<CodeLabel[]>([]);
   const [popularShows, setPopularShows] = useState<any[]>([]);
-  const showsToDisplay = searchedShows.length > 0 ? searchedShows : popularShows;
 
 
 
@@ -162,32 +160,46 @@ export default function Browse() {
   
   const fetchFilteredShows = async () => {
     try {
-      const response = await axios.get("http://127.0.0.1:5001/shows/filter", {
+      // Convert country names to ISO 3166-1 codes
+      const countryCodes = country
+        .map(label => countryOptions.find(c => c.label === label)?.code)
+        .filter(Boolean) // Remove undefined values
+  
+      const languageCodes = language
+        .map(label => languageOptions.find(l => l.label === label)?.code)
+        .filter(Boolean) // Remove undefined values
+
+      const genreCodes = genre
+        .map(label => genreOptions.find(g => g.label === label)?.code)
+        .filter(Boolean) // Remove undefined values
+  
+        console.log(genre)
+      const res = await axios.get("http://127.0.0.1:5001/shows/filter", {
         params: {
-          genre: genre.join(","),
-          year: year[0],
-          company: service[0],
-          country: getCodeFromLabel(country[0], countryOptions),
-          lang: getCodeFromLabel(language[0], languageOptions),
-          sort: sortBy || "score",
-          sortType: "desc",
-          names: searchNames.join(",")
+          with_origin_country: countryCodes.join(","),
+          with_original_language: languageCodes.join(","),
+          sort_by: "popularity.desc",
+          with_genres: genreCodes.join(","),
+          without_genres: "10767,10763"
         }
       });
-      setSearchedShows(response.data.data);
-      const names = response.data.data.map((show: any) => show.name);
-      setSearchNames(names);
+  
+      setPopularShows(res.data.results || []);
+      console.log("Popular shows:", res);
+      console.log("Genre codes used:", genreCodes);
     } catch (error) {
-      console.error("Error fetching filtered shows:", error);
+      console.error("Error fetching default shows:", error);
+      setPopularShows([]);
     }
   };
+  
   
   
 
   useEffect(() => {
     console.log("Filters changed:", { genre, year, service, country, sortBy });
     fetchFilteredShows();
-  }, [genre, year, service, country, sortBy]);
+  }, [genre, year, service, country, language, sortBy]);
   
 
   const searchShows = async () => {
@@ -216,25 +228,45 @@ export default function Browse() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const genres_backend = await axios.get(`http://localhost:5001/genres`);
-        const genreNames = genres_backend.data.data.map((genre: any) => genre.name);
+        const genresRes = await axios.get(`http://localhost:5001/genres`);
+        const genreNames = genresRes.data.data.map((genre: any) => genre.name);
         setGenres(genreNames); 
-        console.log(genreNames);
+        
 
+        const genreRes = await axios.get(`http://localhost:5001/genres`);
         const countryRes = await axios.get("http://localhost:5001/countries");
         const langRes = await axios.get("http://localhost:5001/languages");
+        const countries = countryRes.data.data
+        .map((item: any): { code: string; label: string } => ({
+          code: item.iso_3166_1,
+          label: item.english_name
+        }))
+        .sort((a: { code: string; label: string }, b: { code: string; label: string }) =>
+          a.label.localeCompare(b.label)
+        );
 
-        const countries = countryRes.data.data.map((item: any) => ({
+        const languages = langRes.data.data
+        .map((item: any): { code: string; label: string } => ({
+          code: item.iso_639_1,
+          label: `${item.english_name} (${item.iso_639_1})`
+        }))
+        .sort((a: { code: string; label: string }, b: { code: string; label: string }) =>
+          a.label.localeCompare(b.label)
+        );
+
+        const genres = genreRes.data.data
+        .map((item: any): { code: string; label: string } => ({
           code: item.id,
           label: item.name
-        }));
-        const languages = langRes.data.data.map((item: any) => ({
-          code: item.id,
-          label: item.name
-        }));
+        }))
+        .sort((a: { code: string; label: string }, b: { code: string; label: string }) =>
+          a.label.localeCompare(b.label)
+        );
+
 
         setCountryOptions(countries);
         setLanguageOptions(languages);
+        setGenreOptions(genres);
       } catch (err) {
         console.error("Failed to fetch user:", err);
       }
@@ -248,13 +280,15 @@ export default function Browse() {
       try {
         const res = await axios.get("http://127.0.0.1:5001/shows/filter", {
           params: {
-            country: "usa",
-            lang: "eng",
-            sort: "score",
-            sortType: "desc"
+            with_origin_country: "US",
+            with_original_language: "en",
+            sort_by: "popularity.desc",
+            without_genres: "10767, 10763"
           }
         });
-        setPopularShows(res.data.data || []);
+        setPopularShows(res.data.results || []);
+        console.log("Popular shows:", res.data.results)
+        // console.log("Genre:", genre)
       } catch (error) {
         console.error("Error fetching default shows:", error);
         setPopularShows([]);
@@ -263,13 +297,11 @@ export default function Browse() {
   
     fetchPopularShows();
   }, []);
-  
-  
 
   return (
     <div className="content-wrapper">
       <div className="search-bar-container">
-        <input
+        {/* <input
           type="text"
           className="search-bar"
           placeholder="Search titles..."
@@ -280,11 +312,11 @@ export default function Browse() {
               searchShows();
             }
           }}
-        />
+        /> */}
       </div>
 
       <div className="filters-row">
-        <MultiSelectDropdown label="Genre" options={genres} selected={genre} setSelected={setGenre} />
+        <MultiSelectDropdown label="Genre" options={genreOptions.map((g) => g.label)} selected={genre} setSelected={setGenre} />
         <MultiSelectDropdown label="Year" options={sortedDecades} selected={year} setSelected={setYear} />
         <MultiSelectDropdown label="Service" options={streamingServices} selected={service} setSelected={setService} />
         <MultiSelectDropdown label="Country" options={countryOptions.map((c) => c.label)} selected={country} setSelected={setCountry}/>
@@ -293,26 +325,35 @@ export default function Browse() {
         <SortByDropdown selected={sortBy} setSelected={setSortBy} />
       </div>
 
-      {showsToDisplay.length > 0 && (
-        <div className="search-results-grid">
-          {showsToDisplay.map((show) => (
+      {popularShows.length > 0 && (
+      <div className="search-results-grid">
+        {popularShows.map((show) => {
+          const imagePath = show.poster_path;
+          // console.log(show)
+          const imageUrl = imagePath?.startsWith("http")
+            ? imagePath
+            : `https://image.tmdb.org/t/p/w500${imagePath}`;
+
+          return (
             <Link
-              to={`/show/${encodeURIComponent(show.name)}`}
+              to={`/show/${encodeURIComponent(show.id)}`}
               key={show.id || show.name}
               className="search-result-link"
             >
               <div className="search-result">
                 <img
-                  src={show.image_url || show.image}
+                  src={imageUrl}
                   alt={show.name}
                   className="search-result-img"
                 />
                 <p>{show.name}</p>
               </div>
             </Link>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
+    )}
+
 
     </div>
   );

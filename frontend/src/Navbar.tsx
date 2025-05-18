@@ -7,7 +7,7 @@ export default function Navbar() {
         <Link to="/" className="site-title">Teli</Link>
         <ul>
             <CustomLink to="/browse">Browse</CustomLink>
-            <CustomLink to="/review">Review</CustomLink>
+            <CustomLink to="/search">Search</CustomLink>
             <CustomLink to="/activity">Activity</CustomLink>
             <CustomLink to="/profile">Profile</CustomLink>        
         </ul>

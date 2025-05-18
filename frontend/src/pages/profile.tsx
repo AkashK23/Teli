@@ -12,6 +12,8 @@ export default function Profile() {
   const [following, setFollowing] = useState<any[]>([]);
   const [followers, setFollowers] = useState<any[]>([]);
   const [ratings, setRatings] = useState<any[]>([]);
+  const [ratingsWithImages, setRatingsWithImages] = useState<any[]>([]);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -29,7 +31,7 @@ export default function Profile() {
         setFollowers(followers_backend.data.followers.length);
 
         const ratings_backend = await axios.get(`http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/ratings`);
-        console.log(ratings_backend.data);
+        console.log("Ratings: ", ratings_backend.data);
         setRatings(ratings_backend.data);
       } catch (err) {
         console.error("Failed to fetch user:", err);
@@ -79,13 +81,15 @@ export default function Profile() {
     const fetchImagesForRatings = async () => {
       const updatedRatings = await Promise.all(ratings.map(async (rating) => {
         try {
-          const res = await axios.get("http://localhost:5001/shows/search", {
-            params: { query: rating.show_name }
-          });
-          const showData = res.data.data?.[0];
+          const res = await axios.get(`http://localhost:5001/shows/${rating.show_id}`);
+          const showData = res.data;
+          const imagePath = showData.poster_path;
+          const imageUrl = imagePath?.startsWith("http")
+            ? imagePath
+            : `https://image.tmdb.org/t/p/w500${imagePath}`;
           return {
             ...rating,
-            image_url: showData?.image_url || showData?.thumbnail || null
+            image_url: showData?.image_url || showData?.thumbnail || imageUrl || null
           };
         } catch (err) {
           console.error("Failed to fetch image for:", rating.show_name);
@@ -93,13 +97,14 @@ export default function Profile() {
         }
       }));
   
-      setRatings(updatedRatings);
+      setRatingsWithImages(updatedRatings);
     };
   
     if (ratings.length > 0) {
       fetchImagesForRatings();
     }
   }, [ratings]);
+  
   
 
   return (
@@ -157,17 +162,16 @@ export default function Profile() {
         <h3 className="shows-label">Recent Reviews</h3>
         <div className="user-ratings">
           <div className="rating-cards-container">
-            {ratings.map((rating: any) => (
+          {ratingsWithImages.map((rating: any) => (
               <div className="rating-card" key={rating.show_id}>
                 <img
                   src={rating.image_url}
                   alt={rating.show_name}
                   className="rating-show-img"
-                  />
-
+                />
                 <div className="rating-details">
                   <h4>{rating.show_name}</h4>
-                  <p><b>Rating:</b> {rating.score}/10</p>
+                  <p><b>Rating:</b> {rating.rating}/10</p>
                   <p>{rating.comment}</p>
                 </div>
               </div>

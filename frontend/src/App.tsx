@@ -3,7 +3,7 @@ import axios from "axios";
 import Navbar from "./Navbar"
 import "./styles.css"
 import Home from "./pages/home";
-import Review from "./pages/review";
+import Search from "./pages/search";
 import Browse from "./pages/browse";
 import Activity from "./pages/activity";
 import Profile from "./pages/profile";
@@ -24,8 +24,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/browse" element={<Browse />} />
-        <Route path="/show/:title" element={<ShowDetails />} />
-        <Route path="/review" element={<Review />} />
+        <Route path="/show/:id" element={<ShowDetails />} />
+        <Route path="/search" element={<Search />} />
         <Route path="/activity" element={<Activity />} />
         <Route path="/profile" element={<Profile />} />
       </Routes>
