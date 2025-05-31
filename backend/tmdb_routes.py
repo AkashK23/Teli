@@ -87,7 +87,8 @@ def search_shows():
             "overview", 
             "popularity", 
             "poster_path", 
-            "first_air_date", 
+            "first_air_date",
+            "first_air_date_year", 
             "name"]
         response_data = response.json()
         total_pages = response_data["total_pages"]
