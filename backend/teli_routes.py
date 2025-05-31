@@ -470,3 +470,169 @@ def method_not_allowed(e):
 @teli.errorhandler(500)
 def server_error(e):
     return jsonify({"error": "Internal server error"}), 500
+
+# Watch Status Functionality
+
+class UpdateWatchStatusRequest(BaseModel):
+    user_id: str
+    show_id: str
+    status: str = Field(..., pattern="^(currently_watching|want_to_watch)$")
+    current_season: Optional[int] = None
+    current_episode: Optional[int] = None
+    notes: Optional[str] = None
+
+class DeleteWatchStatusRequest(BaseModel):
+    user_id: str
+    show_id: str
+
+@teli.route("/update_watch_status", methods=["POST"])
+def update_watch_status():
+    try:
+        # Validate and parse request
+        req_data = UpdateWatchStatusRequest.model_validate(request.get_json())
+    except ValidationError as e:
+        # If validation fails, return 400 with error details
+        return jsonify({"errors": e.errors()}), 400
+
+    # Check if user exists
+    user_ref = db.collection("users").document(req_data.user_id).get()
+    if not user_ref.exists:
+        return jsonify({"error": "User not found"}), 404
+
+    # Prepare watch status data
+    watch_status_data = req_data.model_dump()
+    watch_status_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    try:
+        # Check if a watch status for this user and show already exists
+        status_query = db.collection("watch_status").where(
+            filter=FieldFilter("user_id", "==", req_data.user_id)).where(
+                filter=FieldFilter("show_id", "==", req_data.show_id)).limit(1).get()
+        
+        if len(status_query) > 0:
+            # If status exists, update it
+            existing_status = status_query[0]
+            existing_status.reference.update(watch_status_data)
+            status_id = existing_status.id
+            return jsonify({"message": "Watch status updated successfully", "id": status_id}), 200
+        else:
+            # If status does not exist, create a new one
+            status_ref = db.collection("watch_status").add(watch_status_data)
+            status_id = status_ref[1].id
+            return jsonify({"message": "Watch status added successfully", "id": status_id}), 201
+    
+    except Exception as e:
+        logger.error(f"Error updating watch status: {e}")
+        return jsonify({"error": "Database error occurred"}), 500
+
+@teli.route("/users/<user_id>/currently_watching", methods=["GET"])
+def get_currently_watching(user_id):
+    try:
+        # Check if user exists
+        user_ref = db.collection("users").document(user_id).get()
+        if not user_ref.exists:
+            return jsonify({"error": "User not found"}), 404
+            
+        # Query for shows with "currently_watching" status
+        status_query = db.collection("watch_status").where(
+            filter=FieldFilter("user_id", "==", user_id)).where(
+                filter=FieldFilter("status", "==", "currently_watching")).stream()
+        
+        # Prepare result list
+        result = []
+        for doc in status_query:
+            status_data = doc.to_dict()
+            status_data["id"] = doc.id
+            result.append(status_data)
+            
+        return jsonify(result), 200
+    
+    except Exception as e:
+        logger.error(f"Error retrieving currently watching shows: {e}")
+        return jsonify({"error": "Database error occurred"}), 500
+
+@teli.route("/users/<user_id>/want_to_watch", methods=["GET"])
+def get_want_to_watch(user_id):
+    try:
+        # Check if user exists
+        user_ref = db.collection("users").document(user_id).get()
+        if not user_ref.exists:
+            return jsonify({"error": "User not found"}), 404
+            
+        # Query for shows with "want_to_watch" status
+        status_query = db.collection("watch_status").where(
+            filter=FieldFilter("user_id", "==", user_id)).where(
+                filter=FieldFilter("status", "==", "want_to_watch")).stream()
+        
+        # Prepare result list
+        result = []
+        for doc in status_query:
+            status_data = doc.to_dict()
+            status_data["id"] = doc.id
+            result.append(status_data)
+            
+        return jsonify(result), 200
+    
+    except Exception as e:
+        logger.error(f"Error retrieving want to watch shows: {e}")
+        return jsonify({"error": "Database error occurred"}), 500
+
+@teli.route("/users/<user_id>/watch_status/<show_id>", methods=["GET"])
+def get_watch_status(user_id, show_id):
+    try:
+        # Check if user exists
+        user_ref = db.collection("users").document(user_id).get()
+        if not user_ref.exists:
+            return jsonify({"error": "User not found"}), 404
+            
+        # Query for the watch status
+        status_query = db.collection("watch_status").where(
+            filter=FieldFilter("user_id", "==", user_id)).where(
+                filter=FieldFilter("show_id", "==", show_id)).limit(1).get()
+        
+        # Check if status exists
+        if len(status_query) == 0:
+            return jsonify({"error": "No watch status found for this show"}), 404
+        
+        # Return the status
+        status_data = status_query[0].to_dict()
+        status_data["id"] = status_query[0].id
+        
+        return jsonify(status_data), 200
+    
+    except Exception as e:
+        logger.error(f"Error retrieving watch status: {e}")
+        return jsonify({"error": "Database error occurred"}), 500
+
+@teli.route("/delete_watch_status", methods=["POST"])
+def delete_watch_status():
+    try:
+        # Validate and parse request
+        req_data = DeleteWatchStatusRequest.model_validate(request.get_json())
+    except ValidationError as e:
+        # If validation fails, return 400 with error details
+        return jsonify({"errors": e.errors()}), 400
+
+    # Check if user exists
+    user_ref = db.collection("users").document(req_data.user_id).get()
+    if not user_ref.exists:
+        return jsonify({"error": "User not found"}), 404
+    
+    try:
+        # Query for the watch status
+        status_query = db.collection("watch_status").where(
+            filter=FieldFilter("user_id", "==", req_data.user_id)).where(
+                filter=FieldFilter("show_id", "==", req_data.show_id)).limit(1).get()
+        
+        # Check if status exists
+        if len(status_query) == 0:
+            return jsonify({"error": "No watch status found for this show"}), 404
+        
+        # Delete the status
+        status_query[0].reference.delete()
+        
+        return jsonify({"message": "Watch status deleted successfully"}), 200
+    
+    except Exception as e:
+        logger.error(f"Error deleting watch status: {e}")
+        return jsonify({"error": "Database error occurred"}), 500

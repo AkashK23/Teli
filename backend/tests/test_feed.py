@@ -91,10 +91,12 @@ class TestBasicEndpoints:
 class TestUserEndpoints:
     def test_add_user_success(self, get_client):
         client = get_client
+        # Use a timestamp to ensure unique email and username
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
         payload = {
-            "email": "newuser@example.com",
+            "email": f"newuser_{timestamp}@example.com",
             "name": "New User",
-            "username": "newuser",
+            "username": f"newuser_{timestamp}",
             "bio": "Bio for New User"
         }
         response = client.post(
@@ -150,10 +152,12 @@ class TestUserEndpoints:
     def test_get_user_success(self, get_client):
         # First add a user to retrieve
         client = get_client
+        # Use a timestamp to ensure unique email and username
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
         add_payload = {
-            "email": "getuser@example.com",
+            "email": f"getuser_{timestamp}@example.com",
             "name": "Get User",
-            "username": "getuser",
+            "username": f"getuser_{timestamp}",
             "bio": "Bio for Get User"
         }
         add_response = client.post(
@@ -374,10 +378,11 @@ class TestFollowEndpoints:
     def test_follow_user(self, get_client, setup_test_data):
         client = get_client
         # Create a new user to follow
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
         new_user_payload = {
-            "email": "followtest@example.com",
+            "email": f"followtest_{timestamp}@example.com",
             "name": "Follow Test User",
-            "username": "followtest",
+            "username": f"followtest_{timestamp}",
             "bio": "Bio for Follow Test"
         }
         user_response = client.post(
@@ -385,6 +390,7 @@ class TestFollowEndpoints:
             json=new_user_payload,
             headers={"Content-Type": "application/json"}
         )
+        assert user_response.status_code == 200
         new_user_id = user_response.get_json()["id"]
         
         payload = {
