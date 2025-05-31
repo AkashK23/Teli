@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 import requests
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -8,7 +9,11 @@ tmdb = Blueprint("tmdb", __name__)
 
 def get_tmdb_authorization_token():
     try:
-        with open('authorizationToken.txt', 'r') as file:
+        # Get the directory where this file is located
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        token_path = os.path.join(current_dir, "authorizationToken.txt")
+        
+        with open(token_path, 'r') as file:
             data = file.read()
         return data
     except FileNotFoundError:
@@ -56,14 +61,18 @@ def handle_tmdb_api_error(error, api_name="TMDB API", default_status=500):
 @tmdb.route("/shows/search", methods=["GET"])
 def search_shows():
     query = request.args.get("query")
-    page = request.args.get("page", default=1, type=int)
     
     if not query:
         return jsonify({"error": "Missing 'query' parameter"}), 400
     
-    # Ensure limit is within reasonable bounds
-    if page < 1:
-        page = 1
+    # Validate page parameter
+    try:
+        page = request.args.get("page", "1")
+        page = int(page)
+        if page < 1:
+            page = 1
+    except ValueError:
+        return jsonify({"error": "Page parameter must be a positive integer"}), 400
     
     headers = get_tmdb_headers()
     url = f"{TMDB_BASE_URL}/search/tv?query={query}&include_adult=false&page={page}"
@@ -71,11 +80,11 @@ def search_shows():
     try:
         response = requests.get(url, headers=headers)
         if response.status_code == 401:
-            logger.error("TVDB authentication failed")
-            return jsonify({"error": "TVDB API authentication failed"}), 503
+            logger.error("TMDB authentication failed")
+            return jsonify({"error": "TMDB API authentication failed"}), 503
         elif response.status_code != 200:
-            logger.error(f"TVDB API error: {response.status_code}")
-            return jsonify({"error": f"TVDB API returned status {response.status_code}"}), 500
+            logger.error(f"TMDB API error: {response.status_code}")
+            return jsonify({"error": f"TMDB API returned status {response.status_code}"}), 500
         response.raise_for_status()
         wanted_fields = [
             "backdrop_path",
@@ -115,7 +124,16 @@ def extract_wanted_fields(response_json, wanted_fields):
 @tmdb.route("/shows/filter", methods=["GET"])
 def filter_shows():
     if not TMDB_API_KEY:
-        return jsonify({"error": "TVDB API key not available"}), 503
+        return jsonify({"error": "TMDB API key not available"}), 503
+
+    # Validate page parameter
+    try:
+        page = request.args.get("page", "1")
+        page = int(page)
+        if page < 1:
+            page = 1
+    except ValueError:
+        return jsonify({"error": "Page parameter must be a positive integer"}), 400
 
     # Optional filters
     params = {
@@ -123,10 +141,11 @@ def filter_shows():
         "air_date.lte": request.args.get("air_date.lte"),
         "first_air_date_year": request.args.get("first_air_date_year"),
         "first_air_date.gte": request.args.get("first_air_date.gte"),
+        "first_air_date.lte": request.args.get("first_air_date.lte"),
         "include_adult": request.args.get("include_adult", False),
         "include_null_first_air_dates": request.args.get("include_null_first_air_dates", False),
         "language": request.args.get("language", "en-US"),
-        "page": request.args.get("page", 1),
+        "page": page,
         "screened_theatrically": request.args.get("screened_theatrically"),
         "sort_by": request.args.get("sort_by", "popularity.desc"),
         "timezone": request.args.get("timezone"),
@@ -153,6 +172,25 @@ def filter_shows():
         "with_type": request.args.get("with_type"),
     }
 
+    # Validate date parameters
+    date_params = ["air_date.gte", "air_date.lte", "first_air_date.gte", "first_air_date.lte"]
+    for param in date_params:
+        if param in params and params[param]:
+            # Simple date format validation (YYYY-MM-DD)
+            date_value = params[param]
+            if not (len(date_value) == 10 and date_value[4] == '-' and date_value[7] == '-'):
+                return jsonify({"error": f"Invalid date format for {param}. Use YYYY-MM-DD"}), 400
+
+    # Validate numeric parameters
+    numeric_params = ["vote_average.gte", "vote_average.lte", "vote_count.gte", "vote_count.lte", 
+                     "with_runtime.gte", "with_runtime.lte", "first_air_date_year"]
+    for param in numeric_params:
+        if param in params and params[param]:
+            try:
+                float(params[param])
+            except ValueError:
+                return jsonify({"error": f"Parameter {param} must be a number"}), 400
+
     clean_params = {k: v for k, v in params.items() if v is not None}
 
     headers = get_tmdb_headers()
@@ -161,11 +199,11 @@ def filter_shows():
         url = f"{TMDB_BASE_URL}/discover/tv"
         response = requests.get(url, headers=headers, params=clean_params)
         if response.status_code == 401:
-            logger.error("TVDB authentication failed")
-            return jsonify({"error": "TVDB API authentication failed"}), 503
+            logger.error("TMDB authentication failed")
+            return jsonify({"error": "TMDB API authentication failed"}), 503
         elif response.status_code != 200:
-            logger.error(f"TVDB API error: {response.status_code}")
-            return jsonify({"error": f"TVDB API returned status {response.status_code}"}), 500
+            logger.error(f"TMDB API error: {response.status_code}")
+            return jsonify({"error": f"TMDB API returned status {response.status_code}"}), 500
             
         response.raise_for_status()
         wanted_fields = [
@@ -195,9 +233,9 @@ def filter_shows():
         # This will now catch ALL exceptions, not just request-related ones
         return handle_tmdb_api_error(e)
     
-def fetch_tvdb_data(endpoint: str, name_filter: str = None, filter_key: str = "name", data_key: str = None):
+def fetch_tmdb_data(endpoint: str, name_filter: str = None, filter_key: str = "name", data_key: str = None):
     if not TMDB_API_KEY:
-        return jsonify({"error": "TVDB API key not available"}), 503
+        return jsonify({"error": "TMDB API key not available"}), 503
         
     headers = get_tmdb_headers()
     url = f"{TMDB_BASE_URL}{endpoint}"
@@ -205,11 +243,11 @@ def fetch_tvdb_data(endpoint: str, name_filter: str = None, filter_key: str = "n
     try:
         response = requests.get(url, headers=headers)
         if response.status_code == 401:
-            logger.error("TVDB authentication failed")
-            return jsonify({"error": "TVDB API authentication failed"}), 503
+            logger.error("TMDB authentication failed")
+            return jsonify({"error": "TMDB API authentication failed"}), 503
         elif response.status_code != 200:
-            logger.error(f"TVDB API error: {response.status_code}")
-            return jsonify({"error": f"TVDB API returned status {response.status_code}"}), 500
+            logger.error(f"TMDB API error: {response.status_code}")
+            return jsonify({"error": f"TMDB API returned status {response.status_code}"}), 500
             
         response.raise_for_status()
 
@@ -229,16 +267,16 @@ def fetch_tvdb_data(endpoint: str, name_filter: str = None, filter_key: str = "n
     
 @tmdb.route("/shows/content-ratings/<series_id>", methods=["GET"])
 def get_content_ratings(series_id):
-    url = f"{TMDB_BASE_URL}/discover/tv/{series_id}/content_ratings"
+    url = f"{TMDB_BASE_URL}/tv/{series_id}/content_ratings"
     headers = get_tmdb_headers()
     try:
         response = requests.get(url, headers=headers)
         if response.status_code == 401:
-            logger.error("TVDB authentication failed")
-            return jsonify({"error": "TVDB API authentication failed"}), 503
+            logger.error("TMDB authentication failed")
+            return jsonify({"error": "TMDB API authentication failed"}), 503
         elif response.status_code != 200:
-            logger.error(f"TVDB API error: {response.status_code}")
-            return jsonify({"error": f"TVDB API returned status {response.status_code}"}), 500
+            logger.error(f"TMDB API error: {response.status_code}")
+            return jsonify({"error": f"TMDB API returned status {response.status_code}"}), 500
             
         response.raise_for_status()
 
@@ -254,11 +292,11 @@ def get_show_details(series_id):
     try:
         response = requests.get(url, headers=headers)
         if response.status_code == 401:
-            logger.error("TVDB authentication failed")
-            return jsonify({"error": "TVDB API authentication failed"}), 503
+            logger.error("TMDB authentication failed")
+            return jsonify({"error": "TMDB API authentication failed"}), 503
         elif response.status_code != 200:
-            logger.error(f"TVDB API error: {response.status_code}")
-            return jsonify({"error": f"TVDB API returned status {response.status_code}"}), 500
+            logger.error(f"TMDB API error: {response.status_code}")
+            return jsonify({"error": f"TMDB API returned status {response.status_code}"}), 500
             
         response.raise_for_status()
         result = response.json()
@@ -298,15 +336,15 @@ def get_show_details(series_id):
 
 @tmdb.route("/genres", methods=["GET"])
 def get_genres():
-    response = fetch_tvdb_data(endpoint="/genre/tv/list?language=en", name_filter=request.args.get("name"), data_key="genres")
+    response = fetch_tmdb_data(endpoint="/genre/tv/list?language=en", name_filter=request.args.get("name"), data_key="genres")
     return response
 
 @tmdb.route("/languages", methods=["GET"])
 def get_languages():
-    response = fetch_tvdb_data("/configuration/languages", request.args.get("name"))
+    response = fetch_tmdb_data("/configuration/languages", request.args.get("name"))
     return response
 
 @tmdb.route("/countries", methods=["GET"])
 def get_countries():
-    response = fetch_tvdb_data("/configuration/countries", request.args.get("name"))
+    response = fetch_tmdb_data("/configuration/countries", request.args.get("name"))
     return response
