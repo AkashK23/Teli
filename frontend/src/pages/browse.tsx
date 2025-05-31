@@ -113,9 +113,12 @@ export default function Browse() {
     label: string;
   }
 
+  const [showFilters, setShowFilters] = useState(false); // <-- new state for toggling filters visibility
+
   const [genre, setGenre] = useState<string[]>([]);
   const [genres, setGenres] = useState<string[]>([]);
-  const [year, setYear] = useState<string[]>([]);
+  // const [minYear, setMinYear] = useState(1920);
+  // const [maxYear, setMaxYear] = useState(new Date().getFullYear());
   const [service, setService] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -178,6 +181,8 @@ export default function Browse() {
         params: {
           with_origin_country: countryCodes.join(","),
           with_original_language: languageCodes.join(","),
+          // first_air_date: "${minYear}-01-01",
+          // last_air_date: "${maxYear}-12-31",
           sort_by: "popularity.desc",
           with_genres: genreCodes.join(","),
           without_genres: "10767,10763"
@@ -197,9 +202,9 @@ export default function Browse() {
   
 
   useEffect(() => {
-    console.log("Filters changed:", { genre, year, service, country, sortBy });
+    console.log("Filters changed:", { genre, service, country, sortBy });
     fetchFilteredShows();
-  }, [genre, year, service, country, language, sortBy]);
+  }, [genre, service, country, language, sortBy]);
   
 
   const searchShows = async () => {
@@ -315,14 +320,25 @@ export default function Browse() {
         /> */}
       </div>
 
-      <div className="filters-row">
-        <MultiSelectDropdown label="Genre" options={genreOptions.map((g) => g.label)} selected={genre} setSelected={setGenre} />
-        <MultiSelectDropdown label="Year" options={sortedDecades} selected={year} setSelected={setYear} />
-        <MultiSelectDropdown label="Service" options={streamingServices} selected={service} setSelected={setService} />
-        <MultiSelectDropdown label="Country" options={countryOptions.map((c) => c.label)} selected={country} setSelected={setCountry}/>
-        <MultiSelectDropdown label="Language" options={languageOptions.map((l) => l.label)} selected={language} setSelected={setLanguage}/>
+      <div className="filters-wrapper">
+        <button
+          onClick={() => setShowFilters((prev) => !prev)}
+          className="filters-toggle-button"
+        >
+          {showFilters ? "Hide Filters" : "Show Filters"}
+        </button>
 
-        <SortByDropdown selected={sortBy} setSelected={setSortBy} />
+        <div className={`filters-drawer ${showFilters ? "open" : ""}`}>
+          <div className="filters-row">
+              <MultiSelectDropdown label="Genre" options={genreOptions.map((g) => g.label)} selected={genre} setSelected={setGenre} />
+              {/* <MultiSelectDropdown label="Year" options={sortedDecades} selected={year} setSelected={setYear} /> */}
+              <MultiSelectDropdown label="Service" options={streamingServices} selected={service} setSelected={setService} />
+              <MultiSelectDropdown label="Country" options={countryOptions.map((c) => c.label)} selected={country} setSelected={setCountry}/>
+              <MultiSelectDropdown label="Language" options={languageOptions.map((l) => l.label)} selected={language} setSelected={setLanguage}/>
+
+              <SortByDropdown selected={sortBy} setSelected={setSortBy} />
+            </div>
+          </div>
       </div>
 
       {popularShows.length > 0 && (

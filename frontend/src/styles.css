@@ -44,7 +44,8 @@ body {
 }
 
 .nav li.active {
-    background-color: #555;
+  background-color: #555; /* Highlight color */
+  border-bottom: 4px solid white;
 }
 
 .nav li:hover {
@@ -416,6 +417,142 @@ body {
     margin: 0;
   }
   
-
-
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
   
+  .nav-links {
+    display: flex;
+    gap: 1rem;
+    list-style: none;
+  }
+  
+  .nav-search {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+  }
+  
+  
+  .search-input {
+    width: 300px;            /* Make it longer */
+    padding: 10px 14px;      /* More padding for a larger look */
+    border-radius: 20px;     /* Bigger radius for a rounded appearance */
+    border: 1px solid #ccc;
+    font-size: 1rem;         /* Slightly bigger text */
+    outline: none;
+    transition: box-shadow 0.2s ease;
+  }
+  
+  .search-input:focus {
+    box-shadow: 0 0 4px rgba(0, 123, 255, 0.5);
+  }
+  
+  .filters-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 1rem 0 2rem 0;
+    position: relative;
+  }
+  
+  .filters-toggle-button {
+    padding: 0.6rem 1.2rem;
+    cursor: pointer;
+    background-color: #333;
+    border: none;
+    color: white;
+    font-weight: 600;
+    border-radius: 5px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transition: background-color 0.3s ease;
+    z-index: 10; /* stays on top */
+    position: relative;
+    width: 160px;
+    text-align: center;
+  }
+  
+  .filters-toggle-button:hover {
+    background-color: #777;
+  }
+  
+  .filters-drawer {
+    width: 90vw;
+    max-width: 900px;
+    overflow: hidden;
+    max-height: 0;
+    border-radius: 8px;
+    background: #cccccc; /* very light gray */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12); /* subtle shadow around the box */
+    transition: max-height 0.4s ease, padding 0.3s ease;
+    padding: 0 1.5rem;
+    margin-top: 0;
+  }
+  
+  .filters-drawer.open {
+    max-height: 400px;
+    padding: 1rem 1.5rem;
+    margin-top: 0.5rem;
+  }  
+  
+  .filters-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  input[type="range"] {
+  width: 100%;
+  height: 8px;
+  background: #333;          /* Dark grey track */
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+/* Chrome, Safari, Opera */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  background: #333;          /* Dark grey thumb */
+  border-radius: 50%;
+  cursor: pointer;
+  margin-top: -8px;          /* Center the thumb vertically */
+  border: none;
+  box-shadow: 0 0 3px rgba(0,0,0,0.3);
+  transition: background-color 0.3s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background-color: #555;
+}
+
+/* Firefox */
+input[type="range"]::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  background: #333;          /* Dark grey thumb */
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 3px rgba(0,0,0,0.3);
+  transition: background-color 0.3s;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  background-color: #555;
+}
+
+/* Firefox track */
+input[type="range"]::-moz-range-track {
+  background: #333;
+  height: 8px;
+  border-radius: 4px;
+}

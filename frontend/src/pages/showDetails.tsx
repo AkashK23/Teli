@@ -1,10 +1,17 @@
 import { useParams } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import axios from 'axios';
 
 export default function ShowDetails() {
   const { id } = useParams();
   const [showData, setShowData] = useState<any>(null);
+  const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
+  const [seasonEpisodes, setSeasonEpisodes] = useState<{ [key: number]: any[] }>({});
+  const [reviewText, setReviewText] = useState('');
+  const [rating, setRating] = useState(0); 
+  const [submitted, setSubmitted] = useState(false);
+
+  const positionPercent = 5 + ((rating - 1) / 9) * 90;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -21,7 +28,45 @@ export default function ShowDetails() {
     fetchData();
   }, [id]);
 
+  const fetchSeason = async (seasonNumber: number) => {
+    if (seasonEpisodes[seasonNumber]) {
+      setSelectedSeason(seasonNumber);
+      return;
+    }
+
+    try {
+      console.log(showData.seasons)
+      setSeasonEpisodes((prev) => ({ ...prev, [seasonNumber]: showData.seasons }));
+      setSelectedSeason(seasonNumber);
+    } catch (err) {
+      console.error(`Failed to fetch season ${seasonNumber} episodes:`, err);
+    }
+  };
+
+  const handleReviewSubmit = async () => {
+
+    const payload = {
+      user_id: "Gem55qTyh44NPdFwWZgw", // Replace with actual user ID
+      show_id: id,      // ID from URL params
+      rating: rating,
+      comment: reviewText
+    };
+
+    try {
+      const res = await axios.post('http://localhost:5001/ratings', payload);
+      console.log("Review submitted:", res.data);
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 3000);
+      setReviewText('');
+      setRating(0);
+    } catch (err) {
+      console.error("Error submitting review:", err);
+    }
+  };
+
   if (!showData) return <div>Loading...</div>;
+
+  const seasons = showData.seasons?.filter((s: any) => s.season_number > 0) || [];
 
   return (
     <div style={{ maxWidth: '1000px', margin: '2rem auto', padding: '0 1rem' }}>
@@ -47,6 +92,128 @@ export default function ShowDetails() {
           <p><strong>Overview:</strong> {showData.overview || 'No description available.'}</p>
         </div>
       </div>
+
+      {/* Write a Review Section */}
+      <div style={{ marginTop: '3rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <div style={{ marginTop: '2rem' }}>
+              <h2 className="text-lg font-semibold mb-2">Review</h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  value={rating}
+                  onChange={(e) => setRating(Number(e.target.value))}
+                  style={{
+                    width: '90%',
+                    appearance: 'none',
+                    height: '6px',
+                    background: '#ddd',
+                    borderRadius: '5px',
+                    outline: 'none',
+                    padding: '0',
+                    margin: '0',
+                  }}
+                />
+                <span
+                  style={{
+                    fontWeight: 'bold',
+                    fontSize: '3rem',
+                    color: '#333',
+                    marginLeft: '1rem',
+                    width: '40px',
+                    textAlign: 'right',
+                    marginRight: '2rem'
+                  }}
+                >
+                  {rating}
+                </span>
+              </div>
+            </div>
+
+
+
+          </div>
+
+          <div>
+            <textarea
+              id="reviewText"
+              value={reviewText}
+              onChange={(e) => setReviewText(e.target.value)}
+              rows={4}
+              placeholder="What did you think of this show?"
+              style={{
+                width: '100%',
+                padding: '1rem',
+                fontSize: '1rem',
+                borderRadius: '8px',
+                border: '1px solid #ccc',
+                resize: 'vertical'
+              }}
+            />
+          </div>
+
+          <button
+            onClick={handleReviewSubmit}
+            style={{
+              backgroundColor: '#333',
+              color: 'white',
+              border: 'none',
+              padding: '0.5rem 1rem',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              width: 'fit-content'
+            }}
+          >
+            Submit Review
+          </button>
+
+          {submitted && <p style={{ color: 'green' }}>Review submitted!</p>}
+        </div>
+      </div>
+
+
+      {/* Season ticker */}
+      <div style={{ marginTop: '3rem', textAlign: 'center' }}>
+        <h3>Seasons</h3>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '1rem' }}>
+          {seasons.map((season: any) => (
+            <button
+              key={season.season_number}
+              onClick={() => fetchSeason(season.season_number)}
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                border: '2px solid #333',
+                background: selectedSeason === season.season_number ? '#333' : 'white',
+                color: selectedSeason === season.season_number ? 'white' : '#333',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              S{season.season_number}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Episodes list */}
+      {selectedSeason && seasonEpisodes[selectedSeason] && (
+        <div style={{ marginTop: '2rem' }}>
+          <h3 style={{ marginBottom: '1rem' }}>Season {selectedSeason} Episodes</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {seasonEpisodes[selectedSeason].map((episode: any) => (
+              <div key={episode.id} style={{ padding: '1rem', background: '#f4f4f4', borderRadius: '8px' }}>
+                <strong>{episode.episode_number}. {episode.name}</strong>
+                <p style={{ marginTop: '0.5rem' }}>{episode.overview || 'No description available.'}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
