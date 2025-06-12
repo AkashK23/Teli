@@ -10,8 +10,8 @@ export default function ShowDetails() {
   const [reviewText, setReviewText] = useState('');
   const [rating, setRating] = useState(0); 
   const [submitted, setSubmitted] = useState(false);
-
-  const positionPercent = 5 + ((rating - 1) / 9) * 90;
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [userHasRated, setUserHasRated] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -20,6 +20,15 @@ export default function ShowDetails() {
         const res = await axios.get(`http://localhost:5001/shows/${id}`);
         console.log("Res: ",res)
         setShowData(res.data);
+
+        await fetchReviews();
+
+        // const reviews_backend = await axios.get(`http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/ratings`);
+        // setReviews(reviews_backend.data);
+        // console.log("Reviews: ",reviews)
+
+        // setUserHasRated(reviews_backend.data.some((r: any) => r.show_id === id));
+        
       } catch (err) {
         console.error("Failed to fetch show details:", err);
       }
@@ -43,6 +52,13 @@ export default function ShowDetails() {
     }
   };
 
+  const fetchReviews = async () => {
+    const reviews_backend = await axios.get(`http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/ratings`);
+    setReviews(reviews_backend.data);
+    setUserHasRated(reviews_backend.data.some((r: any) => String(r.show_id) === String(id)));
+  };
+
+
   const handleReviewSubmit = async () => {
 
     const payload = {
@@ -55,6 +71,9 @@ export default function ShowDetails() {
     try {
       const res = await axios.post('http://localhost:5001/ratings', payload);
       console.log("Review submitted:", res.data);
+
+      await fetchReviews();
+
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 3000);
       setReviewText('');
@@ -92,13 +111,39 @@ export default function ShowDetails() {
           <p><strong>Overview:</strong> {showData.overview || 'No description available.'}</p>
         </div>
       </div>
+      
+      {/* Your Review */}
+      {userHasRated && (
+        <h2 className="text-lg font-semibold mb-2" style={{ marginBottom: '2rem' }}>Your Review</h2>
+      )}
+        {userHasRated && (
+        <div className="rating-cards-container">
+          {reviews
+            .filter((review: any) => review.show_id === id)
+            .map((review: any) => (
+              <div className="rating-card" key={review.show_id}>
+                <div className="rating-details">
+                  <div className="rating-score">{review.rating}</div>
+                  <div className="rating-text">
+                    <p>{review.comment}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
+
 
       {/* Write a Review Section */}
       <div style={{ marginTop: '3rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
             <div style={{ marginTop: '2rem' }}>
-              <h2 className="text-lg font-semibold mb-2">Review</h2>
+              {userHasRated ? (
+                <h2 className="text-lg font-semibold mb-2">Update Review</h2> 
+              ) : (
+                <h2 className="text-lg font-semibold mb-2">Review</h2> 
+              )}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <input
                   type="range"
@@ -155,21 +200,37 @@ export default function ShowDetails() {
             />
           </div>
 
-          <button
-            onClick={handleReviewSubmit}
-            style={{
-              backgroundColor: '#333',
-              color: 'white',
-              border: 'none',
-              padding: '0.5rem 1rem',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              width: 'fit-content'
-            }}
-          >
-            Submit Review
-          </button>
-
+          {userHasRated ? (
+                <button
+                  onClick={handleReviewSubmit}
+                  style={{
+                    backgroundColor: '#333',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    width: 'fit-content'
+                  }}
+                >
+                  Update Review
+                </button>
+              ) : (
+                <button
+                  onClick={handleReviewSubmit}
+                  style={{
+                    backgroundColor: '#333',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    width: 'fit-content'
+                  }}
+                >
+                  Submit Review
+                </button>
+              )}
           {submitted && <p style={{ color: 'green' }}>Review submitted!</p>}
         </div>
       </div>

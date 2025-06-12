@@ -1,26 +1,173 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
+import axios from "axios";
+import { Link } from "react-router-dom";
 
-const images = [
-    "https://m.media-amazon.com/images/M/MV5BZjQwYzBlYzUtZjhhOS00ZDQ0LWE0NzAtYTk4MjgzZTNkZWEzXkEyXkFqcGc@._V1_.jpg",
-    "https://m.media-amazon.com/images/M/MV5BMzU5ZGYzNmQtMTdhYy00OGRiLTg0NmQtYjVjNzliZTg1ZGE4XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg",
-    "https://m.media-amazon.com/images/M/MV5BMTNhMDJmNmYtNDQ5OS00ODdlLWE0ZDAtZTgyYTIwNDY3OTU3XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg",
-    "https://m.media-amazon.com/images/M/MV5BOTU2YmM5ZjctOGVlMC00YTczLTljM2MtYjhlNGI5YWMyZjFkXkEyXkFqcGc@._V1_QL75_UY281_CR1,0,190,281_.jpg",
-    "https://m.media-amazon.com/images/M/MV5BZjE4ZDU4ZjMtZjliYS00M2ZmLThkNTItN2U3MmJjOGU0NmIxXkEyXkFqcGc@._V1_.jpg"
-  ];
+
 
 export default function Home() {
 
+const [userInfo, setUserInfo] = useState<any>(null);
+const [ratings, setRatings] = useState<any[]>([]);
+const [ratingsWithImages, setRatingsWithImages] = useState<any[]>([]);
+const [currentlyWatching, setCurrentlyWatching] = useState<any[]>([]);
+const [currentlyWatchingWithImages, setCurrentlyWatchingWithImages] = useState<any[]>([]);
+const [newFromFriends, setNewFromFriends] = useState<any[]>([]);
+
+
+
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5001/user/Gem55qTyh44NPdFwWZgw`);
+      setUserInfo(res.data);
+
+      const currentlyWatching_backend = await axios.get(`http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/currently_watching`);
+      setCurrentlyWatching(currentlyWatching_backend.data);
+      console.log("Currently Watching:", currentlyWatching);
+
+      const ratings_backend = await axios.get(`http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/feed`);
+      const fetchedRatings = ratings_backend.data.feed;
+      setRatings(fetchedRatings);
+      console.log("Fetched Ratings:", fetchedRatings);
+
+      // Immediately fetch images after setting ratings
+      const updatedRatings = await Promise.all(fetchedRatings.map(async (rating: any) => {
+        try {
+          const res = await axios.get(`http://localhost:5001/shows/${rating.show_id}`);
+          console.log("res:",res)
+          const showData = res.data;
+          const imagePath = showData.poster_path;
+          const imageUrl = imagePath?.startsWith("http")
+            ? imagePath
+            : `https://image.tmdb.org/t/p/w500${imagePath}`;
+          return {
+            ...rating,
+            show_name: showData?.name,
+            image_url: showData?.image_url || showData?.thumbnail || imageUrl || null
+          };
+        } catch (err) {
+          console.error("Failed to fetch image for:", rating.show_name);
+          return { ...rating, image_url: null };
+        }
+      }));
+      setRatingsWithImages(updatedRatings);
+
+      const top4Ratings = updatedRatings.slice(0, 4);
+
+      const newShows = await Promise.all(
+        top4Ratings.map(async (rating: any) => {
+          try {
+            const res = await axios.get(`http://localhost:5001/shows/${rating.show_id}`);
+            const showData = res.data;
+            const imagePath = showData.poster_path;
+            const imageUrl = imagePath?.startsWith("http")
+              ? imagePath
+              : `https://image.tmdb.org/t/p/w500${imagePath}`;
+
+            return {
+              ...showData,
+              image_url: showData?.image_url || showData?.thumbnail || imageUrl || null,
+              show_id: rating.show_id,
+            };
+          } catch (err) {
+            console.error("Failed to fetch New From Friends show:", rating.show_id);
+            return null;
+          }
+        })
+      );
+
+      setNewFromFriends(newShows.filter(Boolean)); // filter out nulls
+
+    } catch (err) {
+      console.error("Failed to fetch user:", err);
+    }
+  };
+
+  fetchData();
+}, []);
+
+
+
+  // useEffect(() => {
+  //   const fetchImagesForRatings = async () => {
+  //     const updatedRatings = await Promise.all(ratings.map(async (rating: any) => {
+  //       try {
+  //         console.log("Ratings:",ratings)
+  //         const res = await axios.get(`http://localhost:5001/shows/${rating.show_id}`);
+  //         const showData = res.data;
+  //         const imagePath = showData.poster_path;
+  //         const imageUrl = imagePath?.startsWith("http")
+  //           ? imagePath
+  //           : `https://image.tmdb.org/t/p/w500${imagePath}`;
+  //         return {
+  //           ...rating,
+  //           image_url: showData?.image_url || showData?.thumbnail || imageUrl || null
+  //         };
+  //       } catch (err) {
+  //         console.error("Failed to fetch image for:", rating.show_name);
+  //         return { ...rating, image_url: null };
+  //       }
+  //     }));
+  
+  //     setRatingsWithImages(updatedRatings);
+  //   };
+  
+  //   if (ratings.length > 0) {
+  //     fetchImagesForRatings();
+  //   }
+  // }, [ratings]);
+
+  useEffect(() => {
+  const fetchImagesForCurrentlyWatching = async () => {
+    const updatedShows = await Promise.all(currentlyWatching.map(async (show: any) => {
+      try {
+        const res = await axios.get(`http://localhost:5001/shows/${show.show_id}`);
+        const showData = res.data;
+        const imagePath = showData.poster_path;
+        const imageUrl = imagePath?.startsWith("http")
+          ? imagePath
+          : `https://image.tmdb.org/t/p/w500${imagePath}`;
+
+        return {
+          ...show,
+          image_url: showData?.image_url || showData?.thumbnail || imageUrl || null,
+          name: showData.name || show.show_name
+        };
+      } catch (err) {
+        console.error("Failed to fetch currently watching show:", show.show_name);
+        return { ...show, image_url: null };
+      }
+    }));
+    setCurrentlyWatchingWithImages(updatedShows);
+  };
+
+  if (currentlyWatching.length > 0) {
+    fetchImagesForCurrentlyWatching();
+  }
+}, [currentlyWatching]);
     
 
   return (
     <div className="page-container">
-        <h1 className="headings">You're Watching</h1>
-          <div className="scroll-container">
-            <img src="https://m.media-amazon.com/images/M/MV5BZjQwYzBlYzUtZjhhOS00ZDQ0LWE0NzAtYTk4MjgzZTNkZWEzXkEyXkFqcGc@._V1_.jpg" alt="The Office" className="show-icon"/>
-            <img src="https://m.media-amazon.com/images/M/MV5BMzU5ZGYzNmQtMTdhYy00OGRiLTg0NmQtYjVjNzliZTg1ZGE4XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" alt="Breaking Bad" className="show-icon"/>
-            <img src="https://m.media-amazon.com/images/M/MV5BMTNhMDJmNmYtNDQ5OS00ODdlLWE0ZDAtZTgyYTIwNDY3OTU3XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" alt="Game of Thrones" className="show-icon"/>
-            <img src="https://m.media-amazon.com/images/M/MV5BOTU2YmM5ZjctOGVlMC00YTczLTljM2MtYjhlNGI5YWMyZjFkXkEyXkFqcGc@._V1_QL75_UY281_CR1,0,190,281_.jpg" alt="Friends" className="show-icon"/>
-          </div>
+        <div className="favorite-shows">
+          <h1 className="headings">You're Watching</h1>
+            <div className="favorite-shows-images">
+              {currentlyWatchingWithImages.slice(0, 4).map((show) => (
+
+                <Link
+                  to={`/show/${show.show_id}`}
+                  key={show.show_id}
+                  className="show-link"
+                >
+                  <img
+                    src={show.image_url}
+                    alt={show.name}
+                    className="show-icon home-icon"
+                  />
+                </Link>
+              ))}
+            </div>
+        </div>
         <h1 className="headings">Popular This Week</h1>
         <div className="scroll-container">
             <img src="https://m.media-amazon.com/images/M/MV5BMTg5NjY0NGEtMDFhOS00MzJiLTg1NWEtZDhhNWQ5MmE4ZWIxXkEyXkFqcGc@._V1_.jpg" alt="Squid Games" className="show-icon"/>
@@ -30,85 +177,43 @@ export default function Home() {
         </div>
         <h1 className="headings">New From Friends</h1>
         <div className="scroll-container">
-            <img src="https://m.media-amazon.com/images/M/MV5BZDI5YzJhODQtMzQyNy00YWNmLWIxMjUtNDBjNjA5YWRjMzExXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" alt="Severance" className="show-icon"/>
-            <img src="https://m.media-amazon.com/images/M/MV5BMWJlN2U5MzItNjU4My00NTM2LWFjOWUtOWFiNjg3ZTMxZDY1XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" alt="The Boys" className="show-icon"/>
-            <img src="https://m.media-amazon.com/images/M/MV5BZmI3YWVhM2UtNDZjMC00YTIzLWI2NGUtZWIxODZkZjVmYTg1XkEyXkFqcGc@._V1_.jpg" alt="Ted Lasso" className="show-icon"/>
-            <img src="https://m.media-amazon.com/images/M/MV5BMDRiNTBlY2EtZmRiZC00Mzc4LTljZDctNWQ5ZGY2NjUwNjE4XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" alt="Daredevil Born Again" className="show-icon"/>
+          {newFromFriends.map((show) => (
+            <Link to={`/show/${show.show_id}`} key={show.show_id} className="show-link">
+              <img
+                src={show.image_url}
+                alt={show.name}
+                className="show-icon home-icon"
+              />
+            </Link>
+          ))}
         </div>
-        <h1 className="headings">Recent Activity</h1>
         <div className="review-container">
-          <div className="review-card">
-            <div className="review-card-content">
-              <img
-                src="https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
-                className="review-avatar"
-              />
-              <div className="review-text">
-                <h4 className="review-title">
-                  <b>The Office</b>
-                </h4>
-                <h4 className="review-subtitle">
-                  <b>See Review</b>
-                </h4>
+          <h3 className="shows-label">Recent Reviews</h3>
+          <div className="user-ratings">
+            <div className="rating-cards-container">
+              {ratingsWithImages.map((rating: any) => (
+                  <div className="rating-card" key={rating.show_id}>
+                    <img
+                      src="https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
+                      className="profile-avatar-home"
+                    />
+                    <div className="rating-details">
+                      <div className="rating-text">
+                        <h4>{rating.user_name}</h4>
+                        {/* <h4>{rating.show_name}</h4> */}
+                        <p>{rating.comment}</p>
+                      </div>
+                      <div className="rating-score">{rating.rating}</div>
+                    </div>
+                    <img
+                      src={rating.image_url}
+                      alt={rating.name}
+                      className="rating-show-img"
+                    />
+                  </div>
+                ))}
               </div>
-              <h4 className="review-score">
-                <b>9</b>
-              </h4>
-              <img
-                src="https://m.media-amazon.com/images/M/MV5BZjQwYzBlYzUtZjhhOS00ZDQ0LWE0NzAtYTk4MjgzZTNkZWEzXkEyXkFqcGc@._V1_.jpg"
-                alt="The Office"
-                className="review-icon"
-              />
             </div>
-          </div>
-          <div className="review-card">
-            <div className="review-card-content">
-              <img
-                src="https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
-                className="review-avatar"
-              />
-              <div className="review-text">
-                <h4 className="review-title">
-                  <b>Friends</b>
-                </h4>
-                <h4 className="review-subtitle">
-                  <b>See Review</b>
-                </h4>
-              </div>
-              <h4 className="review-score">
-                <b>7</b>
-              </h4>
-              <img
-                src="https://m.media-amazon.com/images/M/MV5BOTU2YmM5ZjctOGVlMC00YTczLTljM2MtYjhlNGI5YWMyZjFkXkEyXkFqcGc@._V1_QL75_UY281_CR1,0,190,281_.jpg"
-                alt="Friends"
-                className="review-icon"
-              />
-            </div>
-          </div>
-          <div className="review-card">
-            <div className="review-card-content">
-              <img
-                src="https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
-                className="review-avatar"
-              />
-              <div className="review-text">
-                <h4 className="review-title">
-                  <b>The Boys</b>
-                </h4>
-                <h4 className="review-subtitle">
-                  <b>See Review</b>
-                </h4>
-              </div>
-              <h4 className="review-score">
-                <b>7</b>
-              </h4>
-              <img
-                src="https://m.media-amazon.com/images/M/MV5BMWJlN2U5MzItNjU4My00NTM2LWFjOWUtOWFiNjg3ZTMxZDY1XkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg"
-                alt="The Boys"
-                className="review-icon"
-              />
-            </div>
-          </div>
         </div>
     </div>
   )

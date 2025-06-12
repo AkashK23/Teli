@@ -1,18 +1,20 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
+
 
   
 export default function Profile() {
   const [favoriteShows, setFavoriteShows] = useState<any[]>([]);
-  const [watchingShows, setWatchingShows] = useState<any[]>([]);
 
   const favoriteNames = ["Breaking Bad", "Game of Thrones", "Friends", "The Office"];
-  const watchingNames = ["Daredevil", "Dune Prophecy", "Arcane", "White Lotus"];
   const [userInfo, setUserInfo] = useState<any>(null);
   const [following, setFollowing] = useState<any[]>([]);
   const [followers, setFollowers] = useState<any[]>([]);
   const [ratings, setRatings] = useState<any[]>([]);
   const [ratingsWithImages, setRatingsWithImages] = useState<any[]>([]);
+  const [currentlyWatching, setCurrentlyWatching] = useState<any[]>([]);
+  const [currentlyWatchingWithImages, setCurrentlyWatchingWithImages] = useState<any[]>([]);
 
 
   useEffect(() => {
@@ -31,8 +33,12 @@ export default function Profile() {
         setFollowers(followers_backend.data.followers.length);
 
         const ratings_backend = await axios.get(`http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/ratings`);
-        console.log("Ratings: ", ratings_backend.data);
         setRatings(ratings_backend.data);
+        console.log(ratings_backend)
+
+        const currently_watching_backend = await axios.get(`http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/currently_watching`);
+        // console.log("Currently Watching: ", currently_watching_backend.data);
+        setCurrentlyWatching(currently_watching_backend.data);
       } catch (err) {
         console.error("Failed to fetch user:", err);
       }
@@ -42,45 +48,11 @@ export default function Profile() {
   }, []); // <== empty array here
   
 
-  const fetchShowDetails = async (names: string[]) => {
-    const results: any[] = [];
-
-    for (const name of names) {
-      try {
-        const res = await axios.get("http://127.0.0.1:5001/shows/search", {
-          params: { query: name }
-        });
-
-        const showData = res.data.data?.[0]; // first result
-        if (showData) {
-          results.push(showData);
-        }
-      } catch (err) {
-        console.error(`Failed to fetch ${name}`, err);
-      }
-    }
-
-    return results;
-  };
-
-  useEffect(() => {
-    const fetchAllShows = async () => {
-      const [fav, watching] = await Promise.all([
-        fetchShowDetails(favoriteNames),
-        fetchShowDetails(watchingNames)
-      ]);
-
-      setFavoriteShows(fav);
-      setWatchingShows(watching);
-    };
-
-    fetchAllShows();
-  }, []);
-
   useEffect(() => {
     const fetchImagesForRatings = async () => {
       const updatedRatings = await Promise.all(ratings.map(async (rating) => {
         try {
+          console.log("Ratings:", ratings)
           const res = await axios.get(`http://localhost:5001/shows/${rating.show_id}`);
           const showData = res.data;
           const imagePath = showData.poster_path;
@@ -104,6 +76,37 @@ export default function Profile() {
       fetchImagesForRatings();
     }
   }, [ratings]);
+
+  useEffect(() => {
+  const fetchImagesForCurrentlyWatching = async () => {
+    const updatedShows = await Promise.all(currentlyWatching.map(async (show: any) => {
+      try {
+        const res = await axios.get(`http://localhost:5001/shows/${show.show_id}`);
+        const showData = res.data;
+        const imagePath = showData.poster_path;
+        const imageUrl = imagePath?.startsWith("http")
+          ? imagePath
+          : `https://image.tmdb.org/t/p/w500${imagePath}`;
+
+        return {
+          ...show,
+          image_url: showData?.image_url || showData?.thumbnail || imageUrl || null,
+          name: showData.name || show.show_name
+        };
+      } catch (err) {
+        console.error("Failed to fetch currently watching show:", show.show_name);
+        return { ...show, image_url: null };
+      }
+    }));
+
+    setCurrentlyWatchingWithImages(updatedShows);
+  };
+
+  if (currentlyWatching.length > 0) {
+    fetchImagesForCurrentlyWatching();
+  }
+}, [currentlyWatching]);
+
   
   
 
@@ -152,32 +155,47 @@ export default function Profile() {
       <div className="favorite-shows">
         <h3 className="shows-label">Currently Watching</h3>
         <div className="favorite-shows-images">
-          {watchingShows.map(show => (
-            <img key={show.id} src={show.image_url || show.thumbnail} alt={show.name} className="show-icon" />
+          {currentlyWatchingWithImages.map((show) => (
+            <Link
+              to={`/show/${show.show_id}`}
+              key={show.show_id}
+              className="show-link"
+            >
+              <img
+                src={show.image_url}
+                alt={show.name}
+                className="show-icon small-icon"
+              />
+            </Link>
           ))}
         </div>
       </div>
+
+
 
       <div className="favorite-shows">
         <h3 className="shows-label">Recent Reviews</h3>
         <div className="user-ratings">
           <div className="rating-cards-container">
-          {ratingsWithImages.map((rating: any) => (
-              <div className="rating-card" key={rating.show_id}>
-                <img
-                  src={rating.image_url}
-                  alt={rating.show_name}
-                  className="rating-show-img"
-                />
-                <div className="rating-details">
-                  <h4>{rating.show_name}</h4>
-                  <p><b>Rating:</b> {rating.rating}/10</p>
-                  <p>{rating.comment}</p>
-                </div>
+              {ratingsWithImages.map((rating: any) => (
+                  <div className="rating-card" key={rating.show_id}>
+                    <img
+                      src={rating.image_url}
+                      alt={rating.name}
+                      className="rating-show-img"
+                    />
+                    <div className="rating-details">
+                      <div className="rating-score">{rating.rating}</div>
+                      <div className="rating-text">
+                        <p>{rating.comment}</p>
+                      </div>
+                      
+                    </div>
+                    
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
       </div>
     </div>
   );

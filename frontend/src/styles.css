@@ -83,6 +83,12 @@ body {
     object-fit: cover;
     border-radius: 8px;
   }
+
+  .show-icon:hover {
+    transform: scale(1.03);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); /* darker and deeper shadow */
+    background-color: #f9f9f9;
+  }
   
   /* Review Card Styles */
   .review-container {
@@ -404,6 +410,7 @@ body {
     padding: 10px;
     width: 50rem;
     background: #f9f9f9;
+    align-items: center;
   }
   
   .rating-show-img {
@@ -411,6 +418,36 @@ body {
     height: auto;
     border-radius: 8px;
     margin-right: 10px;
+  }
+
+  .rating-details {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+    align-items: center;
+  }
+
+  .rating-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    text-align: left;
+    flex: 1;
+    padding-left: 1rem;
+  }
+
+  .rating-score {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #333;
+    white-space: nowrap;
+    align-self: flex-start;
+    margin-left: 20px;
+    padding-right: 2rem;
+    align-items: center;
+    min-width: 80px;
   }
   
   .rating-details h4 {
@@ -556,3 +593,40 @@ input[type="range"]::-moz-range-track {
   height: 8px;
   border-radius: 4px;
 }
+
+.show-icon.small-icon {
+  width: 125px;
+  height: auto;
+  margin: 0.5rem;
+  border-radius: 12px;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.show-icon.small-icon:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); /* darker and deeper shadow */
+  background-color: #f9f9f9;
+}
+
+.show-link {
+  display: inline-block;
+}
+
+.show-icon.home-icon {
+  width: 200px;
+  height: auto;
+  margin: 0.5rem;
+  border-radius: 12px;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.profile-avatar-home {
+    width: 75px;
+    height: 75px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #ccc;
+}
+

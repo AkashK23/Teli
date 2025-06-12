@@ -107,6 +107,30 @@ const SortByDropdown: React.FC<{ selected: string; setSelected: (value: string) 
   );
 };
 
+const generatePageDots = (currentPage: number, totalPages: number): (number | string)[] => {
+  const pages: (number | string)[] = [];
+
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+    return pages;
+  }
+
+  pages.push(1);
+
+  if (currentPage > 4) pages.push("...");
+
+  for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+    pages.push(i);
+  }
+
+  if (currentPage < totalPages - 3) pages.push("...");
+
+  pages.push(totalPages);
+
+  return pages;
+};
+
+
 export default function Browse() {
   interface CodeLabel {
     code: string;
@@ -130,7 +154,17 @@ export default function Browse() {
   const [languageOptions, setLanguageOptions] = useState<CodeLabel[]>([]);
   const [genreOptions, setGenreOptions] = useState<CodeLabel[]>([]);
   const [popularShows, setPopularShows] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
+  const pageDots = generatePageDots(currentPage, totalPages);
+  const goPrev = () => {
+    setCurrentPage((p) => (p > 1 ? p - 1 : p));
+  };
+
+  const goNext = () => {
+    setCurrentPage((p) => (p < totalPages ? p + 1 : p));
+  };
 
 
 
@@ -161,74 +195,45 @@ export default function Browse() {
   const getCodeFromLabel = (label: string, options: CodeLabel[]) =>
     options.find((opt) => opt.label === label)?.code || "";
   
+  useEffect(() => {
   const fetchFilteredShows = async () => {
     try {
-      // Convert country names to ISO 3166-1 codes
+      // Convert country and language labels to codes
       const countryCodes = country
         .map(label => countryOptions.find(c => c.label === label)?.code)
-        .filter(Boolean) // Remove undefined values
-  
+        .filter(Boolean);
+
       const languageCodes = language
         .map(label => languageOptions.find(l => l.label === label)?.code)
-        .filter(Boolean) // Remove undefined values
+        .filter(Boolean);
 
       const genreCodes = genre
         .map(label => genreOptions.find(g => g.label === label)?.code)
-        .filter(Boolean) // Remove undefined values
-  
-        console.log(genre)
+        .filter(Boolean);
+
       const res = await axios.get("http://127.0.0.1:5001/shows/filter", {
         params: {
           with_origin_country: countryCodes.join(","),
           with_original_language: languageCodes.join(","),
-          // first_air_date: "${minYear}-01-01",
-          // last_air_date: "${maxYear}-12-31",
-          sort_by: "popularity.desc",
           with_genres: genreCodes.join(","),
-          without_genres: "10767,10763"
-        }
+          without_genres: "10767,10763",
+          sort_by: sortBy === "" ? "popularity.desc" : sortBy + ".desc",
+          page: currentPage,
+        },
       });
-  
+
       setPopularShows(res.data.results || []);
-      console.log("Popular shows:", res);
-      console.log("Genre codes used:", genreCodes);
+      setTotalPages(res.data.total_pages);
     } catch (error) {
-      console.error("Error fetching default shows:", error);
+      console.error("Error fetching filtered shows:", error);
       setPopularShows([]);
     }
   };
-  
-  
-  
 
-  useEffect(() => {
-    console.log("Filters changed:", { genre, service, country, sortBy });
-    fetchFilteredShows();
-  }, [genre, service, country, language, sortBy]);
-  
+  fetchFilteredShows();
+}, [genre, service, country, language, sortBy, currentPage]);
 
-  const searchShows = async () => {
-    if (!searchTerm.trim()) return;
-    try {
-      const response = await axios.get("http://127.0.0.1:5001/shows/search", {
-        params: { query: searchTerm }
-      });
-      console.log("Search results:", response.data);
-      if (response.data?.data?.length > 0) {
-        setSearchedShows(response.data.data);
-        const names = response.data.data.map((show: any) => show.name);
-        setSearchNames(names);
-        console.log("First show's genres:", response.data.data[0].genres);
-      } else {
-        setSearchedShows([]);
-        setSearchNames([]);
-      }
-    } catch (error) {
-      console.error("Error fetching shows:", error);
-      setSearchedShows([]);
-      setSearchNames([]);
-    }
-  };
+  
 
   useEffect(() => {
     const fetchData = async () => {
@@ -278,30 +283,59 @@ export default function Browse() {
     };
   
     fetchData();
-  }, []); // <== empty array here
+  }, [currentPage]); // <== empty array here
 
-  useEffect(() => {
-    const fetchPopularShows = async () => {
-      try {
-        const res = await axios.get("http://127.0.0.1:5001/shows/filter", {
-          params: {
-            with_origin_country: "US",
-            with_original_language: "en",
-            sort_by: "popularity.desc",
-            without_genres: "10767, 10763"
-          }
-        });
-        setPopularShows(res.data.results || []);
-        console.log("Popular shows:", res.data.results)
-        // console.log("Genre:", genre)
-      } catch (error) {
-        console.error("Error fetching default shows:", error);
-        setPopularShows([]);
-      }
-    };
+  // useEffect(() => {
+  //   const fetchPopularShows = async () => {
+  //     try {
+  //       const res = await axios.get("http://127.0.0.1:5001/shows/filter", {
+  //         params: {
+  //           with_origin_country: "US",
+  //           with_original_language: "en",
+  //           sort_by: "popularity.desc",
+  //           without_genres: "10767, 10763",
+  //           page: currentPage
+  //         }
+  //       });
+  //       setPopularShows(res.data.results || []);
+  //       setTotalPages(res.data.total_pages);
+  //       console.log("Popular shows:", res)
+  //       console.log("Page:", currentPage)
+  //       // console.log("Genre:", genre)
+  //     } catch (error) {
+  //       console.error("Error fetching default shows:", error);
+  //       setPopularShows([]);
+  //     }
+  //   };
   
-    fetchPopularShows();
-  }, []);
+  //   fetchPopularShows();
+  // }, [currentPage]);
+
+  const updateGenre = (newGenre: string[]) => {
+    setGenre(newGenre);
+    setCurrentPage(1);
+  };
+
+  const updateService = (newService: string[]) => {
+    setService(newService);
+    setCurrentPage(1);
+  };
+
+  const updateCountry = (newCountry: string[]) => {
+    setCountry(newCountry);
+    setCurrentPage(1);
+  };
+
+  const updateLanguage = (newLanguage: string[]) => {
+    setLanguage(newLanguage);
+    setCurrentPage(1);
+  };
+
+  const updateSortBy = (newSortBy: string) => {
+    setSortBy(newSortBy);
+    setCurrentPage(1);
+  };
+
 
   return (
     <div className="content-wrapper">
@@ -330,13 +364,13 @@ export default function Browse() {
 
         <div className={`filters-drawer ${showFilters ? "open" : ""}`}>
           <div className="filters-row">
-              <MultiSelectDropdown label="Genre" options={genreOptions.map((g) => g.label)} selected={genre} setSelected={setGenre} />
+              <MultiSelectDropdown label="Genre" options={genreOptions.map((g) => g.label)} selected={genre} setSelected={updateGenre} />
               {/* <MultiSelectDropdown label="Year" options={sortedDecades} selected={year} setSelected={setYear} /> */}
-              <MultiSelectDropdown label="Service" options={streamingServices} selected={service} setSelected={setService} />
-              <MultiSelectDropdown label="Country" options={countryOptions.map((c) => c.label)} selected={country} setSelected={setCountry}/>
-              <MultiSelectDropdown label="Language" options={languageOptions.map((l) => l.label)} selected={language} setSelected={setLanguage}/>
+              <MultiSelectDropdown label="Service" options={streamingServices} selected={service} setSelected={updateService} />
+              <MultiSelectDropdown label="Country" options={countryOptions.map((c) => c.label)} selected={country} setSelected={updateCountry}/>
+              <MultiSelectDropdown label="Language" options={languageOptions.map((l) => l.label)} selected={language} setSelected={updateLanguage}/>
 
-              <SortByDropdown selected={sortBy} setSelected={setSortBy} />
+              <SortByDropdown selected={sortBy} setSelected={updateSortBy} />
             </div>
           </div>
       </div>
@@ -369,6 +403,109 @@ export default function Browse() {
         })}
       </div>
     )}
+
+      <div style={{ width: "320px", margin: "40px auto", userSelect: "none" }}>
+      <nav aria-label="Pagination" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {/* Left arrow */}
+        <button
+          onClick={goPrev}
+          disabled={currentPage === 1}
+          aria-label="Previous page"
+          style={{
+            cursor: currentPage === 1 ? "not-allowed" : "pointer",
+            fontSize: "24px",
+            border: "none",
+            background: "none",
+            marginRight: 12,
+            userSelect: "none",
+          }}
+        >
+          ◀
+        </button>
+
+        {/* Dots with numbers underneath */}
+        <ul
+          style={{
+            display: "flex",
+            gap: 24,
+            listStyle: "none",
+            padding: 0,
+            margin: 0,
+            justifyContent: "center",
+          }}
+        >
+          {pageDots.map((page, idx) => {
+            if (page === "...") {
+              // Ellipsis
+              return (
+                <li
+                  key={`ellipsis-${idx}`}
+                  style={{
+                    width: 24,
+                    textAlign: "center",
+                    userSelect: "none",
+                    fontSize: 18,
+                    lineHeight: 1,
+                    pointerEvents: "none",
+                  }}
+                >
+                  &hellip;
+                </li>
+              );
+            }
+
+            // Dot + number underneath
+            const isActive = page === currentPage;
+
+            return (
+              <li key={page} style={{ textAlign: "center", cursor: "pointer" }}>
+                {/* The dot */}
+                <div
+                  onClick={() => setCurrentPage(Number(page))}
+                  style={{
+                    width: 16,
+                    height: 16,
+                    margin: "0 auto",
+                    borderRadius: "50%",
+                    backgroundColor: isActive ? "blue" : "#ccc",
+                    transition: "background-color 0.2s",
+                  }}
+                />
+                {/* Number underneath */}
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontSize: 14,
+                    color: isActive ? "blue" : "#333",
+                    fontWeight: isActive ? "bold" : "normal",
+                  }}
+                >
+                  {page}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Right arrow */}
+        <button
+          onClick={goNext}
+          disabled={currentPage === totalPages}
+          aria-label="Next page"
+          style={{
+            cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+            fontSize: "24px",
+            border: "none",
+            background: "none",
+            marginLeft: 12,
+            userSelect: "none",
+          }}
+        >
+          ▶
+        </button>
+      </nav>
+    </div>
+
 
 
     </div>
