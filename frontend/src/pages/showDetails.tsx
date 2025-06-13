@@ -22,12 +22,6 @@ export default function ShowDetails() {
         setShowData(res.data);
 
         await fetchReviews();
-
-        // const reviews_backend = await axios.get(`http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/ratings`);
-        // setReviews(reviews_backend.data);
-        // console.log("Reviews: ",reviews)
-
-        // setUserHasRated(reviews_backend.data.some((r: any) => r.show_id === id));
         
       } catch (err) {
         console.error("Failed to fetch show details:", err);

@@ -86,37 +86,6 @@ useEffect(() => {
   fetchData();
 }, []);
 
-
-
-  // useEffect(() => {
-  //   const fetchImagesForRatings = async () => {
-  //     const updatedRatings = await Promise.all(ratings.map(async (rating: any) => {
-  //       try {
-  //         console.log("Ratings:",ratings)
-  //         const res = await axios.get(`http://localhost:5001/shows/${rating.show_id}`);
-  //         const showData = res.data;
-  //         const imagePath = showData.poster_path;
-  //         const imageUrl = imagePath?.startsWith("http")
-  //           ? imagePath
-  //           : `https://image.tmdb.org/t/p/w500${imagePath}`;
-  //         return {
-  //           ...rating,
-  //           image_url: showData?.image_url || showData?.thumbnail || imageUrl || null
-  //         };
-  //       } catch (err) {
-  //         console.error("Failed to fetch image for:", rating.show_name);
-  //         return { ...rating, image_url: null };
-  //       }
-  //     }));
-  
-  //     setRatingsWithImages(updatedRatings);
-  //   };
-  
-  //   if (ratings.length > 0) {
-  //     fetchImagesForRatings();
-  //   }
-  // }, [ratings]);
-
   useEffect(() => {
   const fetchImagesForCurrentlyWatching = async () => {
     const updatedShows = await Promise.all(currentlyWatching.map(async (show: any) => {

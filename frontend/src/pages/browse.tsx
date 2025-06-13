@@ -145,9 +145,6 @@ export default function Browse() {
   // const [maxYear, setMaxYear] = useState(new Date().getFullYear());
   const [service, setService] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchedShows, setSearchedShows] = useState<any[]>([]);
-  const [searchNames, setSearchNames] = useState<string[]>([]);
   const [country, setCountry] = useState<string[]>(["United States of America"]);
   const [language, setLanguage] = useState<string[]>(["English"]);
   const [countryOptions, setCountryOptions] = useState<CodeLabel[]>([]);
@@ -166,31 +163,10 @@ export default function Browse() {
     setCurrentPage((p) => (p < totalPages ? p + 1 : p));
   };
 
-
-
-  // const tvGenres = [
-  //   "Action", "Adventure", "Animation", "Biography", "Comedy", "Crime", "Documentary", "Drama", 
-  //   "Family", "Fantasy", "Game-Show", "History", "Horror", "Music", "Musical", "Mystery", 
-  //   "News", "Reality-TV", "Romance", "Sci-Fi", "Sport", "Talk-Show", "Thriller", "War", "Western"
-  // ];
-
   const streamingServices = [
     "Netflix", "Hulu", "Amazon Prime Video", "Disney+", "HBO Max", "Apple TV+", "Peacock", 
     "Paramount+", "YouTube", "Tubi", "Crunchyroll"
   ];
-
-  const decades = Array.from({ length: 11 }, (_, i) => {
-    const start = 1920 + i * 10;
-    const years = Array.from({ length: 10 }, (_, j) => (start + j).toString()).reverse();
-    const label = `${start + 9}s`;
-    return { label, years };
-  });
-
-  const sortedDecades = decades.sort((a, b) => {
-    const startA = parseInt(a.label.split('s')[0]);
-    const startB = parseInt(b.label.split('s')[0]);
-    return startB - startA;
-  });
 
   const getCodeFromLabel = (label: string, options: CodeLabel[]) =>
     options.find((opt) => opt.label === label)?.code || "";
@@ -283,33 +259,8 @@ export default function Browse() {
     };
   
     fetchData();
-  }, [currentPage]); // <== empty array here
+  }, [currentPage]);
 
-  // useEffect(() => {
-  //   const fetchPopularShows = async () => {
-  //     try {
-  //       const res = await axios.get("http://127.0.0.1:5001/shows/filter", {
-  //         params: {
-  //           with_origin_country: "US",
-  //           with_original_language: "en",
-  //           sort_by: "popularity.desc",
-  //           without_genres: "10767, 10763",
-  //           page: currentPage
-  //         }
-  //       });
-  //       setPopularShows(res.data.results || []);
-  //       setTotalPages(res.data.total_pages);
-  //       console.log("Popular shows:", res)
-  //       console.log("Page:", currentPage)
-  //       // console.log("Genre:", genre)
-  //     } catch (error) {
-  //       console.error("Error fetching default shows:", error);
-  //       setPopularShows([]);
-  //     }
-  //   };
-  
-  //   fetchPopularShows();
-  // }, [currentPage]);
 
   const updateGenre = (newGenre: string[]) => {
     setGenre(newGenre);
@@ -339,21 +290,6 @@ export default function Browse() {
 
   return (
     <div className="content-wrapper">
-      <div className="search-bar-container">
-        {/* <input
-          type="text"
-          className="search-bar"
-          placeholder="Search titles..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              searchShows();
-            }
-          }}
-        /> */}
-      </div>
-
       <div className="filters-wrapper">
         <button
           onClick={() => setShowFilters((prev) => !prev)}
@@ -379,7 +315,6 @@ export default function Browse() {
       <div className="search-results-grid">
         {popularShows.map((show) => {
           const imagePath = show.poster_path;
-          // console.log(show)
           const imageUrl = imagePath?.startsWith("http")
             ? imagePath
             : `https://image.tmdb.org/t/p/w500${imagePath}`;

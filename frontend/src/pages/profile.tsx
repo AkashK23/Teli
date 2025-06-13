@@ -34,7 +34,7 @@ export default function Profile() {
 
         const ratings_backend = await axios.get(`http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/ratings`);
         setRatings(ratings_backend.data);
-        console.log(ratings_backend)
+        // console.log(ratings_backend)
 
         const currently_watching_backend = await axios.get(`http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/currently_watching`);
         // console.log("Currently Watching: ", currently_watching_backend.data);
@@ -122,7 +122,7 @@ export default function Profile() {
         </div>
         <div className="profile-stats">
           <div className="stat">
-            <div className="stat-number"><b>100</b></div>
+            <div className="stat-number"><b>{ratings.length}</b></div>
             <div className="stat-label">Shows</div>
           </div>
           <div className="stat">
