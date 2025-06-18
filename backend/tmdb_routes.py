@@ -347,3 +347,60 @@ def get_languages():
 def get_countries():
     response = fetch_tmdb_data("/configuration/countries", request.args.get("name"))
     return response
+
+@tmdb.route("/shows/<series_id>/season/<season_number>", methods=["GET"])
+def get_season_details(series_id, season_number):
+    """Get detailed information for a specific season of a TV show."""
+    url = f"{TMDB_BASE_URL}/tv/{series_id}/season/{season_number}"
+    headers = get_tmdb_headers()
+    
+    try:
+        # Validate season_number is an integer
+        try:
+            int(season_number)
+        except ValueError:
+            return jsonify({"error": "Season number must be an integer"}), 400
+            
+        response = requests.get(url, headers=headers)
+        if response.status_code == 401:
+            logger.error("TMDB authentication failed")
+            return jsonify({"error": "TMDB API authentication failed"}), 503
+        elif response.status_code != 200:
+            logger.error(f"TMDB API error: {response.status_code}")
+            return jsonify({"error": f"TMDB API returned status {response.status_code}"}), 500
+            
+        response.raise_for_status()
+        result = response.json()
+        
+        return jsonify(result), 200
+    except Exception as e:
+        return handle_tmdb_api_error(e)
+
+@tmdb.route("/shows/<series_id>/season/<season_number>/episode/<episode_number>", methods=["GET"])
+def get_episode_details(series_id, season_number, episode_number):
+    """Get detailed information for a specific episode of a TV show."""
+    url = f"{TMDB_BASE_URL}/tv/{series_id}/season/{season_number}/episode/{episode_number}"
+    headers = get_tmdb_headers()
+    
+    try:
+        # Validate season_number and episode_number are integers
+        try:
+            int(season_number)
+            int(episode_number)
+        except ValueError:
+            return jsonify({"error": "Season number and episode number must be integers"}), 400
+            
+        response = requests.get(url, headers=headers)
+        if response.status_code == 401:
+            logger.error("TMDB authentication failed")
+            return jsonify({"error": "TMDB API authentication failed"}), 503
+        elif response.status_code != 200:
+            logger.error(f"TMDB API error: {response.status_code}")
+            return jsonify({"error": f"TMDB API returned status {response.status_code}"}), 500
+            
+        response.raise_for_status()
+        result = response.json()
+        
+        return jsonify(result), 200
+    except Exception as e:
+        return handle_tmdb_api_error(e)

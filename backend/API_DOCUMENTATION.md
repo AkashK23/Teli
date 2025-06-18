@@ -20,6 +20,8 @@ http://localhost:5001
   - [Filter Shows](#filter-shows)
   - [Get Show Details](#get-show-details)
   - [Get Content Ratings](#get-content-ratings)
+  - [Get Season Details](#get-season-details)
+  - [Get Episode Details](#get-episode-details)
   - [Get Genres](#get-genres)
   - [Get Languages](#get-languages)
   - [Get Countries](#get-countries)
@@ -37,6 +39,9 @@ http://localhost:5001
   - [Add Rating](#add-rating)
   - [Get User Ratings](#get-user-ratings)
   - [Get Show Ratings](#get-show-ratings)
+- [Episode Rating Endpoints](#episode-rating-endpoints)
+  - [Add Episode Rating](#add-episode-rating)
+  - [Get Episode Ratings](#get-episode-ratings)
 - [Watch Status Endpoints](#watch-status-endpoints)
   - [Update Watch Status](#update-watch-status)
   - [Get Currently Watching](#get-currently-watching)
@@ -456,6 +461,227 @@ curl -X GET "http://localhost:5001/shows/content-ratings/1396"
 **Error Responses**:
 
 - `404 Not Found`: Show not found
+  ```json
+  {
+    "error": "The resource you requested could not be found"
+  }
+  ```
+- `500 Internal Server Error`: TMDB API error
+  ```json
+  {
+    "error": "TMDB API returned status 500"
+  }
+  ```
+
+### Get Season Details
+
+Get detailed information about a specific season of a TV show.
+
+**URL**: `/shows/:series_id/season/:season_number`
+
+**Method**: `GET`
+
+**URL Parameters**:
+
+| Parameter     | Type   | Required | Description                |
+|---------------|--------|----------|----------------------------|
+| series_id     | string | Yes      | The ID of the TV show      |
+| season_number | number | Yes      | The season number          |
+
+**Example Request**:
+
+```bash
+curl -X GET "http://localhost:5001/shows/1396/season/1"
+```
+
+**Example Response**:
+
+```json
+{
+  "_id": "5256c89f19c2956ff6046d47",
+  "air_date": "2008-01-20",
+  "episodes": [
+    {
+      "air_date": "2008-01-20",
+      "episode_number": 1,
+      "id": 62085,
+      "name": "Pilot",
+      "overview": "When an unassuming high school chemistry teacher discovers he has a rare form of lung cancer, he decides to team up with a former student and create a top of the line crystal meth in a used RV, to provide for his family once he is gone.",
+      "production_code": "",
+      "runtime": 58,
+      "season_number": 1,
+      "show_id": 1396,
+      "still_path": "/ydlY3iPfeOAvu8gVqrxPoMvzNCn.jpg",
+      "vote_average": 7.9,
+      "vote_count": 155,
+      "crew": [
+        {
+          "department": "Directing",
+          "job": "Director",
+          "credit_id": "52542275760ee313280006ce",
+          "adult": false,
+          "gender": 2,
+          "id": 66633,
+          "known_for_department": "Writing",
+          "name": "Vince Gilligan",
+          "original_name": "Vince Gilligan",
+          "popularity": 4.953,
+          "profile_path": "/lYqC8Amj4owX05xQg5Yo7EUPLOg.jpg"
+        }
+      ],
+      "guest_stars": [
+        {
+          "character": "Krazy-8",
+          "credit_id": "52542275760ee313280006e4",
+          "order": 0,
+          "adult": false,
+          "gender": 2,
+          "id": 92495,
+          "known_for_department": "Acting",
+          "name": "Max Arciniega",
+          "original_name": "Max Arciniega",
+          "popularity": 3.262,
+          "profile_path": "/zRIINchwAhqnkZ1jnWqWPLjQSaO.jpg"
+        }
+      ]
+    },
+    {
+      "air_date": "2008-01-27",
+      "episode_number": 2,
+      "id": 62086,
+      "name": "Cat's in the Bag...",
+      "overview": "Walt and Jesse attempt to tie up loose ends. The desperate situation gets more complicated with the flip of a coin. Walt's wife, Skyler, becomes suspicious of Walt's strange behavior.",
+      "production_code": "",
+      "runtime": 48,
+      "season_number": 1,
+      "show_id": 1396,
+      "still_path": "/tjDNvbokPLtEnpFyFPyXMoMHRnT.jpg",
+      "vote_average": 7.9,
+      "vote_count": 125
+    }
+    // Additional episodes...
+  ],
+  "name": "Season 1",
+  "overview": "High school chemistry teacher Walter White's life is suddenly transformed by a dire medical diagnosis. Street-savvy former student Jesse Pinkman \"teaches\" Walter a new trade.",
+  "id": 3572,
+  "poster_path": "/1BP4xYv9ZG4ZVHkL7ocOziBbSYH.jpg",
+  "season_number": 1
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request`: Invalid parameters
+  ```json
+  {
+    "error": "Season number must be an integer"
+  }
+  ```
+- `404 Not Found`: Season not found
+  ```json
+  {
+    "error": "The resource you requested could not be found"
+  }
+  ```
+- `500 Internal Server Error`: TMDB API error
+  ```json
+  {
+    "error": "TMDB API returned status 500"
+  }
+  ```
+
+### Get Episode Details
+
+Get detailed information about a specific episode of a TV show.
+
+**URL**: `/shows/:series_id/season/:season_number/episode/:episode_number`
+
+**Method**: `GET`
+
+**URL Parameters**:
+
+| Parameter      | Type   | Required | Description                |
+|----------------|--------|----------|----------------------------|
+| series_id      | string | Yes      | The ID of the TV show      |
+| season_number  | number | Yes      | The season number          |
+| episode_number | number | Yes      | The episode number         |
+
+**Example Request**:
+
+```bash
+curl -X GET "http://localhost:5001/shows/1396/season/1/episode/1"
+```
+
+**Example Response**:
+
+```json
+{
+  "air_date": "2008-01-20",
+  "crew": [
+    {
+      "department": "Directing",
+      "job": "Director",
+      "credit_id": "52542275760ee313280006ce",
+      "adult": false,
+      "gender": 2,
+      "id": 66633,
+      "known_for_department": "Writing",
+      "name": "Vince Gilligan",
+      "original_name": "Vince Gilligan",
+      "popularity": 4.953,
+      "profile_path": "/lYqC8Amj4owX05xQg5Yo7EUPLOg.jpg"
+    },
+    {
+      "department": "Writing",
+      "job": "Writer",
+      "credit_id": "52542275760ee313280006d4",
+      "adult": false,
+      "gender": 2,
+      "id": 66633,
+      "known_for_department": "Writing",
+      "name": "Vince Gilligan",
+      "original_name": "Vince Gilligan",
+      "popularity": 4.953,
+      "profile_path": "/lYqC8Amj4owX05xQg5Yo7EUPLOg.jpg"
+    }
+  ],
+  "episode_number": 1,
+  "guest_stars": [
+    {
+      "character": "Krazy-8",
+      "credit_id": "52542275760ee313280006e4",
+      "order": 0,
+      "adult": false,
+      "gender": 2,
+      "id": 92495,
+      "known_for_department": "Acting",
+      "name": "Max Arciniega",
+      "original_name": "Max Arciniega",
+      "popularity": 3.262,
+      "profile_path": "/zRIINchwAhqnkZ1jnWqWPLjQSaO.jpg"
+    }
+  ],
+  "id": 62085,
+  "name": "Pilot",
+  "overview": "When an unassuming high school chemistry teacher discovers he has a rare form of lung cancer, he decides to team up with a former student and create a top of the line crystal meth in a used RV, to provide for his family once he is gone.",
+  "production_code": "",
+  "runtime": 58,
+  "season_number": 1,
+  "still_path": "/ydlY3iPfeOAvu8gVqrxPoMvzNCn.jpg",
+  "vote_average": 7.9,
+  "vote_count": 155
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request`: Invalid parameters
+  ```json
+  {
+    "error": "Season number and episode number must be integers"
+  }
+  ```
+- `404 Not Found`: Episode not found
   ```json
   {
     "error": "The resource you requested could not be found"
@@ -1364,6 +1590,183 @@ curl -X GET "http://localhost:5001/shows/breaking_bad/ratings"
 
 **Error Responses**:
 
+- `500 Internal Server Error`: Database error
+  ```json
+  {
+    "error": "Database error occurred"
+  }
+  ```
+
+## Episode Rating Endpoints
+
+These endpoints manage user ratings for specific TV show episodes.
+
+### Add Episode Rating
+
+Add or update a rating for a specific episode of a TV show.
+
+**URL**: `/episode_ratings`
+
+**Method**: `POST`
+
+**Request Body**:
+
+| Field          | Type   | Required | Description                |
+|----------------|--------|----------|----------------------------|
+| user_id        | string | Yes      | ID of the user             |
+| show_id        | string | Yes      | ID of the TV show          |
+| season_number  | number | Yes      | Season number (must be ≥ 1)|
+| episode_number | number | Yes      | Episode number (must be ≥ 1)|
+| rating         | number | Yes      | Rating value (1-10)        |
+| comment        | string | No       | Optional review comment    |
+
+**Example Request**:
+
+```bash
+curl -X POST "http://localhost:5001/episode_ratings" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user123",
+    "show_id": "1396",
+    "season_number": 1,
+    "episode_number": 1,
+    "rating": 9,
+    "comment": "Amazing pilot episode!"
+  }'
+```
+
+**Example Response**:
+
+```json
+{
+  "message": "Rating added successfully!",
+  "id": "episode_rating123"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request`: Validation error
+  ```json
+  {
+    "errors": [
+      {
+        "loc": ["rating"],
+        "msg": "ensure this value is less than or equal to 10",
+        "type": "value_error.number.not_le"
+      }
+    ]
+  }
+  ```
+- `404 Not Found`: User not found
+  ```json
+  {
+    "error": "User not found"
+  }
+  ```
+- `500 Internal Server Error`: Database error
+  ```json
+  {
+    "error": "Database error occurred"
+  }
+  ```
+
+### Get Episode Ratings
+
+Get ratings for episodes in a specific season of a TV show.
+
+**URL**: `/users/:user_id/shows/:show_id/season/:season_number/ratings`
+
+**Method**: `GET`
+
+**URL Parameters**:
+
+| Parameter     | Type   | Required | Description                |
+|---------------|--------|----------|----------------------------|
+| user_id       | string | Yes      | The ID of the user         |
+| show_id       | string | Yes      | The ID of the TV show      |
+| season_number | number | Yes      | The season number          |
+
+**Query Parameters**:
+
+| Parameter      | Type   | Required | Description                      |
+|----------------|--------|----------|----------------------------------|
+| episode_number | number | No       | Filter by specific episode number|
+
+**Example Request (All Episodes in Season)**:
+
+```bash
+curl -X GET "http://localhost:5001/users/user123/shows/1396/season/1/ratings"
+```
+
+**Example Request (Specific Episode)**:
+
+```bash
+curl -X GET "http://localhost:5001/users/user123/shows/1396/season/1/ratings?episode_number=1"
+```
+
+**Example Response (All Episodes in Season)**:
+
+```json
+[
+  {
+    "id": "episode_rating123",
+    "user_id": "user123",
+    "show_id": "1396",
+    "season_number": 1,
+    "episode_number": 1,
+    "rating": 9,
+    "comment": "Amazing pilot episode!",
+    "timestamp": "2024-05-30T14:22:10Z"
+  },
+  {
+    "id": "episode_rating456",
+    "user_id": "user123",
+    "show_id": "1396",
+    "season_number": 1,
+    "episode_number": 2,
+    "rating": 8,
+    "comment": "Great follow-up to the pilot",
+    "timestamp": "2024-05-31T09:15:30Z"
+  }
+]
+```
+
+**Example Response (Specific Episode)**:
+
+```json
+{
+  "id": "episode_rating123",
+  "user_id": "user123",
+  "show_id": "1396",
+  "season_number": 1,
+  "episode_number": 1,
+  "rating": 9,
+  "comment": "Amazing pilot episode!",
+  "timestamp": "2024-05-30T14:22:10Z"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request`: Invalid parameters
+  ```json
+  {
+    "error": "Episode number must be an integer"
+  }
+  ```
+- `404 Not Found`: User not found
+  ```json
+  {
+    "error": "User not found"
+  }
+  ```
+- `404 Not Found`: Episode rating not found
+  ```json
+  {
+    "error": "Episode rating not found"
+  }
+  ```
 - `500 Internal Server Error`: Database error
   ```json
   {
