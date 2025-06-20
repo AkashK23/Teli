@@ -135,6 +135,14 @@ class AddRatingRequest(BaseModel):
     rating: int = Field(..., ge=1, le=10)  # Rating between 1-10
     comment: Optional[str] = None
 
+class AddEpisodeRatingRequest(BaseModel):
+    user_id: str
+    show_id: str
+    season_number: int = Field(..., ge=1)  # Season number must be positive
+    episode_number: int = Field(..., ge=1)  # Episode number must be positive
+    rating: int = Field(..., ge=1, le=10)  # Rating between 1-10
+    comment: Optional[str] = None
+
 @teli.route("/ratings", methods=["POST"])
 def add_rating():
     try:
@@ -179,6 +187,48 @@ def add_rating():
     
     except Exception as e:
         logger.error(f"Error adding rating: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@teli.route("/episode_ratings", methods=["POST"])
+def add_episode_rating():
+    try:
+        req_data = AddEpisodeRatingRequest.model_validate(request.get_json())
+    except ValidationError as e:
+        return jsonify({"errors": e.errors()}), 400
+
+    # Check if user exists
+    user_ref = db.collection("users").document(req_data.user_id).get()
+    if not user_ref.exists:
+        return jsonify({"error": "User not found"}), 404
+        
+    rating_data = req_data.model_dump()
+    rating_data["timestamp"] = datetime.now(timezone.utc).isoformat()
+
+    try:
+        # Check if a rating from the same user for the same episode already exists
+        episode_ratings_ref = db.collection("episode_ratings")
+        query = episode_ratings_ref.where(
+            filter=FieldFilter("user_id", "==", rating_data["user_id"])).where(
+                filter=FieldFilter("show_id", "==", rating_data["show_id"])).where(
+                    filter=FieldFilter("season_number", "==", rating_data["season_number"])).where(
+                        filter=FieldFilter("episode_number", "==", rating_data["episode_number"])).limit(1)
+
+        existing_ratings = list(query.stream())
+        existing_rating = existing_ratings[0] if existing_ratings else None
+
+        if existing_rating:
+            # If rating exists, update it
+            existing_rating.reference.update(rating_data)
+            rating_id = existing_rating.id
+        else:
+            # If rating does not exist, create a new one
+            rating_ref = episode_ratings_ref.add(rating_data)
+            rating_id = rating_ref[1].id
+
+        return jsonify({"message": "Rating added successfully!", "id": rating_id})
+    
+    except Exception as e:
+        logger.error(f"Error adding episode rating: {e}")
         return jsonify({"error": str(e)}), 500
     
 def update_feeds_with_rating(user_id, rating_id, rating_data):
@@ -239,6 +289,68 @@ def get_user_ratings(user_id):
         return jsonify(ratings_list), 200
     except Exception as e:
         logger.error(f"Error getting user ratings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@teli.route("/users/<user_id>/shows/<show_id>/season/<season_number>/ratings", methods=["GET"])
+def get_episode_ratings(user_id, show_id, season_number):
+    try:
+        # Check if user exists
+        user_ref = db.collection("users").document(user_id).get()
+        if not user_ref.exists:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Validate season number
+        try:
+            season_num = int(season_number)
+        except ValueError:
+            return jsonify({"error": "Season number must be an integer"}), 400
+        
+        # Check if the request is for a specific episode
+        episode_number = request.args.get("episode_number")
+        
+        if episode_number:
+            # Convert to integer
+            try:
+                episode_number = int(episode_number)
+            except ValueError:
+                return jsonify({"error": "Episode number must be an integer"}), 400
+                
+            # Get rating for a specific episode
+            query = db.collection("episode_ratings").where(
+                filter=FieldFilter("user_id", "==", user_id)).where(
+                    filter=FieldFilter("show_id", "==", show_id)).where(
+                        filter=FieldFilter("season_number", "==", season_num)).where(
+                            filter=FieldFilter("episode_number", "==", episode_number)).limit(1)
+                            
+            docs = list(query.stream())
+            
+            if not docs:
+                return jsonify({"error": "Episode rating not found"}), 404
+                
+            rating_data = docs[0].to_dict()
+            rating_data["id"] = docs[0].id
+            
+            return jsonify(rating_data), 200
+            
+        else:
+            # Get all ratings for the season
+            query = db.collection("episode_ratings").where(
+                filter=FieldFilter("user_id", "==", user_id)).where(
+                    filter=FieldFilter("show_id", "==", show_id)).where(
+                        filter=FieldFilter("season_number", "==", season_num))
+                        
+            docs = query.stream()
+            
+            ratings_list = []
+            for doc in docs:
+                rating_data = doc.to_dict()
+                rating_data["id"] = doc.id
+                ratings_list.append(rating_data)
+                
+            return jsonify(ratings_list), 200
+            
+    except Exception as e:
+        logger.error(f"Error getting episode ratings: {e}")
         return jsonify({"error": str(e)}), 500
 
 @teli.route("/shows/<show_id>/ratings", methods=["GET"])
