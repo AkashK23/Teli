@@ -10,12 +10,6 @@ import Profile from "./pages/profile";
 import { Route, Routes } from "react-router-dom";
 import ShowDetails from './pages/showDetails';
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
 function App() {
   return (
   <>

@@ -2,12 +2,14 @@ import { Link, useMatch, useResolvedPath, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
 
+/* Navigation Bar */
 export default function Navbar() {
   const [searchInput, setSearchInput] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const navigate = useNavigate();
 
+  /* Find search suggestions */
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (!searchInput.trim()) {
@@ -30,6 +32,7 @@ export default function Navbar() {
     return () => clearTimeout(delayDebounce);
   }, [searchInput]);
 
+  /* Arrow Key Tracking */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "ArrowDown") {
       setSelectedIndex((prev) => Math.min(prev + 1, suggestions.length - 1));
@@ -42,14 +45,13 @@ export default function Navbar() {
         navigate(`/search?query=${encodeURIComponent(searchInput.trim())}`);
       }
 
-      // 🔹 Clear search bar and suggestions
       setSearchInput("");
       setSuggestions([]);
       setSelectedIndex(-1);
     }
   };
 
-
+  /* If search suggestion is selected go to show */
   const handleSelect = (name: string, id: string) => {
     setSearchInput("");
     navigate(`/show/${encodeURIComponent(id)}`);
@@ -61,6 +63,7 @@ export default function Navbar() {
 
   return (
     <nav className="nav" style={{ position: "relative" }}>
+      {/* Links */}
       <Link to="/" className="site-title">Teli</Link>
       <ul className="nav-links">
         <CustomLink to="/browse">Browse</CustomLink>
@@ -68,6 +71,7 @@ export default function Navbar() {
         <CustomLink to="/profile">Profile</CustomLink>
       </ul>
 
+      {/* Search Bar */}
       <div className="nav-search" style={{ position: "relative", width: "250px" }}>
         <input
           type="text"
@@ -103,7 +107,6 @@ export default function Navbar() {
           >
 
             {suggestions.map((s, index) => {
-              // console.log(s.name)
               const isSelected = index === selectedIndex;
               const img = s.poster_path?.startsWith("http")
                 ? s.poster_path
@@ -145,6 +148,8 @@ export default function Navbar() {
     </nav>
   );
 }
+
+/* Highlights the active link */
 
 interface CustomLinkProps {
   to: string;

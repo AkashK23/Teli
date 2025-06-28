@@ -2,8 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 
-
-
+/* Home Page */
 export default function Home() {
 
 const [userInfo, setUserInfo] = useState<any>(null);
@@ -14,7 +13,7 @@ const [currentlyWatchingWithImages, setCurrentlyWatchingWithImages] = useState<a
 const [newFromFriends, setNewFromFriends] = useState<any[]>([]);
 
 
-
+/* Pull user info from backend */
 useEffect(() => {
   const fetchData = async () => {
     try {
@@ -52,12 +51,14 @@ useEffect(() => {
       }));
       setRatingsWithImages(updatedRatings);
 
-      const top4Ratings = updatedRatings.slice(0, 4);
+      const top3Ratings = updatedRatings.slice(0, 3);
 
       const newShows = await Promise.all(
-        top4Ratings.map(async (rating: any) => {
+        top3Ratings.map(async (rating: any) => {
           try {
-            const res = await axios.get(`http://localhost:5001/shows/${rating.show_id}`);
+            const res = await axios.get(
+              `http://localhost:5001/shows/${rating.show_id}`
+            );
             const showData = res.data;
             const imagePath = showData.poster_path;
             const imageUrl = imagePath?.startsWith("http")
@@ -66,11 +67,15 @@ useEffect(() => {
 
             return {
               ...showData,
-              image_url: showData?.image_url || showData?.thumbnail || imageUrl || null,
+              image_url:
+                showData?.image_url || showData?.thumbnail || imageUrl || null,
               show_id: rating.show_id,
             };
           } catch (err) {
-            console.error("Failed to fetch New From Friends show:", rating.show_id);
+            console.error(
+              "Failed to fetch New From Friends show:",
+              rating.show_id
+            );
             return null;
           }
         })
@@ -86,7 +91,8 @@ useEffect(() => {
   fetchData();
 }, []);
 
-  useEffect(() => {
+/* Fetch images for currently watching shows */
+useEffect(() => {
   const fetchImagesForCurrentlyWatching = async () => {
     const updatedShows = await Promise.all(currentlyWatching.map(async (show: any) => {
       try {
@@ -118,6 +124,7 @@ useEffect(() => {
 
   return (
     <div className="page-container">
+        {/* You're Watching */}
         <div className="favorite-shows">
           <h1 className="headings">You're Watching</h1>
             <div className="favorite-shows-images">
@@ -137,6 +144,7 @@ useEffect(() => {
               ))}
             </div>
         </div>
+        {/* Popular This Week */}
         <h1 className="headings">Popular This Week</h1>
         <div className="scroll-container">
             <img src="https://m.media-amazon.com/images/M/MV5BMTg5NjY0NGEtMDFhOS00MzJiLTg1NWEtZDhhNWQ5MmE4ZWIxXkEyXkFqcGc@._V1_.jpg" alt="Squid Games" className="show-icon"/>
@@ -144,6 +152,7 @@ useEffect(() => {
             <img src="https://m.media-amazon.com/images/M/MV5BOWJhYjdjNWEtMWFmNC00ZjNkLThlZGEtN2NkM2U3NTVmMjZkXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" alt="Arcane" className="show-icon"/>
             <img src="https://m.media-amazon.com/images/M/MV5BZmM1MGM0MDQtZTAzNy00ZGJkLWI4MDUtNjBmMzdhYjhlM2QwXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" alt="White Lotus" className="show-icon"/>
         </div>
+        {/* New From Friends*/}
         <h1 className="headings">New From Friends</h1>
         <div className="scroll-container">
           {newFromFriends.map((show) => (
@@ -156,6 +165,7 @@ useEffect(() => {
             </Link>
           ))}
         </div>
+        {/* Recent Reviews */}
         <div className="review-container">
           <h3 className="shows-label">Recent Reviews</h3>
           <div className="user-ratings">
