@@ -5,7 +5,7 @@ from flask_cors import CORS
 from pydantic import BaseModel, EmailStr, Field, ValidationError
 from werkzeug.exceptions import BadRequest
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from flask import Blueprint, request, jsonify
 import requests
 import logging
@@ -715,6 +715,93 @@ def get_watch_status(user_id, show_id):
     except Exception as e:
         logger.error(f"Error retrieving watch status: {e}")
         return jsonify({"error": "Database error occurred"}), 500
+
+@teli.route("/shows/popular", methods=["GET"])
+def get_popular_shows():
+    try:
+        # Get timeframe parameter (default to 7 days if not provided)
+        timeframe_days = request.args.get("timeframe", "7")
+        
+        # Validate timeframe parameter
+        try:
+            timeframe_days = int(timeframe_days)
+            if timeframe_days < 1:
+                return jsonify({"error": "Timeframe must be a positive integer"}), 400
+        except ValueError:
+            return jsonify({"error": "Timeframe must be a valid integer"}), 400
+        
+        # Get num_most_popular parameter (default to 10 if not provided)
+        try:
+            num_most_popular = int(request.args.get("num_most_popular", "10"))
+            if num_most_popular < 1:
+                num_most_popular = 10
+            elif num_most_popular > 100:  # Set a reasonable upper limit
+                num_most_popular = 100
+        except ValueError:
+            return jsonify({"error": "num_most_popular parameter must be a valid integer"}), 400
+        
+        # Calculate the date based on the timeframe
+        start_date = datetime.now(timezone.utc) - timedelta(days=timeframe_days)
+        start_date_str = start_date.isoformat()
+        
+        # Query ratings from the specified timeframe with a reasonable limit
+        ratings_ref = db.collection("ratings").where(
+            filter=FieldFilter("timestamp", ">=", start_date_str)).limit(10000)
+        
+        # Get ratings from the specified timeframe
+        ratings = list(ratings_ref.stream())
+        
+        # Count ratings per show
+        show_rating_counts = {}
+        
+        for rating in ratings:
+            rating_data = rating.to_dict()
+            show_id = rating_data.get("show_id")
+            
+            if show_id:
+                if show_id in show_rating_counts:
+                    show_rating_counts[show_id] += 1
+                else:
+                    show_rating_counts[show_id] = 1
+        
+        # Sort shows by rating count (most popular first)
+        sorted_shows = sorted(show_rating_counts.items(), 
+                             key=lambda x: x[1], reverse=True)
+        
+        # Limit to the specified number of most popular shows
+        top_shows = sorted_shows[:num_most_popular]
+        
+        # Prepare result with show details
+        result = []
+        for show_id, count in top_shows:
+            # Use the existing endpoint to get show details
+            try:
+                # Import necessary modules
+                from flask import current_app
+                with current_app.test_client() as client:
+                    response = client.get(f"/shows/{show_id}")
+                    if response.status_code == 200:
+                        show_details = response.get_json()
+                        # Add rating count for the specified timeframe
+                        show_details["rating_count"] = count
+                        # Add the timeframe to the response
+                        show_details["timeframe_days"] = timeframe_days
+                        result.append(show_details)
+            except Exception as e:
+                logger.error(f"Error fetching show details for {show_id}: {e}")
+                # Continue with the next show if there's an error
+                continue
+        
+        return jsonify({
+            "popular_shows": result,
+            "timeframe_days": timeframe_days,
+            "total_shows_found": len(sorted_shows),
+            "num_most_popular": num_most_popular
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting popular shows: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @teli.route("/delete_watch_status", methods=["POST"])
 def delete_watch_status():
