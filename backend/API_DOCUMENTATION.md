@@ -39,6 +39,7 @@ http://localhost:5001
   - [Add Rating](#add-rating)
   - [Get User Ratings](#get-user-ratings)
   - [Get Show Ratings](#get-show-ratings)
+  - [Get Popular Shows](#get-popular-shows)
 - [Episode Rating Endpoints](#episode-rating-endpoints)
   - [Add Episode Rating](#add-episode-rating)
   - [Get Episode Ratings](#get-episode-ratings)
@@ -1594,6 +1595,91 @@ curl -X GET "http://localhost:5001/shows/breaking_bad/ratings"
   ```json
   {
     "error": "Database error occurred"
+  }
+  ```
+
+### Get Popular Shows
+
+Get a list of the most popular shows based on the number of ratings within a specified timeframe.
+
+**URL**: `/shows/popular`
+
+**Method**: `GET`
+
+**Query Parameters**:
+
+| Parameter        | Type   | Required | Description                                           |
+|------------------|--------|----------|-------------------------------------------------------|
+| timeframe        | number | No       | Number of days to look back (default: 7)              |
+| num_most_popular | number | No       | Number of most popular shows to return (default: 10, max: 100) |
+
+**Example Request (Default parameters)**:
+
+```bash
+curl -X GET "http://localhost:5001/shows/popular"
+```
+
+**Example Request (Custom timeframe)**:
+
+```bash
+curl -X GET "http://localhost:5001/shows/popular?timeframe=30"
+```
+
+**Example Request (Custom number of shows)**:
+
+```bash
+curl -X GET "http://localhost:5001/shows/popular?num_most_popular=5"
+```
+
+**Example Response**:
+
+```json
+{
+  "popular_shows": [
+    {
+      "id": 1396,
+      "name": "Breaking Bad",
+      "poster_path": "/ggFHVNu6YYI5L9pCfOacjizRGt.jpg",
+      "backdrop_path": "/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg",
+      "overview": "When Walter White, a New Mexico chemistry teacher, is diagnosed with Stage III cancer and given a prognosis of only two years left to live. He becomes filled with a sense of fearlessness and an unrelenting desire to secure his family's financial future at any cost as he enters the dangerous world of drugs and crime.",
+      "rating_count": 42,
+      "timeframe_days": 7
+    },
+    {
+      "id": 66732,
+      "name": "Stranger Things",
+      "poster_path": "/49WJfeN0moxb9IPfGn8AIqMGskD.jpg",
+      "backdrop_path": "/56v2KjBlU4XaOv9rVYEQypROD7P.jpg",
+      "overview": "When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces, and one strange little girl.",
+      "rating_count": 38,
+      "timeframe_days": 7
+    }
+    // Additional shows...
+  ],
+  "timeframe_days": 7,
+  "total_shows_found": 25,
+  "num_most_popular": 10
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request`: Invalid parameters
+  ```json
+  {
+    "error": "Timeframe must be a positive integer"
+  }
+  ```
+- `400 Bad Request`: Invalid parameters
+  ```json
+  {
+    "error": "num_most_popular parameter must be a valid integer"
+  }
+  ```
+- `500 Internal Server Error`: Database error
+  ```json
+  {
+    "error": "Error getting popular shows: [error details]"
   }
   ```
 
