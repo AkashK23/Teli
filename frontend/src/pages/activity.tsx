@@ -1,84 +1,53 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useUser } from "../UserContext";
 
-/* Activity Page */
 export default function Activity() {
   const [activeTab, setActiveTab] = useState<"following" | "user">("following");
   const [followingReviews, setFollowingReviews] = useState<any[]>([]);
   const [userReviews, setUserReviews] = useState<any[]>([]);
+  const url = `http://localhost:5001`;
+  const user_id = useUser().userId;
 
-  /* Pull review info from backend */
   useEffect(() => {
     const fetchReviews = async () => {
       try {
         const [followingRes, userRes] = await Promise.all([
-          axios.get("http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/feed"),
-          axios.get("http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/ratings"),
+          axios.get(`${url}/users/${user_id}/feed`),
+          axios.get(`${url}/users/${user_id}/ratings`),
         ]);
         const fetchedFollowingRatings = followingRes.data.feed;
-        setFollowingReviews(fetchedFollowingRatings);
         const fetchedUserRatings = userRes.data;
-        setUserReviews(fetchedUserRatings);
 
-        const updatedRatingsFollowing = await Promise.all(
-          fetchedFollowingRatings.map(async (rating: any) => {
-            try {
-              const res = await axios.get(
-                `http://localhost:5001/shows/${rating.show_id}`
-              );
-              console.log("res:", res);
-              const showData = res.data;
-              const imagePath = showData.poster_path;
-              const imageUrl = imagePath?.startsWith("http")
-                ? imagePath
-                : `https://image.tmdb.org/t/p/w500${imagePath}`;
-              return {
-                ...rating,
-                show_name: showData?.name,
-                image_url:
-                  showData?.image_url ||
-                  showData?.thumbnail ||
-                  imageUrl ||
-                  null,
-              };
-            } catch (err) {
-              console.error("Failed to fetch image for:", rating.show_name);
-              return { ...rating, image_url: null };
-            }
-          })
-        );
+        const enrichRatings = async (ratings: any[]) => {
+          return await Promise.all(
+            ratings.map(async (rating: any) => {
+              try {
+                const res = await axios.get(`${url}/shows/${rating.show_id}`);
+                const showData = res.data;
+                const imagePath = showData.poster_path;
+                const imageUrl = imagePath?.startsWith("http")
+                  ? imagePath
+                  : `https://image.tmdb.org/t/p/w500${imagePath}`;
+                return {
+                  ...rating,
+                  show_name: showData?.name,
+                  image_url:
+                    showData?.image_url ||
+                    showData?.thumbnail ||
+                    imageUrl ||
+                    null,
+                };
+              } catch (err) {
+                console.error("Failed to fetch image for:", rating.show_name);
+                return { ...rating, image_url: null };
+              }
+            })
+          );
+        };
 
-        setFollowingReviews(updatedRatingsFollowing);
-
-        const updatedRatingsUser = await Promise.all(
-          fetchedUserRatings.map(async (rating: any) => {
-            try {
-              const res = await axios.get(
-                `http://localhost:5001/shows/${rating.show_id}`
-              );
-              console.log("res:", res);
-              const showData = res.data;
-              const imagePath = showData.poster_path;
-              const imageUrl = imagePath?.startsWith("http")
-                ? imagePath
-                : `https://image.tmdb.org/t/p/w500${imagePath}`;
-              return {
-                ...rating,
-                show_name: showData?.name,
-                image_url:
-                  showData?.image_url ||
-                  showData?.thumbnail ||
-                  imageUrl ||
-                  null,
-              };
-            } catch (err) {
-              console.error("Failed to fetch image for:", rating.show_name);
-              return { ...rating, image_url: null };
-            }
-          })
-        );
-
-        setUserReviews(updatedRatingsUser);
+        setFollowingReviews(await enrichRatings(fetchedFollowingRatings));
+        setUserReviews(await enrichRatings(fetchedUserRatings));
       } catch (err) {
         console.error("Failed to fetch reviews:", err);
       }
@@ -87,7 +56,6 @@ export default function Activity() {
     fetchReviews();
   }, []);
 
-  /* Render Reviews */
   const renderReviews = (reviews: any[]) => {
     return reviews.length === 0 ? (
       <p>No reviews yet.</p>
@@ -122,32 +90,29 @@ export default function Activity() {
   };
 
   return (
-    <div className="page-container">
-      {/* Tabs */}
-      <div className="tab-container">
-        <button
-          className={`tab-button ${activeTab === "following" ? "active" : ""}`}
+    <div style={styles.container}>
+      <div style={styles.tabContainer}>
+        <div
           onClick={() => setActiveTab("following")}
+          style={{
+            ...styles.tab,
+            ...(activeTab === "following" ? styles.activeTab : {}),
+          }}
         >
           Following
-        </button>
-        <button
-          className={`tab-button ${activeTab === "user" ? "active" : ""}`}
+        </div>
+        <div
           onClick={() => setActiveTab("user")}
+          style={{
+            ...styles.tab,
+            ...(activeTab === "user" ? styles.activeTab : {}),
+          }}
         >
           You
-        </button>
-        <div
-          className="tab-slider"
-          style={{
-            transform:
-              activeTab === "following" ? "translateX(0%)" : "translateX(100%)",
-          }}
-        />
+        </div>
       </div>
 
-      {/* Render reviews for each tab */}
-      <div className="tab-content">
+      <div style={styles.contentContainer}>
         {activeTab === "following"
           ? renderReviews(followingReviews)
           : renderReviews(userReviews)}
@@ -155,3 +120,39 @@ export default function Activity() {
     </div>
   );
 }
+
+const styles = {
+  container: {
+    maxWidth: "600px",
+    margin: "3rem auto",
+    padding: "2rem",
+  },
+  title: {
+    textAlign: "center" as const,
+    fontSize: "2rem",
+    marginBottom: "1.5rem",
+  },
+  tabContainer: {
+    display: "flex",
+    borderRadius: "6px",
+    overflow: "hidden",
+    border: "1px solid #ccc",
+    marginBottom: "2rem",
+  },
+  tab: {
+    flex: 1,
+    textAlign: "center" as const,
+    padding: "0.75rem",
+    cursor: "pointer",
+    backgroundColor: "#f5f5f5",
+    fontWeight: 600,
+    transition: "background-color 0.2s ease",
+  },
+  activeTab: {
+    backgroundColor: "#333",
+    color: "white",
+  },
+  contentContainer: {
+    marginTop: "1rem",
+  },
+};

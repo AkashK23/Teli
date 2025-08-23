@@ -1,9 +1,16 @@
 import { useParams } from 'react-router-dom';
 import React, { useRef, useEffect, useState } from 'react';
 import axios from 'axios';
+import { useUser } from "../UserContext";
+import ProtectedSection from "../components/ProtectedSection";
+
+type WatchStatus = "want_to_watch" | "currently_watching" | "watched" | "";
 
  /* Show details page */
 export default function ShowDetails() {
+  const url = `http://localhost:5001`;
+  const user_id = useUser().userId;
+
   const { id } = useParams();
   const [showData, setShowData] = useState<any>(null);
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
@@ -13,10 +20,13 @@ export default function ShowDetails() {
   const [submitted, setSubmitted] = useState(false);
   const [reviews, setReviews] = useState<any[]>([]);
   const [userHasRated, setUserHasRated] = useState(false);
+  const [loadingShow, setLoadingShow] = useState(true);
+  const [loadingReview, setLoadingReview] = useState(true);
   const [episodeReviews, setEpisodeReviews] = useState<any[]>([]);
   const [episodeReviewStates, setEpisodeReviewStates] = useState<
     Record<number, { open: boolean; rating: number; text: string }>
   >({});
+  const [watchStatus, setWatchStatus] = useState<WatchStatus>("");
 
   /* Pull show data from backend */
   useEffect(() => {
@@ -25,18 +35,78 @@ export default function ShowDetails() {
         setSelectedSeason(null);
         setSeasonEpisodes([]);
         setShowData(null);
-
-        const res = await axios.get(`http://localhost:5001/shows/${id}`);
+        setLoadingShow(true);
+        const res = await axios.get(`${url}/shows/${id}`);
         setShowData(res.data);
 
-        await fetchReviews();
+        // await fetchReviews();
       } catch (err) {
         console.error("Failed to fetch show details:", err);
+      } finally {
+        setLoadingShow(false);
       }
     };
 
     fetchData();
   }, [id]);
+
+  // Fetch user review if userId exists
+  useEffect(() => {
+    if (!user_id) {
+      setReviews([]);
+      setUserHasRated(false);
+      setLoadingReview(false);
+      return;
+    }
+
+    const fetchUserReview = async () => {
+      try {
+        setLoadingReview(true);
+        const res = await axios.get(`${url}/users/${user_id}/ratings`);
+        const userReview = res.data.find(
+          (r: any) => String(r.show_id) === String(id)
+        );
+        if (userReview) {
+          setReviews([userReview]);
+          setUserHasRated(true);
+          setRating(userReview.rating);
+          setReviewText(userReview.comment);
+        } else {
+          setReviews([]);
+          setUserHasRated(false);
+          setRating(0);
+          setReviewText("");
+        }
+      } catch (err) {
+        console.error("Failed to fetch user review:", err);
+      } finally {
+        setLoadingReview(false);
+      }
+    };
+
+    fetchUserReview();
+  }, [user_id, id]);
+
+  // Fetch existing status from backend
+  useEffect(() => {
+    if (!user_id) return;
+
+    const fetchWatchStatus = async () => {
+      try {
+        const res = await axios.get(
+          `http://localhost:5001/users/${user_id}/watch_status/${id}`
+        );
+        console.log(res.data.status);
+        if (res.data?.status) {
+          setWatchStatus(res.data.status as WatchStatus);
+        }
+      } catch (err) {
+        console.error("Error fetching watch status:", err);
+      }
+    };
+
+    fetchWatchStatus();
+  }, [user_id, id]);
 
   // After showData is updated, load Season 1 if available
   useEffect(() => {
@@ -54,11 +124,9 @@ export default function ShowDetails() {
     }
 
     try {
-      const res = await axios.get(
-        `http://localhost:5001/shows/${id}/season/${seasonNumber}`
-      );
+      const res = await axios.get(`${url}/shows/${id}/season/${seasonNumber}`);
       const data = res.data;
-      console.log(data);
+      // console.log(data);
 
       setSeasonEpisodes((prev) => ({
         ...prev,
@@ -78,9 +146,7 @@ export default function ShowDetails() {
 
   /* Pull user reviews of the show from backend */
   const fetchReviews = async () => {
-    const reviews_backend = await axios.get(
-      `http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/ratings`
-    );
+    const reviews_backend = await axios.get(`${url}/users/${user_id}/ratings`);
     setReviews(reviews_backend.data);
     setUserHasRated(
       reviews_backend.data.some((r: any) => String(r.show_id) === String(id))
@@ -90,24 +156,26 @@ export default function ShowDetails() {
   /* Pull user reviews of episodes from backend */
   const fetchEpisodeReviews = async () => {
     const episode_reviews_backend = await axios.get(
-      `http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/shows/${id}/season/${selectedSeason}/ratings`
+      `${url}/users/${user_id}/shows/${id}/season/${selectedSeason}/ratings`
     );
-    console.log("episode reviews:", episode_reviews_backend.data);
+    // console.log("episode reviews:", episode_reviews_backend.data);
 
     setEpisodeReviews(episode_reviews_backend.data);
   };
 
   /* Show review submit function */
   const handleReviewSubmit = async () => {
+    if (!user_id) return;
+
     const payload = {
-      user_id: "Gem55qTyh44NPdFwWZgw", // Replace with actual user ID
+      user_id: user_id, // Replace with actual user ID
       show_id: id, // ID from URL params
       rating: rating,
       comment: reviewText,
     };
 
     try {
-      const res = await axios.post("http://localhost:5001/ratings", payload);
+      const res = await axios.post(`${url}/ratings`, payload);
       console.log("Review submitted:", res.data);
 
       await fetchReviews();
@@ -116,6 +184,24 @@ export default function ShowDetails() {
       setTimeout(() => setSubmitted(false), 3000);
       setReviewText("");
       setRating(0);
+
+      setWatchStatus("watched");
+      const payloadWatchStatus = {
+        user_id: user_id,
+        show_id: id,
+        status: "watched",
+        // current_season:1,
+        // current_episode:1,
+      };
+
+      try {
+        const res = await axios.post(
+          `${url}/update_watch_status`,
+          payloadWatchStatus
+        );
+      } catch (err) {
+        console.error("Error changing watch status:", err);
+      }
     } catch (err) {
       console.error("Error submitting review:", err);
     }
@@ -130,7 +216,7 @@ export default function ShowDetails() {
     if (!state || state.text.trim() === "") return;
 
     const payload = {
-      user_id: "Gem55qTyh44NPdFwWZgw", // Replace with dynamic user ID if available
+      user_id: user_id,
       show_id: id,
       season_number: seasonNumber,
       episode_number: episodeNumber,
@@ -139,10 +225,7 @@ export default function ShowDetails() {
     };
 
     try {
-      const res = await axios.post(
-        "http://localhost:5001/episode_ratings",
-        payload
-      );
+      const res = await axios.post(`${url}/episode_ratings`, payload);
       console.log("Episode review submitted:", res.data);
 
       setEpisodeReviewStates((prev) => ({
@@ -194,6 +277,54 @@ export default function ShowDetails() {
     }));
   };
 
+  /* Change watch status */
+  const handleWatchStatusChange = async (
+    event: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const newStatus = event.target.value as WatchStatus;
+    setWatchStatus(newStatus);
+
+    
+    if (newStatus == "") {
+      const payload = {
+        user_id: user_id,
+        show_id: id,
+      };
+
+      try {
+        const res = await axios.post(`${url}/delete_watch_status`, payload);
+        console.log("Watch Status deleted:", res.data);
+      } catch (err) {
+        console.error("Error changing watch status:", err);
+      }
+
+    }
+    else {
+      const payload = {
+        user_id: user_id,
+        show_id: id,
+        status: newStatus,
+        // current_season:1,
+        // current_episode:1,
+      };
+
+      try {
+        const res = await axios.post(`${url}/update_watch_status`, payload);
+        console.log("Watch Status updated:", res.data);
+      } catch (err) {
+        console.error("Error changing watch status:", err);
+      }
+    }
+
+    // if (newStatus == "want_to_watch") {
+
+    // } else if (newStatus == "currently_watching") {
+    // } else if (newStatus == "watched") {
+    // }
+  };
+
+  if (loadingShow) return <div>Loading show details...</div>;
+
   return (
     <div style={{ maxWidth: "1000px", margin: "2rem auto", padding: "0 1rem" }}>
       {/* Show information */}
@@ -225,138 +356,184 @@ export default function ShowDetails() {
             <strong>Overview:</strong>{" "}
             {showData.overview || "No description available."}
           </p>
+
+          {/* --- Watch Status Dropdown --- */}
+          {user_id && !loadingReview && (
+            <div style={{ marginTop: "1rem" }}>
+              <label htmlFor="watchStatus" style={{ fontWeight: "bold" }}>
+                Watch Status:
+              </label>
+              <select
+                id="watchStatus"
+                value={watchStatus}
+                onChange={handleWatchStatusChange}
+                style={{
+                  marginLeft: "0.5rem",
+                  marginTop: "2rem",
+                  padding: "0.5rem",
+                  borderRadius: "4px",
+                  border: "1px solid #ccc",
+                  backgroundColor: "white",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease-in-out",
+                  fontSize: "1rem",
+                }}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.backgroundColor = "#f0f0f0")
+                }
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.backgroundColor = "#f9f9f9")
+                }
+              >
+                <option value="">Select...</option>
+                <option value="want_to_watch">Want to Watch</option>
+                <option value="currently_watching">Currently Watching</option>
+                <option value="watched">Watched</option>
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Your Review */}
-      {userHasRated && (
-        <h2
-          className="text-lg font-semibold mb-2"
-          style={{ marginBottom: "2rem" }}
-        >
-          Your Review
-        </h2>
-      )}
-      {userHasRated && (
-        <div className="rating-cards-container">
-          {reviews
-            .filter((review: any) => review.show_id === id)
-            .map((review: any) => (
-              <div className="rating-card" key={review.show_id}>
-                <div className="rating-details">
-                  <div className="rating-score">{review.rating}</div>
-                  <div className="rating-text">
-                    <p>{review.comment}</p>
+      {user_id && !loadingReview && (
+        <>
+          {userHasRated && (
+            <h2
+              className="text-lg font-semibold mb-2"
+              style={{ marginBottom: "2rem" }}
+            >
+              Your Review
+            </h2>
+          )}
+
+          {userHasRated && (
+            <div className="rating-cards-container">
+              {reviews
+                .filter((review: any) => review.show_id === id)
+                .map((review: any) => (
+                  <div className="rating-card" key={review.show_id}>
+                    <div className="rating-details">
+                      <div className="rating-score">{review.rating}</div>
+                      <div className="rating-text">
+                        <p>{review.comment}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+
+          {/* Write a Review Section */}
+
+          <div style={{ marginTop: "3rem" }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+            >
+              <div>
+                <div style={{ marginTop: "2rem" }}>
+                  {userHasRated ? (
+                    <h2 className="text-lg font-semibold mb-2">
+                      Update Review
+                    </h2>
+                  ) : (
+                    <h2 className="text-lg font-semibold mb-2">Review</h2>
+                  )}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <input
+                      type="range"
+                      min="0"
+                      max="10"
+                      value={rating}
+                      onChange={(e) => setRating(Number(e.target.value))}
+                      style={{
+                        width: "90%",
+                        appearance: "none",
+                        height: "6px",
+                        background: "#ddd",
+                        borderRadius: "5px",
+                        outline: "none",
+                        padding: "0",
+                        margin: "0",
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontWeight: "bold",
+                        fontSize: "3rem",
+                        color: "#333",
+                        marginLeft: "1rem",
+                        width: "40px",
+                        textAlign: "right",
+                        marginRight: "2rem",
+                      }}
+                    >
+                      {rating}
+                    </span>
                   </div>
                 </div>
               </div>
-            ))}
-        </div>
-      )}
 
-      {/* Write a Review Section */}
-      <div style={{ marginTop: "3rem" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div>
-            <div style={{ marginTop: "2rem" }}>
-              {userHasRated ? (
-                <h2 className="text-lg font-semibold mb-2">Update Review</h2>
-              ) : (
-                <h2 className="text-lg font-semibold mb-2">Review</h2>
-              )}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <input
-                  type="range"
-                  min="0"
-                  max="10"
-                  value={rating}
-                  onChange={(e) => setRating(Number(e.target.value))}
+              <div>
+                <textarea
+                  id="reviewText"
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  rows={4}
+                  placeholder="What did you think of this show?"
                   style={{
-                    width: "90%",
-                    appearance: "none",
-                    height: "6px",
-                    background: "#ddd",
-                    borderRadius: "5px",
-                    outline: "none",
-                    padding: "0",
-                    margin: "0",
+                    width: "100%",
+                    padding: "1rem",
+                    fontSize: "1rem",
+                    borderRadius: "8px",
+                    border: "1px solid #ccc",
+                    resize: "vertical",
                   }}
                 />
-                <span
+              </div>
+
+              {userHasRated ? (
+                <button
+                  onClick={handleReviewSubmit}
                   style={{
-                    fontWeight: "bold",
-                    fontSize: "3rem",
-                    color: "#333",
-                    marginLeft: "1rem",
-                    width: "40px",
-                    textAlign: "right",
-                    marginRight: "2rem",
+                    backgroundColor: "#333",
+                    color: "white",
+                    border: "none",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    width: "fit-content",
                   }}
                 >
-                  {rating}
-                </span>
-              </div>
+                  Update Review
+                </button>
+              ) : (
+                <button
+                  onClick={handleReviewSubmit}
+                  style={{
+                    backgroundColor: "#333",
+                    color: "white",
+                    border: "none",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    width: "fit-content",
+                  }}
+                >
+                  Submit Review
+                </button>
+              )}
+              {submitted && <p style={{ color: "green" }}>Review submitted!</p>}
             </div>
           </div>
-
-          <div>
-            <textarea
-              id="reviewText"
-              value={reviewText}
-              onChange={(e) => setReviewText(e.target.value)}
-              rows={4}
-              placeholder="What did you think of this show?"
-              style={{
-                width: "100%",
-                padding: "1rem",
-                fontSize: "1rem",
-                borderRadius: "8px",
-                border: "1px solid #ccc",
-                resize: "vertical",
-              }}
-            />
-          </div>
-
-          {userHasRated ? (
-            <button
-              onClick={handleReviewSubmit}
-              style={{
-                backgroundColor: "#333",
-                color: "white",
-                border: "none",
-                padding: "0.5rem 1rem",
-                borderRadius: "6px",
-                cursor: "pointer",
-                width: "fit-content",
-              }}
-            >
-              Update Review
-            </button>
-          ) : (
-            <button
-              onClick={handleReviewSubmit}
-              style={{
-                backgroundColor: "#333",
-                color: "white",
-                border: "none",
-                padding: "0.5rem 1rem",
-                borderRadius: "6px",
-                cursor: "pointer",
-                width: "fit-content",
-              }}
-            >
-              Submit Review
-            </button>
-          )}
-          {submitted && <p style={{ color: "green" }}>Review submitted!</p>}
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Season ticker */}
       <div style={{ marginTop: "3rem", textAlign: "center" }}>
@@ -488,24 +665,28 @@ export default function ShowDetails() {
                       </p>
                     </div>
 
-                    {/* Review toggle button */}
-                    <button
-                      onClick={() =>
-                        toggleEpisodeReview(episode.episode_number)
-                      }
-                      style={{
-                        backgroundColor: "#333",
-                        color: "white",
-                        border: "none",
-                        padding: "0.5rem 1rem",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        height: "fit-content",
-                        alignSelf: "center",
-                      }}
-                    >
-                      {epState.open ? "Hide Review" : "Review"}
-                    </button>
+                    {user_id && !loadingReview && (
+                      <>
+                        {/* Review toggle button */}
+                        <button
+                          onClick={() =>
+                            toggleEpisodeReview(episode.episode_number)
+                          }
+                          style={{
+                            backgroundColor: "#333",
+                            color: "white",
+                            border: "none",
+                            padding: "0.5rem 1rem",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            height: "fit-content",
+                            alignSelf: "center",
+                          }}
+                        >
+                          {epState.open ? "Hide Review" : "Review"}
+                        </button>
+                      </>
+                    )}
                   </div>
 
                   {/* Review form dropdown */}

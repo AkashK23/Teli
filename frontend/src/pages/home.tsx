@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import { useUser } from "../UserContext";
 
 /* Home Page */
 export default function Home() {
@@ -8,23 +9,42 @@ export default function Home() {
 const [userInfo, setUserInfo] = useState<any>(null);
 const [ratings, setRatings] = useState<any[]>([]);
 const [ratingsWithImages, setRatingsWithImages] = useState<any[]>([]);
+const [popularShows, setPopularShows] = useState<any[]>([]);
 const [currentlyWatching, setCurrentlyWatching] = useState<any[]>([]);
 const [currentlyWatchingWithImages, setCurrentlyWatchingWithImages] = useState<any[]>([]);
 const [newFromFriends, setNewFromFriends] = useState<any[]>([]);
+
+const url = `http://localhost:5001`;
+const user_id = useUser().userId;
+// const user_id = "Gem55qTyh44NPdFwWZgw";
 
 
 /* Pull user info from backend */
 useEffect(() => {
   const fetchData = async () => {
     try {
-      const res = await axios.get(`http://localhost:5001/user/Gem55qTyh44NPdFwWZgw`);
+      const res = await axios.get(`${url}/user/${user_id}`);
       setUserInfo(res.data);
 
-      const currentlyWatching_backend = await axios.get(`http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/currently_watching`);
+      const currentlyWatching_backend = await axios.get(
+        `${url}/users/${user_id}/currently_watching`
+      );
       setCurrentlyWatching(currentlyWatching_backend.data);
       console.log("Currently Watching:", currentlyWatching);
 
-      const ratings_backend = await axios.get(`http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/feed`);
+      const popularShows_backend = await axios.get(
+        `${url}/shows/popular`,
+        {
+          params: {
+            timeframe: 100,
+            num_most_popular: 4,
+          },
+        }
+      );
+      setPopularShows(popularShows_backend.data.popular_shows);
+      console.log("Popular Shows:", popularShows);
+
+      const ratings_backend = await axios.get(`${url}/users/${user_id}/feed`);
       const fetchedRatings = ratings_backend.data.feed;
       setRatings(fetchedRatings);
       console.log("Fetched Ratings:", fetchedRatings);
@@ -32,7 +52,7 @@ useEffect(() => {
       // Immediately fetch images after setting ratings
       const updatedRatings = await Promise.all(fetchedRatings.map(async (rating: any) => {
         try {
-          const res = await axios.get(`http://localhost:5001/shows/${rating.show_id}`);
+          const res = await axios.get(`${url}/shows/${rating.show_id}`);
           console.log("res:",res)
           const showData = res.data;
           const imagePath = showData.poster_path;
@@ -57,7 +77,7 @@ useEffect(() => {
         top3Ratings.map(async (rating: any) => {
           try {
             const res = await axios.get(
-              `http://localhost:5001/shows/${rating.show_id}`
+              `${url}/shows/${rating.show_id}`
             );
             const showData = res.data;
             const imagePath = showData.poster_path;
@@ -96,7 +116,7 @@ useEffect(() => {
   const fetchImagesForCurrentlyWatching = async () => {
     const updatedShows = await Promise.all(currentlyWatching.map(async (show: any) => {
       try {
-        const res = await axios.get(`http://localhost:5001/shows/${show.show_id}`);
+        const res = await axios.get(`${url}/shows/${show.show_id}`);
         const showData = res.data;
         const imagePath = showData.poster_path;
         const imageUrl = imagePath?.startsWith("http")
@@ -124,76 +144,86 @@ useEffect(() => {
 
   return (
     <div className="page-container">
-        {/* You're Watching */}
-        <div className="favorite-shows">
-          <h1 className="headings">You're Watching</h1>
-            <div className="favorite-shows-images">
-              {currentlyWatchingWithImages.slice(0, 4).map((show) => (
-
-                <Link
-                  to={`/show/${show.show_id}`}
-                  key={show.show_id}
-                  className="show-link"
-                >
-                  <img
-                    src={show.image_url}
-                    alt={show.name}
-                    className="show-icon home-icon"
-                  />
-                </Link>
-              ))}
-            </div>
-        </div>
-        {/* Popular This Week */}
-        <h1 className="headings">Popular This Week</h1>
-        <div className="scroll-container">
-            <img src="https://m.media-amazon.com/images/M/MV5BMTg5NjY0NGEtMDFhOS00MzJiLTg1NWEtZDhhNWQ5MmE4ZWIxXkEyXkFqcGc@._V1_.jpg" alt="Squid Games" className="show-icon"/>
-            <img src="https://m.media-amazon.com/images/M/MV5BOTc2YTFiOTItZmRiNi00OWE5LThhOTEtMmZhMTkzYmRiNjIxXkEyXkFqcGc@._V1_.jpg" alt="Dune Prophecy" className="show-icon"/>
-            <img src="https://m.media-amazon.com/images/M/MV5BOWJhYjdjNWEtMWFmNC00ZjNkLThlZGEtN2NkM2U3NTVmMjZkXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" alt="Arcane" className="show-icon"/>
-            <img src="https://m.media-amazon.com/images/M/MV5BZmM1MGM0MDQtZTAzNy00ZGJkLWI4MDUtNjBmMzdhYjhlM2QwXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg" alt="White Lotus" className="show-icon"/>
-        </div>
-        {/* New From Friends*/}
-        <h1 className="headings">New From Friends</h1>
-        <div className="scroll-container">
-          {newFromFriends.map((show) => (
-            <Link to={`/show/${show.show_id}`} key={show.show_id} className="show-link">
-              <img
-                src={show.image_url}
-                alt={show.name}
-                className="show-icon home-icon"
-              />
-            </Link>
-          ))}
-        </div>
-        {/* Recent Reviews */}
-        <div className="review-container">
-          <h3 className="shows-label">Recent Reviews</h3>
-          <div className="user-ratings">
-            <div className="rating-cards-container">
-              {ratingsWithImages.map((rating: any) => (
-                  <div className="rating-card" key={rating.show_id}>
-                    <img
-                      src="https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
-                      className="profile-avatar-home"
-                    />
-                    <div className="rating-details">
-                      <div className="rating-text">
-                        <h4>{rating.user_name}</h4>
-                        {/* <h4>{rating.show_name}</h4> */}
-                        <p>{rating.comment}</p>
-                      </div>
-                      <div className="rating-score">{rating.rating}</div>
-                    </div>
-                    <img
-                      src={rating.image_url}
-                      alt={rating.name}
-                      className="rating-show-img"
-                    />
+      {/* You're Watching */}
+      <h1 className="headings">You're Watching</h1>
+      <div className="scroll-container">
+        {currentlyWatchingWithImages.slice(0, 4).map((show) => (
+          <Link
+            to={`/show/${show.show_id}`}
+            key={show.show_id}
+            className="show-link"
+          >
+            <img
+              src={show.image_url}
+              alt={show.name}
+              className="show-icon home-icon"
+            />
+          </Link>
+        ))}
+      </div>
+      {/* Popular This Week */}
+      <h1 className="headings">Popular This Week</h1>
+      <div className="scroll-container">
+        {popularShows.map((show) => (
+          <Link
+            to={`/show/${show.id}`}
+            key={show.id}
+            className="show-link"
+          >
+            <img
+              src={`https://image.tmdb.org/t/p/w300${show.poster_path}`}
+              alt={show.name}
+              className="show-icon home-icon"
+            />
+          </Link>
+        ))}
+      </div>
+      {/* New From Friends*/}
+      <h1 className="headings">New From Friends</h1>
+      <div className="scroll-container">
+        {newFromFriends.map((show) => (
+          <Link
+            to={`/show/${show.show_id}`}
+            key={show.show_id}
+            className="show-link"
+          >
+            <img
+              src={show.image_url}
+              alt={show.name}
+              className="show-icon home-icon"
+            />
+          </Link>
+        ))}
+      </div>
+      {/* Recent Reviews */}
+      <div className="review-container">
+        <h3 className="headings">Recent Reviews</h3>
+        <div className="user-ratings">
+          <div className="rating-cards-container">
+            {ratingsWithImages.map((rating: any) => (
+              <div className="rating-card" key={rating.show_id}>
+                <img
+                  src="https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
+                  className="profile-avatar-home"
+                />
+                <div className="rating-details">
+                  <div className="rating-text">
+                    <h4>{rating.user_name}</h4>
+                    {/* <h4>{rating.show_name}</h4> */}
+                    <p>{rating.comment}</p>
                   </div>
-                ))}
+                  <div className="rating-score">{rating.rating}</div>
+                </div>
+                <img
+                  src={rating.image_url}
+                  alt={rating.name}
+                  className="rating-show-img"
+                />
               </div>
-            </div>
+            ))}
+          </div>
         </div>
+      </div>
     </div>
-  )
+  );
 }

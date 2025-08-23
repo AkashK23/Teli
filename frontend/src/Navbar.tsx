@@ -1,13 +1,19 @@
 import { Link, useMatch, useResolvedPath, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useUser } from "./UserContext";
 
 /* Navigation Bar */
 export default function Navbar() {
   const [searchInput, setSearchInput] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
+  const url = `http://localhost:5001`;
+  const { userId, setUserId } = useUser();
+
+  
 
   /* Find search suggestions */
   useEffect(() => {
@@ -59,20 +65,47 @@ export default function Navbar() {
     setSelectedIndex(-1);
   };
 
+  const handleLogout = () => {
+    setUserId(null);
+    localStorage.removeItem("userId"); // if you're storing in localStorage
+    navigate("/login"); 
+  };
 
+// if (loading) {
+//   return null; // Or a spinner
+// }
 
   return (
     <nav className="nav" style={{ position: "relative" }}>
       {/* Links */}
-      <Link to="/" className="site-title">Teli</Link>
+      <Link to="/" className="site-title">
+        Teli
+      </Link>
       <ul className="nav-links">
         <CustomLink to="/browse">Browse</CustomLink>
-        <CustomLink to="/activity">Activity</CustomLink>
-        <CustomLink to="/profile">Profile</CustomLink>
+        {userId && (
+          <>
+            <CustomLink to="/activity">Activity</CustomLink>
+            <CustomLink to="/profile">Profile</CustomLink>
+          </>
+        )}
+
+        {/* <CustomLink to="/activity">Activity</CustomLink>
+        <CustomLink to="/profile">Profile</CustomLink> */}
+        {userId ? (
+          <button onClick={handleLogout} className="logout-btn">
+            Logout
+          </button>
+        ) : (
+          <CustomLink to="/login">Login</CustomLink>
+        )}
       </ul>
 
       {/* Search Bar */}
-      <div className="nav-search" style={{ position: "relative", width: "250px" }}>
+      <div
+        className="nav-search"
+        style={{ position: "relative", width: "250px" }}
+      >
         <input
           type="text"
           className="search-input"
@@ -105,7 +138,6 @@ export default function Navbar() {
               display: "block", // make sure it's block (or remove if it's default)
             }}
           >
-
             {suggestions.map((s, index) => {
               const isSelected = index === selectedIndex;
               const img = s.poster_path?.startsWith("http")
@@ -126,7 +158,6 @@ export default function Navbar() {
                   }}
                   onMouseEnter={() => setSelectedIndex(index)}
                 >
-
                   <img
                     src={img}
                     alt={s.name}
@@ -138,7 +169,15 @@ export default function Navbar() {
                       marginRight: 12,
                     }}
                   />
-                  <span style={{ fontSize: "15px", lineHeight: "1.2", color: "#000" }}>{s.name}</span>
+                  <span
+                    style={{
+                      fontSize: "15px",
+                      lineHeight: "1.2",
+                      color: "#000",
+                    }}
+                  >
+                    {s.name}
+                  </span>
                 </li>
               );
             })}

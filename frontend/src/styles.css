@@ -91,6 +91,25 @@ body {
   box-shadow: 0 0 4px rgba(0, 123, 255, 0.5);
 }
 
+.logout-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  background-color: #777;
+}
+
+.nav-disabled {
+  color: #888;
+  cursor: not-allowed;
+}
+
 /* Home */
   
 .headings {
@@ -227,6 +246,14 @@ body {
   align-items: center;
 }
 
+.dropdown-label {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .dropdown-list {
   margin-top: 0.5rem;
   padding: 0.5rem;
@@ -332,6 +359,19 @@ body {
   padding: 1rem;
   border-right: 1px solid #ccc;
   background-color: #f9f9f9;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.filter-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #444;
+  margin-bottom: 0.25rem;
 }
 
 .filters-column {

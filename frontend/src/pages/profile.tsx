@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import { useUser } from "../UserContext";
 
 
  /* Profile page */  
 export default function Profile() {
+
+  const url = `http://localhost:5001`;
+  const user_id = useUser().userId;
+
   const [favoriteShows, setFavoriteShows] = useState<any[]>([]);
+  
 
   const favoriteNames = [
     "Breaking Bad",
@@ -19,39 +25,38 @@ export default function Profile() {
   const [ratings, setRatings] = useState<any[]>([]);
   const [ratingsWithImages, setRatingsWithImages] = useState<any[]>([]);
   const [currentlyWatching, setCurrentlyWatching] = useState<any[]>([]);
-  const [currentlyWatchingWithImages, setCurrentlyWatchingWithImages] =
-    useState<any[]>([]);
+  const [currentlyWatchingWithImages, setCurrentlyWatchingWithImages] = useState<any[]>([]);
 
   /* Pull user info from backend */
   useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5001/user/Gem55qTyh44NPdFwWZgw`
+          `${url}/user/${user_id}`
         );
         // console.log(res.data);
         setUserInfo(res.data);
 
         const following_backend = await axios.get(
-          `http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/following`
+          `${url}/users/${user_id}/following`
         );
         // console.log(following_backend.data.following.length);
         setFollowing(following_backend.data.following.length);
 
         const followers_backend = await axios.get(
-          `http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/followers`
+          `${url}/users/${user_id}/followers`
         );
         // console.log(followers_backend.data.followers.length);
         setFollowers(followers_backend.data.followers.length);
 
         const ratings_backend = await axios.get(
-          `http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/ratings`
+          `${url}/users/${user_id}/ratings`
         );
         setRatings(ratings_backend.data);
         // console.log(ratings_backend)
 
         const currently_watching_backend = await axios.get(
-          `http://localhost:5001/users/Gem55qTyh44NPdFwWZgw/currently_watching`
+          `${url}/users/${user_id}/currently_watching`
         );
         // console.log("Currently Watching: ", currently_watching_backend.data);
         setCurrentlyWatching(currently_watching_backend.data);
@@ -71,7 +76,7 @@ export default function Profile() {
           try {
             console.log("Ratings:", ratings);
             const res = await axios.get(
-              `http://localhost:5001/shows/${rating.show_id}`
+              `${url}/shows/${rating.show_id}`
             );
             const showData = res.data;
             const imagePath = showData.poster_path;
@@ -105,7 +110,7 @@ export default function Profile() {
         currentlyWatching.map(async (show: any) => {
           try {
             const res = await axios.get(
-              `http://localhost:5001/shows/${show.show_id}`
+              `${url}/shows/${show.show_id}`
             );
             const showData = res.data;
             const imagePath = showData.poster_path;
@@ -180,7 +185,7 @@ export default function Profile() {
       )}
 
       {/* Favorite shows */}
-      <div className="favorite-shows">
+      {/* <div className="favorite-shows">
         <h3 className="shows-label">Favorite Shows</h3>
         <div className="favorite-shows-images">
           {favoriteShows.map((show) => (
@@ -192,7 +197,7 @@ export default function Profile() {
             />
           ))}
         </div>
-      </div>
+      </div> */}
 
       {/* Currently Watching */}
       <div className="favorite-shows">
