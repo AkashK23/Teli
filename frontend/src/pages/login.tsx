@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 
-
 type GooglePayload = {
   sub: string;
   email: string;
@@ -14,255 +13,171 @@ type GooglePayload = {
 };
 
 export default function Login() {
-
   const url = `http://localhost:5001`;
-
   const { setUserId } = useUser();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
-  const [loginData, setLoginData] = useState({ username: "", password: "" });
-  const [signupData, setSignupData] = useState({
-    name: "",
-    username: "",
-    password: "",
-    email: "",
-    bio: "",
-  });
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    if (!credentialResponse.credential) {
+      setError("No credential received from Google");
+      return;
+    }
 
-  const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLoginData({ ...loginData, [e.target.name]: e.target.value });
-  };
+    setLoading(true);
+    setError(null);
 
-  const handleSignupChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setSignupData({ ...signupData, [e.target.name]: e.target.value });
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
     try {
-      const res = await axios.get(`${url}/user/${loginData.username}`);
-      console.log(res);
-      const id = res.data.id;
-      setUserId(id);
-      navigate("/");
-      // localStorage.setItem("user_id", res.data.user_id);
-      // alert("Login successful!");
-      // Optionally redirect here
+      // Send the Google token to our backend for verification
+      const response = await axios.post(`${url}/auth/google`, {
+        token: credentialResponse.credential
+      });
+
+      if (response.data.user && response.data.user.id) {
+        // Set the user ID in context and localStorage
+        setUserId(response.data.user.id);
+        
+        // Navigate to home page
+        navigate("/");
+      } else {
+        setError("Invalid response from server");
+      }
     } catch (err) {
-      console.error(err);
-      alert("Login failed.");
+      console.error("Login error:", err);
+      if (axios.isAxiosError(err) && err.response) {
+        setError(err.response.data.error || "Login failed. Please try again.");
+      } else {
+        setError("Unable to connect to server. Please try again.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post(
-        "http://localhost:5001/auth/signup",
-        signupData
-      );
-      localStorage.setItem("user_id", res.data.user_id);
-      alert("Sign up successful!");
-      // Optionally redirect here
-    } catch (err) {
-      console.error(err);
-      alert("Sign up failed.");
-    }
+  const handleGoogleError = () => {
+    setError("Google login failed. Please try again.");
   };
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.title}>Teli</h1>
-      <p style={styles.slogan}>Channel What You Love</p>
+      <div style={styles.loginBox}>
+        <h1 style={styles.title}>Teli</h1>
+        <p style={styles.slogan}>Channel What You Love</p>
+        
+        <div style={styles.divider} />
+        
+        <h2 style={styles.subtitle}>Sign in to continue</h2>
+        <p style={styles.description}>
+          Use your Google account to sign in and start tracking your favorite shows
+        </p>
 
-      <div style={styles.tabContainer}>
-        <button
-          style={{
-            ...styles.tab,
-            ...(activeTab === "login" ? styles.activeTab : {}),
-          }}
-          onClick={() => setActiveTab("login")}
-        >
-          Login
-        </button>
-        <button
-          style={{
-            ...styles.tab,
-            ...(activeTab === "signup" ? styles.activeTab : {}),
-          }}
-          onClick={() => setActiveTab("signup")}
-        >
-          Sign Up
-        </button>
-      </div>
-
-      <form
-        onSubmit={activeTab === "login" ? handleLogin : handleSignup}
-        style={styles.form}
-      >
-        {activeTab === "login" ? (
-          <>
-            <input
-              name="username"
-              placeholder="Username"
-              value={loginData.username}
-              onChange={handleLoginChange}
-              required
-              style={styles.input}
-            />
-            <input
-              name="password"
-              type="password"
-              placeholder="Password"
-              value={loginData.password}
-              onChange={handleLoginChange}
-              required
-              style={styles.input}
-            />
-          </>
-        ) : (
-          <>
-            <input
-              name="name"
-              placeholder="Name"
-              value={signupData.name}
-              onChange={handleSignupChange}
-              required
-              style={styles.input}
-            />
-            <input
-              name="username"
-              placeholder="Username"
-              value={signupData.username}
-              onChange={handleSignupChange}
-              required
-              style={styles.input}
-            />
-            <input
-              name="password"
-              type="password"
-              placeholder="Password"
-              value={signupData.password}
-              onChange={handleSignupChange}
-              required
-              style={styles.input}
-            />
-            <input
-              name="email"
-              type="email"
-              placeholder="Email"
-              value={signupData.email}
-              onChange={handleSignupChange}
-              required
-              style={styles.input}
-            />
-            <textarea
-              name="bio"
-              placeholder="Bio"
-              value={signupData.bio}
-              onChange={handleSignupChange}
-              style={{ ...styles.input, height: "60px" }}
-            />
-          </>
+        {error && (
+          <div style={styles.errorMessage}>
+            {error}
+          </div>
         )}
-        <button type="submit" style={styles.submitButton}>
-          {activeTab === "login" ? "Login" : "Sign Up"}
-        </button>
-      </form>
 
-      <GoogleLogin
-        onSuccess={(credentialResponse) => {
-          if (credentialResponse.credential) {
-            const decoded: GooglePayload = jwtDecode<GooglePayload>(
-              credentialResponse.credential as string
-            );
-            console.log(decoded)
+        <div style={styles.googleButtonContainer}>
+          {loading ? (
+            <div style={styles.loadingContainer}>
+              <p>Signing in...</p>
+            </div>
+          ) : (
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              theme="outline"
+              size="large"
+              text="signin_with"
+              shape="rectangular"
+              width="300"
+            />
+          )}
+        </div>
 
-
-            // Use Google’s sub (unique id) as your user_id
-            setUserId(decoded.sub);
-            navigate("/");
-
-            // Optional: send token to your backend for verification & user creation
-            // fetch("http://localhost:5001/auth/google", {
-            //   method: "POST",
-            //   headers: { "Content-Type": "application/json" },
-            //   body: JSON.stringify({
-            //     token: credentialResponse.credential,
-            //   }),
-            // });
-          }
-        }}
-        onError={() => {
-          console.log("Google Login Failed");
-        }}
-      />
+        <p style={styles.privacyNote}>
+          By signing in, you agree to our Terms of Service and Privacy Policy
+        </p>
+      </div>
     </div>
   );
 }
 
 const styles = {
   container: {
-    maxWidth: "400px",
-    margin: "4rem auto",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: "calc(100vh - 80px)", // Account for navbar height
+    backgroundColor: "#f5f5f5",
     padding: "2rem",
-    borderRadius: "8px",
-    boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+  },
+  loginBox: {
+    maxWidth: "450px",
+    width: "100%",
+    padding: "3rem",
+    borderRadius: "12px",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
     textAlign: "center" as const,
     fontFamily: "Arial, sans-serif",
     background: "#fff",
   },
   title: {
-    fontSize: "2.5rem",
-    marginBottom: "0.25rem",
+    fontSize: "3rem",
+    marginBottom: "0.5rem",
+    color: "#333",
+    fontWeight: "bold",
   },
   slogan: {
+    fontSize: "1.1rem",
+    color: "#666",
+    marginBottom: "2rem",
+    fontStyle: "italic",
+  },
+  divider: {
+    height: "1px",
+    backgroundColor: "#e0e0e0",
+    margin: "2rem 0",
+  },
+  subtitle: {
+    fontSize: "1.5rem",
+    marginBottom: "0.5rem",
+    color: "#333",
+    fontWeight: "600",
+  },
+  description: {
     fontSize: "1rem",
     color: "#666",
-    marginBottom: "1.5rem",
+    marginBottom: "2rem",
+    lineHeight: "1.5",
   },
-  tabContainer: {
+  googleButtonContainer: {
     display: "flex",
     justifyContent: "center",
-    marginBottom: "1rem",
+    alignItems: "center",
+    margin: "2rem 0",
+    minHeight: "50px",
   },
-  tab: {
-    flex: 1,
-    padding: "0.75rem",
-    border: "1px solid #ccc",
-    backgroundColor: "#f5f5f5",
-    cursor: "pointer",
-    fontWeight: 600,
-  },
-  activeTab: {
-    backgroundColor: "#333",
-    color: "white",
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "1rem",
-  },
-  input: {
-    padding: "0.75rem",
-    borderRadius: "4px",
-    border: "1px solid #ccc",
+  loadingContainer: {
+    padding: "1rem",
+    color: "#666",
     fontSize: "1rem",
   },
-  submitButton: {
-    padding: "0.75rem",
-    backgroundColor: "#333",
-    color: "white",
-    fontWeight: "bold",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
-    marginBottom: "1rem",
+  errorMessage: {
+    backgroundColor: "#ffebee",
+    color: "#d32f2f",
+    padding: "12px 16px",
+    borderRadius: "8px",
+    marginBottom: "1.5rem",
+    fontSize: "0.95rem",
+    textAlign: "left" as const,
+    border: "1px solid #ffcdd2",
+  },
+  privacyNote: {
+    fontSize: "0.85rem",
+    color: "#999",
+    marginTop: "2rem",
+    lineHeight: "1.4",
   },
 };
-  

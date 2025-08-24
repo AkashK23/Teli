@@ -11,6 +11,7 @@ import requests
 import logging
 from tmdb_routes import tmdb
 from teli_routes import teli
+from auth_routes import auth
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,6 +21,7 @@ def create_app():
     CORS(app)
     app.register_blueprint(tmdb)
     app.register_blueprint(teli)
+    app.register_blueprint(auth)
     return app
 
 if __name__ == "__main__":

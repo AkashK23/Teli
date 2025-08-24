@@ -67,7 +67,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     setUserId(null);
-    localStorage.removeItem("userId"); // if you're storing in localStorage
+    localStorage.removeItem("user_id"); // Use consistent key with UserContext
     navigate("/login"); 
   };
 

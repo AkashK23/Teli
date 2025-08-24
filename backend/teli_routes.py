@@ -50,6 +50,10 @@ def add_user():
     user_data = req_data.model_dump()
     user_data["created_at"] = datetime.now(timezone.utc).isoformat()
     
+    # Add lowercase fields for case-insensitive search
+    user_data["name_lowercase"] = req_data.name.lower()
+    user_data["username_lowercase"] = req_data.username.lower()
+    
     try:
         user_ref = db.collection("users").add(user_data)
         return jsonify({"message": "User added successfully!", "id": user_ref[1].id})
@@ -99,6 +103,132 @@ def get_users():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+def get_prefix_range(prefix):
+    """Convert 'joh' to range ['joh', 'joi') for Firestore queries"""
+    if not prefix:
+        return None, None
+    
+    start = prefix.lower()
+    # Increment the last character for the end range
+    if start:
+        end = start[:-1] + chr(ord(start[-1]) + 1)
+        return start, end
+    return None, None
+
+@teli.route('/users/search', methods=['GET'])
+def search_users():
+    try:
+        # Get query parameter
+        query = request.args.get('query', '').strip()
+        
+        if not query:
+            return jsonify({"error": "Missing 'query' parameter"}), 400
+        
+        # Get pagination parameters
+        try:
+            page = int(request.args.get('page', 1))
+            if page < 1:
+                page = 1
+        except ValueError:
+            return jsonify({"error": "Page parameter must be a positive integer"}), 400
+        
+        try:
+            limit = int(request.args.get('limit', 20))
+            if limit < 1:
+                limit = 20
+            elif limit > 100:
+                limit = 100
+        except ValueError:
+            return jsonify({"error": "Limit parameter must be a positive integer"}), 400
+        
+        # Get prefix range for efficient Firestore queries
+        start_range, end_range = get_prefix_range(query)
+        
+        if not start_range or not end_range:
+            result = {
+                "results": [],
+                "total_results": 0,
+                "total_pages": 1,
+                "current_page": page,
+                "limit": limit
+            }
+            return jsonify(result), 200
+        
+        # Search by username_lowercase (prefix match)
+        username_query = db.collection("users").where(
+            filter=FieldFilter("username_lowercase", ">=", start_range)).where(
+                filter=FieldFilter("username_lowercase", "<", end_range)).limit(limit * 2)
+        
+        # Search by name_lowercase (prefix match)
+        name_query = db.collection("users").where(
+            filter=FieldFilter("name_lowercase", ">=", start_range)).where(
+                filter=FieldFilter("name_lowercase", "<", end_range)).limit(limit * 2)
+        
+        # Execute queries
+        username_results = list(username_query.stream())
+        name_results = list(name_query.stream())
+        
+        # Combine and deduplicate results
+        all_results = {}
+        
+        for doc in username_results + name_results:
+            user_data = doc.to_dict()
+            user_data["id"] = doc.id
+            
+            # Remove sensitive fields
+            if "email" in user_data:
+                del user_data["email"]
+            if "password" in user_data:
+                del user_data["password"]
+            if "name_lowercase" in user_data:
+                del user_data["name_lowercase"]
+            if "username_lowercase" in user_data:
+                del user_data["username_lowercase"]
+            
+            all_results[doc.id] = user_data
+        
+        # Convert to list and sort by relevance
+        matching_users = list(all_results.values())
+        query_lower = query.lower()
+        
+        def sort_key(user):
+            username = user.get('username', '').lower()
+            name = user.get('name', '').lower()
+            
+            if username == query_lower:
+                return (0, username)  # Exact username match first
+            elif username.startswith(query_lower):
+                return (1, username)  # Username prefix match
+            elif name.startswith(query_lower):
+                return (2, name)  # Name prefix match
+            else:
+                return (3, username)  # Fallback
+        
+        matching_users.sort(key=sort_key)
+        
+        # Calculate pagination
+        total_results = len(matching_users)
+        total_pages = (total_results + limit - 1) // limit if total_results > 0 else 1
+        start_index = (page - 1) * limit
+        end_index = start_index + limit
+        
+        # Get the page of results
+        page_results = matching_users[start_index:end_index]
+        
+        result = {
+            "results": page_results,
+            "total_results": total_results,
+            "total_pages": total_pages,
+            "current_page": page,
+            "limit": limit
+        }
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        logger.error(f"Error searching users: {e}")
+        return jsonify({"error": "Database error occurred"}), 500
 
 class AddToWatchlistRequest(BaseModel):
     user_id: str

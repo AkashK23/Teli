@@ -15,6 +15,9 @@ http://localhost:5001
 - [General Information](#general-information)
   - [Error Handling](#error-handling)
   - [Authentication](#authentication)
+- [Authentication Endpoints](#authentication-endpoints)
+  - [Google Authentication](#google-authentication)
+  - [Verify User](#verify-user)
 - [TMDB Endpoints](#tmdb-endpoints)
   - [Search Shows](#search-shows)
   - [Filter Shows](#filter-shows)
@@ -29,6 +32,7 @@ http://localhost:5001
   - [Add User](#add-user)
   - [Get User](#get-user)
   - [Get All Users](#get-all-users)
+  - [Search Users](#search-users)
 - [Social Endpoints](#social-endpoints)
   - [Follow User](#follow-user)
   - [Unfollow User](#unfollow-user)
@@ -94,7 +98,162 @@ For validation errors, the response will include detailed error information:
 
 ### Authentication
 
-Currently, the API does not implement authentication. All endpoints are publicly accessible.
+The API uses Google OAuth for authentication. Users authenticate via Google and receive a user ID that should be stored and used for subsequent requests.
+
+## Authentication Endpoints
+
+These endpoints handle user authentication via Google OAuth.
+
+### Google Authentication
+
+Authenticate a user with a Google OAuth token. Creates a new user if they don't exist.
+
+**URL**: `/auth/google`
+
+**Method**: `POST`
+
+**Request Body**:
+
+| Field | Type   | Required | Description                    |
+|-------|--------|----------|--------------------------------|
+| token | string | Yes      | Google OAuth JWT token         |
+
+**Example Request**:
+
+```bash
+curl -X POST "http://localhost:5001/auth/google" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "eyJhbGciOiJSUzI1NiIsImtpZCI..."
+  }'
+```
+
+**Example Response (Existing User)**:
+
+```json
+{
+  "message": "Login successful",
+  "user": {
+    "id": "user123",
+    "google_id": "google123",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "username": "user",
+    "picture": "https://example.com/picture.jpg",
+    "created_at": "2023-05-31T12:34:56.789Z",
+    "last_login": "2024-05-30T14:22:10Z"
+  }
+}
+```
+
+**Example Response (New User)**:
+
+```json
+{
+  "message": "User created successfully",
+  "user": {
+    "id": "newuser123",
+    "google_id": "google456",
+    "email": "newuser@example.com",
+    "name": "Jane Smith",
+    "username": "newuser",
+    "picture": "https://example.com/picture.jpg",
+    "created_at": "2024-05-30T14:22:10Z",
+    "last_login": "2024-05-30T14:22:10Z"
+  }
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request`: Missing token
+  ```json
+  {
+    "errors": [
+      {
+        "loc": ["token"],
+        "msg": "field required",
+        "type": "value_error.missing"
+      }
+    ]
+  }
+  ```
+- `401 Unauthorized`: Invalid token
+  ```json
+  {
+    "error": "Invalid token format"
+  }
+  ```
+- `401 Unauthorized`: Invalid Google token
+  ```json
+  {
+    "error": "Invalid Google token"
+  }
+  ```
+- `500 Internal Server Error`: Authentication failed
+  ```json
+  {
+    "error": "Authentication failed"
+  }
+  ```
+
+### Verify User
+
+Verify if a user ID is valid. Used for checking authentication status.
+
+**URL**: `/auth/verify`
+
+**Method**: `GET`
+
+**Headers**:
+
+| Header    | Type   | Required | Description                |
+|-----------|--------|----------|----------------------------|
+| X-User-ID | string | Yes      | The user ID to verify      |
+
+**Example Request**:
+
+```bash
+curl -X GET "http://localhost:5001/auth/verify" \
+  -H "X-User-ID: user123"
+```
+
+**Example Response**:
+
+```json
+{
+  "valid": true,
+  "user": {
+    "id": "user123",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "username": "user",
+    "google_id": "google123",
+    "picture": "https://example.com/picture.jpg"
+  }
+}
+```
+
+**Error Responses**:
+
+- `401 Unauthorized`: No user ID provided
+  ```json
+  {
+    "error": "No user ID provided"
+  }
+  ```
+- `401 Unauthorized`: Invalid user ID
+  ```json
+  {
+    "error": "Invalid user ID"
+  }
+  ```
+- `500 Internal Server Error`: Verification failed
+  ```json
+  {
+    "error": "Verification failed"
+  }
+  ```
 
 ## TMDB Endpoints
 
@@ -1106,6 +1265,105 @@ curl -X GET "http://localhost:5001/get_users"
 
 **Error Responses**:
 
+- `500 Internal Server Error`: Database error
+  ```json
+  {
+    "error": "Database error occurred"
+  }
+  ```
+
+### Search Users
+
+Search for users by username or name with case-insensitive prefix matching.
+
+**URL**: `/users/search`
+
+**Method**: `GET`
+
+**Query Parameters**:
+
+| Parameter | Type   | Required | Description                                |
+|-----------|--------|----------|--------------------------------------------|
+| query     | string | Yes      | The search term to find users              |
+| page      | number | No       | Page number for pagination (default: 1)    |
+| limit     | number | No       | Results per page (default: 20, max: 100)   |
+
+**Example Request**:
+
+```bash
+curl -X GET "http://localhost:5001/users/search?query=john"
+```
+
+**Example Request with Pagination**:
+
+```bash
+curl -X GET "http://localhost:5001/users/search?query=john&page=2&limit=10"
+```
+
+**Example Response**:
+
+```json
+{
+  "results": [
+    {
+      "id": "user123",
+      "name": "John Doe",
+      "username": "john",
+      "bio": "TV show enthusiast",
+      "created_at": "2023-05-31T12:34:56.789Z"
+    },
+    {
+      "id": "user456",
+      "name": "Johnny Smith",
+      "username": "johnny_s",
+      "bio": "Movie critic",
+      "created_at": "2023-05-30T10:20:30.456Z"
+    },
+    {
+      "id": "user789",
+      "name": "John Wilson",
+      "username": "jwilson",
+      "bio": "Binge watcher",
+      "created_at": "2023-05-29T14:15:20.123Z"
+    }
+  ],
+  "total_results": 15,
+  "total_pages": 2,
+  "current_page": 1,
+  "limit": 20
+}
+```
+
+**Search Behavior**:
+- Case-insensitive prefix matching on both usernames and names
+- Results are sorted by relevance:
+  1. Exact username matches first
+  2. Username prefix matches
+  3. Name prefix matches
+  4. Alphabetical fallback
+- Sensitive fields (email, password) are automatically removed from results
+- Supports pagination for large result sets
+
+**Error Responses**:
+
+- `400 Bad Request`: Missing query parameter
+  ```json
+  {
+    "error": "Missing 'query' parameter"
+  }
+  ```
+- `400 Bad Request`: Invalid page parameter
+  ```json
+  {
+    "error": "Page parameter must be a positive integer"
+  }
+  ```
+- `400 Bad Request`: Invalid limit parameter
+  ```json
+  {
+    "error": "Limit parameter must be a positive integer"
+  }
+  ```
 - `500 Internal Server Error`: Database error
   ```json
   {
@@ -2353,4 +2611,3 @@ Detailed show object (from show details endpoint) includes additional fields:
   "timestamp": "2024-05-30T14:22:10Z",
   "rating_id": "rating123"
 }
-```
