@@ -1,203 +1,157 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useUser } from "../UserContext";
 
-
- /* Profile page */  
 export default function Profile() {
-
   const url = `http://localhost:5001`;
-  const user_id = useUser().userId;
+  const { id } = useParams<{ id?: string }>(); // <-- optional param
+  const loggedInUserId = useUser().userId;
 
-  const [favoriteShows, setFavoriteShows] = useState<any[]>([]);
-  
+  const user_id = id || loggedInUserId;
 
-  const favoriteNames = [
-    "Breaking Bad",
-    "Game of Thrones",
-    "Friends",
-    "The Office",
-  ];
   const [userInfo, setUserInfo] = useState<any>(null);
-  const [following, setFollowing] = useState<any[]>([]);
-  const [followers, setFollowers] = useState<any[]>([]);
+  const [following, setFollowing] = useState(0);
+  const [followers, setFollowers] = useState(0);
   const [ratings, setRatings] = useState<any[]>([]);
   const [ratingsWithImages, setRatingsWithImages] = useState<any[]>([]);
   const [currentlyWatching, setCurrentlyWatching] = useState<any[]>([]);
-  const [currentlyWatchingWithImages, setCurrentlyWatchingWithImages] = useState<any[]>([]);
+  const [currentlyWatchingWithImages, setCurrentlyWatchingWithImages] =
+    useState<any[]>([]);
+  const [loading, setLoading] = useState(true); // single loading state
 
-  /* Pull user info from backend */
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProfileData = async () => {
       try {
-        const res = await axios.get(
-          `${url}/user/${user_id}`
-        );
-        // console.log(res.data);
-        setUserInfo(res.data);
+        // Fetch user info
+        const userRes = await axios.get(`${url}/user/${user_id}`);
+        console.log(userRes)
+        setUserInfo(userRes.data);
 
-        const following_backend = await axios.get(
+        // Fetch followers/following
+        const followingRes = await axios.get(
           `${url}/users/${user_id}/following`
         );
-        // console.log(following_backend.data.following.length);
-        setFollowing(following_backend.data.following.length);
+        setFollowing(followingRes.data.following.length);
 
-        const followers_backend = await axios.get(
+        const followersRes = await axios.get(
           `${url}/users/${user_id}/followers`
         );
-        // console.log(followers_backend.data.followers.length);
-        setFollowers(followers_backend.data.followers.length);
+        setFollowers(followersRes.data.followers.length);
 
-        const ratings_backend = await axios.get(
-          `${url}/users/${user_id}/ratings`
-        );
-        setRatings(ratings_backend.data);
-        // console.log(ratings_backend)
+        // Fetch ratings
+        const ratingsRes = await axios.get(`${url}/users/${user_id}/ratings`);
+        setRatings(ratingsRes.data);
 
-        const currently_watching_backend = await axios.get(
+        // Fetch currently watching
+        const currentlyWatchingRes = await axios.get(
           `${url}/users/${user_id}/currently_watching`
         );
-        // console.log("Currently Watching: ", currently_watching_backend.data);
-        setCurrentlyWatching(currently_watching_backend.data);
+        setCurrentlyWatching(currentlyWatchingRes.data);
+
+        // Fetch images for ratings
+        const ratingsWithImagesRes = await Promise.all(
+          ratingsRes.data.map(async (rating: any) => {
+            try {
+              const showRes = await axios.get(`${url}/shows/${rating.show_id}`);
+              const showData = showRes.data;
+              const imagePath = showData.poster_path;
+              const imageUrl = imagePath?.startsWith("http")
+                ? imagePath
+                : `https://image.tmdb.org/t/p/w500${imagePath}`;
+              return {
+                ...rating,
+                image_url:
+                  showData?.image_url || showData?.thumbnail || imageUrl,
+              };
+            } catch {
+              return { ...rating, image_url: null };
+            }
+          })
+        );
+        setRatingsWithImages(ratingsWithImagesRes);
+
+        // Fetch images for currently watching
+        const currentlyWatchingWithImagesRes = await Promise.all(
+          currentlyWatchingRes.data.map(async (show: any) => {
+            try {
+              const showRes = await axios.get(`${url}/shows/${show.show_id}`);
+              const showData = showRes.data;
+              const imagePath = showData.poster_path;
+              const imageUrl = imagePath?.startsWith("http")
+                ? imagePath
+                : `https://image.tmdb.org/t/p/w500${imagePath}`;
+              return {
+                ...show,
+                image_url:
+                  showData?.image_url || showData?.thumbnail || imageUrl,
+                name: showData.name || show.show_name,
+              };
+            } catch {
+              return { ...show, image_url: null };
+            }
+          })
+        );
+        setCurrentlyWatchingWithImages(currentlyWatchingWithImagesRes);
       } catch (err) {
-        console.error("Failed to fetch user:", err);
+        console.error("Failed to fetch profile data:", err);
+      } finally {
+        setLoading(false); // everything loaded
       }
     };
 
-    fetchData();
-  }, []); // <== empty array here
+    fetchProfileData();
+  }, [user_id]);
 
-  /* Fetch images for ratings */
-  useEffect(() => {
-    const fetchImagesForRatings = async () => {
-      const updatedRatings = await Promise.all(
-        ratings.map(async (rating) => {
-          try {
-            console.log("Ratings:", ratings);
-            const res = await axios.get(
-              `${url}/shows/${rating.show_id}`
-            );
-            const showData = res.data;
-            const imagePath = showData.poster_path;
-            const imageUrl = imagePath?.startsWith("http")
-              ? imagePath
-              : `https://image.tmdb.org/t/p/w500${imagePath}`;
-            return {
-              ...rating,
-              image_url:
-                showData?.image_url || showData?.thumbnail || imageUrl || null,
-            };
-          } catch (err) {
-            console.error("Failed to fetch image for:", rating.show_name);
-            return { ...rating, image_url: null };
-          }
-        })
-      );
-      const top4Ratings = updatedRatings.slice(0, 3);
-      setRatingsWithImages(top4Ratings);
-    };
-
-    if (ratings.length > 0) {
-      fetchImagesForRatings();
-    }
-  }, [ratings]);
-
-  /* Fetch images for currently watching */
-  useEffect(() => {
-    const fetchImagesForCurrentlyWatching = async () => {
-      const updatedShows = await Promise.all(
-        currentlyWatching.map(async (show: any) => {
-          try {
-            const res = await axios.get(
-              `${url}/shows/${show.show_id}`
-            );
-            const showData = res.data;
-            const imagePath = showData.poster_path;
-            const imageUrl = imagePath?.startsWith("http")
-              ? imagePath
-              : `https://image.tmdb.org/t/p/w500${imagePath}`;
-
-            return {
-              ...show,
-              image_url:
-                showData?.image_url || showData?.thumbnail || imageUrl || null,
-              name: showData.name || show.show_name,
-            };
-          } catch (err) {
-            console.error(
-              "Failed to fetch currently watching show:",
-              show.show_name
-            );
-            return { ...show, image_url: null };
-          }
-        })
-      );
-
-      setCurrentlyWatchingWithImages(updatedShows);
-    };
-
-    if (currentlyWatching.length > 0) {
-      fetchImagesForCurrentlyWatching();
-    }
-  }, [currentlyWatching]);
+  if (loading) return <div>Loading profile...</div>; // wait until all data is ready
 
   return (
     <div>
-      {/* Profile Header */}
-      <div className="profile-header">
-        <div className="profile-pic">
-          <img
-            src="https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
-            className="profile-avatar"
-          />
-          <h4 className="username">
-            <b>{userInfo?.name}</b>
-          </h4>
-        </div>
-        <div className="profile-stats">
-          <div className="stat">
-            <div className="stat-number">
-              <b>{ratings.length}</b>
-            </div>
-            <div className="stat-label">Shows</div>
-          </div>
-          <div className="stat">
-            <div className="stat-number">
-              <b>{following}</b>
-            </div>
-            <div className="stat-label">Following</div>
-          </div>
-          <div className="stat">
-            <div className="stat-number">
-              <b>{followers}</b>
-            </div>
-            <div className="stat-label">Followers</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bio Section */}
-      {userInfo?.bio && (
-        <div className="profile-bio">
-          <p className="bio-content">{userInfo.bio}</p>
-        </div>
-      )}
-
-      {/* Favorite shows */}
-      {/* <div className="favorite-shows">
-        <h3 className="shows-label">Favorite Shows</h3>
-        <div className="favorite-shows-images">
-          {favoriteShows.map((show) => (
+      {/* Profile Header + Bio */}
+      <div className="profile-header-section">
+        <div className="profile-header">
+          <div className="profile-pic">
             <img
-              key={show.id}
-              src={show.image_url || show.thumbnail}
-              alt={show.name}
-              className="show-icon"
+              src={userInfo.picture || "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"}
+              referrerPolicy="no-referrer"
+              className="profile-avatar"
             />
-          ))}
+            <h4 className="username">
+              <b>{userInfo.name}</b>
+            </h4>
+          </div>
+          <div className="profile-stats">
+            <div className="stat">
+              <div className="stat-number">
+                <b>{ratings.length}</b>
+              </div>
+              <div className="stat-label">Shows</div>
+            </div>
+            <Link to={`/users/${user_id}/following`} className="stat-link">
+              <div className="stat">
+                <div className="stat-number">
+                  <b>{following}</b>
+                </div>
+                <div className="stat-label">Following</div>
+              </div>
+            </Link>
+            <Link to={`/users/${user_id}/followers`} className="stat-link">
+              <div className="stat">
+                <div className="stat-number">
+                  <b>{followers}</b>
+                </div>
+                <div className="stat-label">Followers</div>
+              </div>
+            </Link>
+          </div>
         </div>
-      </div> */}
+
+        {userInfo.bio && (
+          <div className="profile-bio">
+            <p className="bio-content">{userInfo.bio}</p>
+          </div>
+        )}
+      </div>
 
       {/* Currently Watching */}
       <div className="favorite-shows">
@@ -219,7 +173,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Recent reviews */}
+      {/* Recent Reviews */}
       <div className="favorite-shows">
         <h3 className="shows-label">Recent Reviews</h3>
         <div className="user-ratings">

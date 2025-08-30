@@ -364,7 +364,7 @@ export default function Browse() {
       });
 
       setPopularShows(res.data.results || []);
-      // console.log(res.data.results);
+      console.log(res.data.results);
       setTotalPages(res.data.total_pages);
     } catch (error) {
       console.error("Error fetching filtered shows:", error);
