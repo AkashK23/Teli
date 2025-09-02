@@ -5,7 +5,7 @@ import { useUser } from "../UserContext";
 
 export default function Profile() {
   const url = `http://localhost:5001`;
-  const { id } = useParams<{ id?: string }>(); // <-- optional param
+  const { id } = useParams<{ id?: string }>();
   const loggedInUserId = useUser().userId;
 
   const user_id = id || loggedInUserId;
@@ -18,17 +18,21 @@ export default function Profile() {
   const [currentlyWatching, setCurrentlyWatching] = useState<any[]>([]);
   const [currentlyWatchingWithImages, setCurrentlyWatchingWithImages] =
     useState<any[]>([]);
-  const [loading, setLoading] = useState(true); // single loading state
+  const [loading, setLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
         // Fetch user info
         const userRes = await axios.get(`${url}/user/${user_id}`);
-        console.log(userRes)
         setUserInfo(userRes.data);
 
-        // Fetch followers/following
+        console.log(user_id)
+        console.log(loggedInUserId)
+        console.log(id)
+
+        // Fetch followers/following counts
         const followingRes = await axios.get(
           `${url}/users/${user_id}/following`
         );
@@ -38,6 +42,15 @@ export default function Profile() {
           `${url}/users/${user_id}/followers`
         );
         setFollowers(followersRes.data.followers.length);
+
+        // Check if logged-in user follows this profile
+        if (loggedInUserId && loggedInUserId !== user_id) {
+          const loggedInFollowingRes = await axios.get(
+            `${url}/users/${loggedInUserId}/following`
+          );
+          const followingList = loggedInFollowingRes.data.following;
+          setIsFollowing(followingList.some((u: any) => u === user_id));
+        }
 
         // Fetch ratings
         const ratingsRes = await axios.get(`${url}/users/${user_id}/ratings`);
@@ -49,7 +62,7 @@ export default function Profile() {
         );
         setCurrentlyWatching(currentlyWatchingRes.data);
 
-        // Fetch images for ratings
+        // Ratings with images
         const ratingsWithImagesRes = await Promise.all(
           ratingsRes.data.map(async (rating: any) => {
             try {
@@ -71,7 +84,7 @@ export default function Profile() {
         );
         setRatingsWithImages(ratingsWithImagesRes);
 
-        // Fetch images for currently watching
+        // Currently watching with images
         const currentlyWatchingWithImagesRes = await Promise.all(
           currentlyWatchingRes.data.map(async (show: any) => {
             try {
@@ -96,14 +109,41 @@ export default function Profile() {
       } catch (err) {
         console.error("Failed to fetch profile data:", err);
       } finally {
-        setLoading(false); // everything loaded
+        setLoading(false);
       }
     };
 
     fetchProfileData();
-  }, [user_id]);
+  }, [user_id, loggedInUserId]);
 
-  if (loading) return <div>Loading profile...</div>; // wait until all data is ready
+  const handleFollowToggle = async () => {
+   
+    const payload = {
+      follower_id: loggedInUserId,
+      followee_id: user_id,
+    };
+
+    try {
+       
+      if (isFollowing) {
+        const res = await axios.post(`${url}/unfollow`, payload);
+        console.log(res.data)
+        setIsFollowing(false);
+        setFollowers((prev) => prev - 1);
+      } else {
+        const res = await axios.post(`${url}/follow`, payload);
+        console.log(res.data);
+        setIsFollowing(true);
+        setFollowers((prev) => prev + 1);
+      }
+    } catch (err) {
+      console.error("Failed to toggle follow:", err);
+    }
+  };
+
+  if (loading) return <div>Loading profile...</div>;
+
+  const isOwnProfile = user_id === loggedInUserId;
 
   return (
     <div>
@@ -112,7 +152,10 @@ export default function Profile() {
         <div className="profile-header">
           <div className="profile-pic">
             <img
-              src={userInfo.picture || "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"}
+              src={
+                userInfo.picture ||
+                "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
+              }
               referrerPolicy="no-referrer"
               className="profile-avatar"
             />
@@ -121,37 +164,51 @@ export default function Profile() {
             </h4>
           </div>
           <div className="profile-stats">
-            <div className="stat">
-              <div className="stat-number">
-                <b>{ratings.length}</b>
+            {/* Stats Row */}
+            <div className="stats-row">
+              <div className="stat">
+                <div className="stat-number">
+                  <b>{ratings.length}</b>
+                </div>
+                <div className="stat-label">Shows</div>
               </div>
-              <div className="stat-label">Shows</div>
+              <Link to={`/users/${user_id}/following`} className="stat-link">
+                <div className="stat">
+                  <div className="stat-number">
+                    <b>{following}</b>
+                  </div>
+                  <div className="stat-label">Following</div>
+                </div>
+              </Link>
+              <Link to={`/users/${user_id}/followers`} className="stat-link">
+                <div className="stat">
+                  <div className="stat-number">
+                    <b>{followers}</b>
+                  </div>
+                  <div className="stat-label">Followers</div>
+                </div>
+              </Link>
             </div>
-            <Link to={`/users/${user_id}/following`} className="stat-link">
-              <div className="stat">
-                <div className="stat-number">
-                  <b>{following}</b>
-                </div>
-                <div className="stat-label">Following</div>
-              </div>
-            </Link>
-            <Link to={`/users/${user_id}/followers`} className="stat-link">
-              <div className="stat">
-                <div className="stat-number">
-                  <b>{followers}</b>
-                </div>
-                <div className="stat-label">Followers</div>
-              </div>
-            </Link>
+
+            {/* Follow button */}
+            {user_id !== loggedInUserId && (
+              <button
+                className={`follow-btn ${!isFollowing ? "followed" : ""}`}
+                onClick={handleFollowToggle}
+              >
+                {isFollowing ? "Followed" : "Follow"}
+              </button>
+            )}
           </div>
         </div>
 
-        {userInfo.bio && (
+       
+      </div> 
+      {userInfo.bio && (
           <div className="profile-bio">
             <p className="bio-content">{userInfo.bio}</p>
           </div>
         )}
-      </div>
 
       {/* Currently Watching */}
       <div className="favorite-shows">
