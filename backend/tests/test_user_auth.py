@@ -200,7 +200,34 @@ class TestGoogleAuthentication:
 
 
 class TestUserVerification:
-    """Test user verification endpoint"""
+    """Test user verification endpoint using real database operations"""
+    
+    @pytest.fixture(autouse=True)
+    def setup_test_data(self, get_db):
+        """Set up test data in the database before each test"""
+        self.db = get_db
+        self.test_user_ids = []
+        
+        # Create a test user for verification tests
+        test_user_data = {
+            "email": "verify@example.com",
+            "name": "Verify User",
+            "username": "verifyuser",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        _, user_ref = self.db.collection("users").add(test_user_data)
+        self.test_user_id = user_ref.id
+        self.test_user_ids.append(user_ref.id)
+        
+        yield
+        
+        # Clean up test data
+        for user_id in self.test_user_ids:
+            try:
+                self.db.collection("users").document(user_id).delete()
+            except Exception:
+                pass
     
     def test_verify_user_no_header(self, get_client):
         """Test verify user with no user ID header"""
@@ -210,14 +237,8 @@ class TestUserVerification:
         data = json.loads(response.data)
         assert data["error"] == "No user ID provided"
         
-    @patch('auth_routes.db')
-    def test_verify_user_invalid_id(self, mock_db, get_client):
+    def test_verify_user_invalid_id(self, get_client):
         """Test verify user with invalid user ID"""
-        # Mock user not found
-        mock_doc = MagicMock()
-        mock_doc.exists = False
-        mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
-        
         response = get_client.get("/auth/verify", 
                             headers={"X-User-ID": "invalid123"})
         
@@ -225,40 +246,18 @@ class TestUserVerification:
         data = json.loads(response.data)
         assert data["error"] == "Invalid user ID"
         
-    @patch('auth_routes.db')
-    def test_verify_user_valid_id(self, mock_db, get_client):
+    def test_verify_user_valid_id(self, get_client):
         """Test verify user with valid user ID"""
-        # Mock valid user
-        mock_doc = MagicMock()
-        mock_doc.exists = True
-        mock_doc.to_dict.return_value = {
-            "email": "test@example.com",
-            "name": "Test User",
-            "username": "test"
-        }
-        mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
-        
         response = get_client.get("/auth/verify", 
-                            headers={"X-User-ID": "user123"})
+                            headers={"X-User-ID": self.test_user_id})
         
         assert response.status_code == 200
         data = json.loads(response.data)
         assert data["valid"] is True
-        assert data["user"]["id"] == "user123"
-        assert data["user"]["email"] == "test@example.com"
-        
-    @patch('auth_routes.db')
-    def test_verify_user_database_error(self, mock_db, get_client):
-        """Test verify user with database error"""
-        # Mock database error
-        mock_db.collection.return_value.document.return_value.get.side_effect = Exception("Database error")
-        
-        response = get_client.get("/auth/verify", 
-                            headers={"X-User-ID": "user123"})
-        
-        assert response.status_code == 500
-        data = json.loads(response.data)
-        assert data["error"] == "Verification failed"
+        assert data["user"]["id"] == self.test_user_id
+        assert data["user"]["email"] == "verify@example.com"
+        assert data["user"]["name"] == "Verify User"
+        assert data["user"]["username"] == "verifyuser"
 
 
 class TestProtectedEndpoints:

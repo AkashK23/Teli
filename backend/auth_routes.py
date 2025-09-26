@@ -86,12 +86,14 @@ def google_auth():
                 "user": user_data
             }), 200
         else:
+            username_str = user_info.email.split("@")[0]
             # Create new user
             new_user_data = {
                 "google_id": user_info.sub,
                 "email": user_info.email,
                 "name": user_info.name,
-                "username": user_info.email.split("@")[0],  # Default username from email
+                "username": username_str,  # Default username from email
+                "username_lowercase": username_str.lower(),
                 "picture": user_info.picture,
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "last_login": datetime.now(timezone.utc).isoformat()

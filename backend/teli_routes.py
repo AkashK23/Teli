@@ -25,6 +25,13 @@ class AddUserRequest(BaseModel):
     email: EmailStr
     bio: Optional[str] = None
 
+class UpdateUserProfileRequest(BaseModel):
+    name: Optional[str] = None
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    bio: Optional[str] = None
+    picture: Optional[str] = None
+
 @teli.route("/add_user", methods=["POST"])
 def add_user():
     try:
@@ -85,6 +92,85 @@ def get_user(user_id):
     
     except Exception as e:
         logger.error(f"Error retrieving user: {e}", exc_info=True)
+        return jsonify({"error": "Database error occurred"}), 500
+
+@teli.route("/user/<user_id>/profile", methods=["PUT"])
+def update_user_profile(user_id):
+    try:
+        # Validate and parse request
+        req_data = UpdateUserProfileRequest.model_validate(request.get_json())
+    except ValidationError as e:
+        # If validation fails, return 400 with error details
+        return jsonify({"errors": e.errors()}), 400
+
+    # Check if user exists
+    user_doc = db.collection("users").document(user_id).get()
+    if not user_doc.exists:
+        return jsonify({"error": "User not found"}), 404
+
+    # Get current user data
+    current_user_data = user_doc.to_dict()
+    
+    # Prepare update data with only provided fields
+    update_data = {}
+    
+    # Check for username conflicts if username is being updated
+    if req_data.username is not None and req_data.username != current_user_data.get("username"):
+        username_query = db.collection("users").where(
+            filter=FieldFilter("username", "==", req_data.username)).limit(1).get()
+        if len(username_query) > 0:
+            return jsonify({"error": "Username already exists"}), 409
+        update_data["username"] = req_data.username
+        update_data["username_lowercase"] = req_data.username.lower()
+
+    # Check for email conflicts if email is being updated
+    if req_data.email is not None and req_data.email != current_user_data.get("email"):
+        email_query = db.collection("users").where(
+            filter=FieldFilter("email", "==", req_data.email)).limit(1).get()
+        if len(email_query) > 0:
+            return jsonify({"error": "Email already exists"}), 409
+        update_data["email"] = req_data.email
+
+    # Update name if provided
+    if req_data.name is not None:
+        update_data["name"] = req_data.name
+        update_data["name_lowercase"] = req_data.name.lower()
+
+    # Update bio if provided
+    if req_data.bio is not None:
+        update_data["bio"] = req_data.bio
+
+    # Update picture if provided
+    if req_data.picture is not None:
+        update_data["picture"] = req_data.picture
+
+    # Add updated timestamp
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    try:
+        # Update the user document
+        user_doc.reference.update(update_data)
+        
+        # Get updated user data
+        updated_user_doc = db.collection("users").document(user_id).get()
+        updated_user_data = updated_user_doc.to_dict()
+        
+        # Remove sensitive fields
+        if "password" in updated_user_data:
+            del updated_user_data["password"]
+        
+        # Add the document ID to the response
+        updated_user_data["id"] = user_id
+        
+        result = {
+            "message": "Profile updated successfully",
+            "user": updated_user_data
+        }
+        
+        return jsonify(result), 200
+    
+    except Exception as e:
+        logger.error(f"Error updating user profile: {e}")
         return jsonify({"error": "Database error occurred"}), 500
 
 @teli.route('/get_users', methods=['GET'])
@@ -965,3 +1051,127 @@ def delete_watch_status():
     except Exception as e:
         logger.error(f"Error deleting watch status: {e}")
         return jsonify({"error": "Database error occurred"}), 500
+
+@teli.route("/user/<user_id>", methods=["DELETE"])
+def delete_user(user_id):
+    """
+    Delete a user and all associated data.
+    This performs a complete removal including:
+    - User profile
+    - All ratings (show and episode)
+    - Watch status records
+    - Follow relationships (both directions)
+    - Feed entries from all followers
+    - Watchlist entries
+    """
+    try:
+        # Check if user exists
+        user_doc = db.collection("users").document(user_id).get()
+        if not user_doc.exists:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Perform cascading deletion using batch operations
+        result = delete_user_and_related_data(user_id)
+        
+        if result["success"]:
+            return jsonify({"message": "User deleted successfully"}), 200
+        else:
+            logger.error(f"Error deleting user {user_id}: {result['error']}")
+            return jsonify({"error": "Database error occurred"}), 500
+    
+    except Exception as e:
+        logger.error(f"Error deleting user {user_id}: {e}")
+        return jsonify({"error": "Database error occurred"}), 500
+
+def delete_user_and_related_data(user_id):
+    """
+    Delete user and all related data using batch operations for atomicity.
+    Returns dict with success status and error message if applicable.
+    """
+    try:
+        # Get all followers to clean their feeds later
+        followers_query = db.collection("follows").where(
+            filter=FieldFilter("followee_id", "==", user_id)).stream()
+        follower_ids = [doc.to_dict()["follower_id"] for doc in followers_query]
+        
+        # Start batch operations
+        batches = []
+        current_batch = db.batch()
+        operation_count = 0
+        
+        def add_to_batch(operation_func, *args):
+            nonlocal current_batch, operation_count, batches
+            operation_func(current_batch, *args)
+            operation_count += 1
+            
+            # Firestore batch limit is 500 operations
+            if operation_count >= 500:
+                batches.append(current_batch)
+                current_batch = db.batch()
+                operation_count = 0
+        
+        # 1. Delete user's ratings
+        ratings_query = db.collection("ratings").where(
+            filter=FieldFilter("user_id", "==", user_id)).stream()
+        for rating_doc in ratings_query:
+            add_to_batch(lambda batch, doc: batch.delete(doc.reference), rating_doc)
+        
+        # 2. Delete user's episode ratings
+        episode_ratings_query = db.collection("episode_ratings").where(
+            filter=FieldFilter("user_id", "==", user_id)).stream()
+        for episode_rating_doc in episode_ratings_query:
+            add_to_batch(lambda batch, doc: batch.delete(doc.reference), episode_rating_doc)
+        
+        # 3. Delete user's watch status records
+        watch_status_query = db.collection("watch_status").where(
+            filter=FieldFilter("user_id", "==", user_id)).stream()
+        for watch_status_doc in watch_status_query:
+            add_to_batch(lambda batch, doc: batch.delete(doc.reference), watch_status_doc)
+        
+        # 4. Delete user's watchlist entries
+        watchlist_query = db.collection("watchlists").where(
+            filter=FieldFilter("user_id", "==", user_id)).stream()
+        for watchlist_doc in watchlist_query:
+            add_to_batch(lambda batch, doc: batch.delete(doc.reference), watchlist_doc)
+        
+        # 5. Delete follow relationships where user is follower
+        follower_query = db.collection("follows").where(
+            filter=FieldFilter("follower_id", "==", user_id)).stream()
+        for follow_doc in follower_query:
+            add_to_batch(lambda batch, doc: batch.delete(doc.reference), follow_doc)
+        
+        # 6. Delete follow relationships where user is followee
+        followee_query = db.collection("follows").where(
+            filter=FieldFilter("followee_id", "==", user_id)).stream()
+        for follow_doc in followee_query:
+            add_to_batch(lambda batch, doc: batch.delete(doc.reference), follow_doc)
+        
+        # 7. Clean feeds - remove deleted user's content from all followers' feeds
+        for follower_id in follower_ids:
+            feed_items_query = db.collection("feeds").document(follower_id).collection("items").where(
+                filter=FieldFilter("user_id", "==", user_id)).stream()
+            for feed_item_doc in feed_items_query:
+                add_to_batch(lambda batch, doc: batch.delete(doc.reference), feed_item_doc)
+        
+        # 8. Delete user's own feed
+        user_feed_items = db.collection("feeds").document(user_id).collection("items").stream()
+        for feed_item_doc in user_feed_items:
+            add_to_batch(lambda batch, doc: batch.delete(doc.reference), feed_item_doc)
+        
+        # 9. Delete the user document itself
+        user_doc_ref = db.collection("users").document(user_id)
+        add_to_batch(lambda batch, doc_ref: batch.delete(doc_ref), user_doc_ref)
+        
+        # Add the final batch if it has operations
+        if operation_count > 0:
+            batches.append(current_batch)
+        
+        # Commit all batches
+        for batch in batches:
+            batch.commit()
+        
+        return {"success": True}
+    
+    except Exception as e:
+        logger.error(f"Error in delete_user_and_related_data: {e}")
+        return {"success": False, "error": str(e)}
