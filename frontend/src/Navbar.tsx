@@ -9,11 +9,10 @@ export default function Navbar() {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [searchType, setSearchType] = useState<"shows" | "users">("shows");
   const navigate = useNavigate();
   const url = `http://localhost:5001`;
   const { userId, setUserId } = useUser();
-
-  
 
   /* Find search suggestions */
   useEffect(() => {
@@ -24,9 +23,15 @@ export default function Navbar() {
       }
 
       try {
-        const response = await axios.get("http://127.0.0.1:5001/shows/search", {
+        const endpoint =
+          searchType === "shows"
+            ? `${url}/shows/search`
+            : `${url}/users/search`;
+
+        const response = await axios.get(endpoint, {
           params: { query: searchInput.trim(), page: 1 },
         });
+
         setSuggestions(response.data.results?.slice(0, 6) || []);
       } catch (err) {
         console.error("Error fetching suggestions:", err);
@@ -36,7 +41,7 @@ export default function Navbar() {
 
     const delayDebounce = setTimeout(fetchSuggestions, 200);
     return () => clearTimeout(delayDebounce);
-  }, [searchInput]);
+  }, [searchInput, searchType]);
 
   /* Arrow Key Tracking */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -48,7 +53,7 @@ export default function Navbar() {
       if (selectedIndex >= 0 && suggestions[selectedIndex]) {
         navigate(`/show/${encodeURIComponent(suggestions[selectedIndex].id)}`);
       } else if (searchInput.trim()) {
-        navigate(`/search?query=${encodeURIComponent(searchInput.trim())}`);
+        navigate(`/search?query=${encodeURIComponent(searchInput.trim())}&type=${searchType}`);
       }
 
       setSearchInput("");
@@ -60,20 +65,25 @@ export default function Navbar() {
   /* If search suggestion is selected go to show */
   const handleSelect = (name: string, id: string) => {
     setSearchInput("");
-    navigate(`/show/${encodeURIComponent(id)}`);
     setSuggestions([]);
     setSelectedIndex(-1);
+   if(searchType === "shows") {
+     navigate(`/show/${encodeURIComponent(id)}`);
+    }
+    else {
+      navigate(`/profile/${encodeURIComponent(id)}`);
+    }
   };
 
   const handleLogout = () => {
     setUserId(null);
     localStorage.removeItem("user_id"); // Use consistent key with UserContext
-    navigate("/login"); 
+    navigate("/login");
   };
 
-// if (loading) {
-//   return null; // Or a spinner
-// }
+  // if (loading) {
+  //   return null; // Or a spinner
+  // }
 
   return (
     <nav className="nav" style={{ position: "relative" }}>
@@ -109,7 +119,7 @@ export default function Navbar() {
         <input
           type="text"
           className="search-input"
-          placeholder="Search titles..."
+          placeholder="Search shows, users..."
           value={searchInput}
           onChange={(e) => {
             setSearchInput(e.target.value);
@@ -119,8 +129,9 @@ export default function Navbar() {
           onBlur={() => setTimeout(() => setSuggestions([]), 150)}
         />
 
-        {suggestions.length > 0 && (
-          <ul
+        {/* Suggestions Dropdown */}
+        {(suggestions.length > 0 || searchInput.trim()) && (
+          <div
             style={{
               position: "absolute",
               top: "100%",
@@ -130,58 +141,115 @@ export default function Navbar() {
               border: "1px solid #ccc",
               boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
               zIndex: 1000,
-              listStyle: "none",
-              margin: 0,
-              padding: 0,
-              maxHeight: "260px",
+              maxHeight: "300px",
               overflowY: "auto",
-              display: "block", // make sure it's block (or remove if it's default)
             }}
           >
-            {suggestions.map((s, index) => {
-              const isSelected = index === selectedIndex;
-              const img = s.poster_path?.startsWith("http")
-                ? s.poster_path
-                : `https://image.tmdb.org/t/p/w92${s.poster_path}`;
-
-              return (
-                <li
-                  key={s.id}
-                  onMouseDown={() => handleSelect(s.name, s.id)}
+            {/* Toggle Slider */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                marginBottom: 6,
+                background: "#f5f5f5",
+                padding: "6px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  background: "#e0e0e0",
+                  borderRadius: "20px",
+                  overflow: "hidden",
+                }}
+              >
+                <button
+                  onClick={() => setSearchType("shows")}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    padding: "10px",
+                    padding: "6px 14px",
+                    border: "none",
+                    backgroundColor:
+                      searchType === "shows" ? "#007bff" : "transparent",
+                    color: searchType === "shows" ? "#fff" : "#000",
+                    fontWeight: searchType === "shows" ? "bold" : "normal",
                     cursor: "pointer",
-                    backgroundColor: isSelected ? "#f0f0f0" : "#fff",
-                    borderBottom: "1px solid #eee",
+                    transition: "all 0.2s ease",
                   }}
-                  onMouseEnter={() => setSelectedIndex(index)}
                 >
-                  <img
-                    src={img}
-                    alt={s.name}
+                  Shows
+                </button>
+                <button
+                  onClick={() => setSearchType("users")}
+                  style={{
+                    padding: "6px 14px",
+                    border: "none",
+                    backgroundColor:
+                      searchType === "users" ? "#007bff" : "transparent",
+                    color: searchType === "users" ? "#fff" : "#000",
+                    fontWeight: searchType === "users" ? "bold" : "normal",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  Users
+                </button>
+              </div>
+            </div>
+
+            {/* Search Results */}
+            <ul
+              style={{
+                listStyle: "none",
+                margin: 0,
+                padding: 0,
+                maxHeight: "240px",
+                overflowY: "auto",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              {suggestions.map((s, index) => {
+                const isSelected = index === selectedIndex;
+                const img =
+                  searchType === "shows" ? s.poster_path?.startsWith("http") ? s.poster_path
+                      : `https://image.tmdb.org/t/p/w92${s.poster_path}`
+                    : (s.picture
+                        ? s.picture.slice(0, -4) + "1080"
+                        : "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg")
+
+                return (
+                  <li
+                    key={s.id}
+                    onMouseDown={() => handleSelect(s.name, s.id)}
                     style={{
-                      width: 40,
-                      height: 60,
-                      objectFit: "cover",
-                      borderRadius: 4,
-                      marginRight: 12,
+                      display: "flex",
+                      alignItems: "center",
+                      padding: "10px",
+                      cursor: "pointer",
+                      backgroundColor: isSelected ? "#f0f0f0" : "#fff",
+                      borderBottom: "1px solid #eee",
                     }}
-                  />
-                  <span
-                    style={{
-                      fontSize: "15px",
-                      lineHeight: "1.2",
-                      color: "#000",
-                    }}
+                    onMouseEnter={() => setSelectedIndex(index)}
                   >
-                    {s.name}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+                    <img
+                      src={img}
+                      alt={s.name}
+                      className={searchType === "shows" ? "search-suggestions-show" : "search-suggestions-user"}
+                    />
+                    <span
+                      style={{
+                        fontSize: "15px",
+                        lineHeight: "1.2",
+                        color: "#000",
+                      }}
+                    >
+                      {s.name}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         )}
       </div>
     </nav>

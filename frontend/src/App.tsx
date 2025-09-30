@@ -13,6 +13,8 @@ import Login from "./pages/login";
 import ShowDetails from './pages/showDetails';
 import Followers from './pages/followers';
 import Following from './pages/following';
+import Onboarding from "./pages/onboarding";
+import EditProfile from "./pages/editProfile";
 
 import { Routes, Route } from "react-router-dom";
 import { UserProvider } from "./UserContext";
@@ -33,11 +35,13 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/users/:userId/followers" element={<Followers />} />
               <Route path="/users/:userId/following" element={<Following />} />
+              <Route path="/onboarding" element={<Onboarding />} />
 
               <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
               <Route path="/activity" element={<ProtectedRoute><Activity /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/editprofile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
               
             </Routes>
           </div>

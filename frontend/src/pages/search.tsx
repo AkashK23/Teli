@@ -29,20 +29,26 @@ const generatePageDots = (currentPage: number, totalPages: number): (number | st
 /* Search Page */
 export default function Search() {
   const [searchedShows, setSearchedShows] = useState<any[]>([]);
+  const [searchedUsers, setSearchedUsers] = useState<any[]>([]);
+  const [searchType, setSearchType] = useState<"shows" | "users">("shows"); // <-- toggle state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const location = useLocation();
 
   const pageDots = generatePageDots(currentPage, totalPages);
-  const goPrev = () => {
-    setCurrentPage((p) => (p > 1 ? p - 1 : p));
-  };
+  const goPrev = () => setCurrentPage((p) => (p > 1 ? p - 1 : p));
+  const goNext = () => setCurrentPage((p) => (p < totalPages ? p + 1 : p));
 
-  const goNext = () => {
-    setCurrentPage((p) => (p < totalPages ? p + 1 : p));
-  };
+  const queryParams = new URLSearchParams(location.search);
+  const query = queryParams.get("query") || "";
+  const typeParam = (queryParams.get("type") as "shows" | "users") || "shows";
 
-  const query = new URLSearchParams(location.search).get("query") || "";
+  /* Sync state with query params */
+  useEffect(() => {
+    setSearchType(typeParam);
+    setCurrentPage(1);
+  }, [typeParam]);
+  
 
   /* Pull search results from backend */
   useEffect(() => {
@@ -50,31 +56,70 @@ export default function Search() {
       if (!query.trim()) return;
 
       try {
-        const response = await axios.get("http://127.0.0.1:5001/shows/search", {
-          params: {
-            query,
-            page: currentPage, // send page param here
-          },
-        });
-        if (response.data?.results?.length > 0) {
-          setSearchedShows(response.data.results);
-          setTotalPages(response.data.total_pages);
-        } else {
-          setSearchedShows([]);
+        if (searchType === "shows") {
+          const response = await axios.get("http://127.0.0.1:5001/shows/search", {
+            params: { query, page: currentPage },
+          });
+
+          if (response.data?.results?.length > 0) {
+            setSearchedShows(response.data.results);
+            setTotalPages(response.data.total_pages);
+          } else {
+            setSearchedShows([]);
+          }
+        } else if (searchType === "users") {
+          const response = await axios.get("http://127.0.0.1:5001/users/search", {
+            params: { query, page: currentPage },
+          });
+
+          if (response.data?.results?.length > 0) {
+            setSearchedUsers(response.data.results);
+            setTotalPages(response.data.total_pages);
+          } else {
+            setSearchedUsers([]);
+          }
         }
       } catch (error) {
-        console.error("Error fetching shows:", error);
-        setSearchedShows([]);
+        console.error("Error fetching search results:", error);
+        if (searchType === "shows") setSearchedShows([]);
+        else setSearchedUsers([]);
       }
     };
 
     fetchSearchResults();
-  }, [query, currentPage]);
+  }, [query, currentPage, searchType]);
 
   return (
     <div className="content-wrapper">
+      {/* Toggle Tabs */}
+      <div className="toggle-container">
+        <div
+          className={`toggle-option ${searchType === "shows" ? "active" : ""}`}
+          onClick={() => {
+            setSearchType("shows");
+            setCurrentPage(1);
+          }}
+        >
+          Shows
+        </div>
+        <div
+          className={`toggle-option ${searchType === "users" ? "active" : ""}`}
+          onClick={() => {
+            setSearchType("users");
+            setCurrentPage(1);
+          }}
+        >
+          Users
+        </div>
+        <div className={`toggle-slider ${searchType}`} />
+      </div>
+
+      <div className="search-results-message">
+        Showing search results for "<b>{query}</b>"
+      </div>
+
       {/* Search results grid */}
-      {searchedShows.length > 0 && (
+      {searchType === "shows" && searchedShows.length > 0 && (
         <div className="search-results-grid">
           {searchedShows.map((show) => {
             const imageUrl = show.poster_path?.startsWith("http")
@@ -91,13 +136,38 @@ export default function Search() {
                   <img
                     src={imageUrl}
                     alt={show.name}
-                    className="search-result-img"
+                    className="search-result-img-show"
                   />
                   <p>{show.name}</p>
                 </div>
               </Link>
             );
           })}
+        </div>
+      )}
+
+      {searchType === "users" && searchedUsers.length > 0 && (
+        <div className="search-results-grid">
+          {searchedUsers.map((user) => (
+            <Link
+              to={`/profile/${encodeURIComponent(user.id)}`}
+              key={user.id || user.name}
+              className="search-result-link"
+            >
+              <div className="search-result">
+                <img
+                  src={
+                    user.picture
+                      ? user.picture.slice(0, -4) + "1080"
+                      : "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
+                  }
+                  alt={user.name}
+                  className="search-result-img-user"
+                />
+                <p>{user.name}</p>
+              </div>
+            </Link>
+          ))}
         </div>
       )}
 
@@ -111,7 +181,6 @@ export default function Search() {
             justifyContent: "center",
           }}
         >
-          {/* Left arrow */}
           <button
             onClick={goPrev}
             disabled={currentPage === 1}
@@ -128,7 +197,6 @@ export default function Search() {
             ◀
           </button>
 
-          {/* Dots with numbers underneath */}
           <ul
             style={{
               display: "flex",
@@ -139,35 +207,26 @@ export default function Search() {
               justifyContent: "center",
             }}
           >
-            {pageDots.map((page, idx) => {
-              if (page === "...") {
-                // Ellipsis
-                return (
-                  <li
-                    key={`ellipsis-${idx}`}
-                    style={{
-                      width: 24,
-                      textAlign: "center",
-                      userSelect: "none",
-                      fontSize: 18,
-                      lineHeight: 1,
-                      pointerEvents: "none",
-                    }}
-                  >
-                    &hellip;
-                  </li>
-                );
-              }
-
-              // Dot + number underneath
-              const isActive = page === currentPage;
-
-              return (
+            {pageDots.map((page, idx) =>
+              page === "..." ? (
+                <li
+                  key={`ellipsis-${idx}`}
+                  style={{
+                    width: 24,
+                    textAlign: "center",
+                    userSelect: "none",
+                    fontSize: 18,
+                    lineHeight: 1,
+                    pointerEvents: "none",
+                  }}
+                >
+                  &hellip;
+                </li>
+              ) : (
                 <li
                   key={page}
                   style={{ textAlign: "center", cursor: "pointer" }}
                 >
-                  {/* The dot */}
                   <div
                     onClick={() => setCurrentPage(Number(page))}
                     style={{
@@ -175,27 +234,25 @@ export default function Search() {
                       height: 16,
                       margin: "0 auto",
                       borderRadius: "50%",
-                      backgroundColor: isActive ? "blue" : "#ccc",
+                      backgroundColor: page === currentPage ? "blue" : "#ccc",
                       transition: "background-color 0.2s",
                     }}
                   />
-                  {/* Number underneath */}
                   <div
                     style={{
                       marginTop: 6,
                       fontSize: 14,
-                      color: isActive ? "blue" : "#333",
-                      fontWeight: isActive ? "bold" : "normal",
+                      color: page === currentPage ? "blue" : "#333",
+                      fontWeight: page === currentPage ? "bold" : "normal",
                     }}
                   >
                     {page}
                   </div>
                 </li>
-              );
-            })}
+              )
+            )}
           </ul>
 
-          {/* Right arrow */}
           <button
             onClick={goNext}
             disabled={currentPage === totalPages}

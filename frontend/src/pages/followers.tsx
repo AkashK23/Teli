@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import UserList from "../components/UserList";
 
 export default function Followers() {
   const { userId } = useParams<{ userId: string }>();
@@ -32,25 +33,9 @@ export default function Followers() {
 
   return (
     <div className="following-page">
-      <h2 className="following-title">Following</h2>
+      <h2 className="following-title">Followers</h2>
       <div className="following-container">
-        <ul className="following-list">
-          {followers.map((user: any, index: number) => (
-            <li key={user.id} className="following-item">
-              <a href={`/profile/${user.id}`}>
-                <img
-                  src={
-                    user.picture ||
-                    "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
-                  }
-                  alt={user.name}
-                  className="following-avatar"
-                />
-                <span className="following-name">{user.name}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
+        <UserList users={followers} />
       </div>
     </div>
   );
