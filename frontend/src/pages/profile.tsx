@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { useUser } from "../UserContext";
+
+import ReviewCard from "../components/ReviewCard";
 
 export default function Profile() {
   const url = `http://localhost:5001`;
   const { id } = useParams<{ id?: string }>();
   const loggedInUserId = useUser().userId;
+  const navigate = useNavigate();
 
   const user_id = id || loggedInUserId;
 
@@ -26,6 +29,7 @@ export default function Profile() {
       try {
         // Fetch user info
         const userRes = await axios.get(`${url}/user/${user_id}`);
+        console.log(userRes.data)
         setUserInfo(userRes.data);
 
         console.log(user_id)
@@ -72,17 +76,21 @@ export default function Profile() {
               const imageUrl = imagePath?.startsWith("http")
                 ? imagePath
                 : `https://image.tmdb.org/t/p/w500${imagePath}`;
+              const userReviewInfo = await axios.get(`${url}/user/${rating.user_id}`);
               return {
                 ...rating,
                 image_url:
                   showData?.image_url || showData?.thumbnail || imageUrl,
+                user_name: userReviewInfo.data.name,
+                user_id: userReviewInfo.data.id,
+                user_profile_pic: userReviewInfo.data.picture,
               };
             } catch {
               return { ...rating, image_url: null };
             }
           })
         );
-        setRatingsWithImages(ratingsWithImagesRes);
+        setRatingsWithImages(ratingsWithImagesRes.slice(0,3));
 
         // Currently watching with images
         const currentlyWatchingWithImagesRes = await Promise.all(
@@ -141,6 +149,10 @@ export default function Profile() {
     }
   };
 
+  const handleEditProfile = async () => {
+    navigate(`/editprofile`);
+  };
+
   if (loading) return <div>Loading profile...</div>;
 
   const isOwnProfile = user_id === loggedInUserId;
@@ -148,13 +160,13 @@ export default function Profile() {
   return (
     <div>
       {/* Profile Header + Bio */}
-      <div className="profile-header-section">
         <div className="profile-header">
           <div className="profile-pic">
             <img
               src={
-                userInfo.picture ||
-                "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
+                userInfo?.picture
+                  ? userInfo.picture.slice(0, -4) + "1080"
+                  : "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
               }
               referrerPolicy="no-referrer"
               className="profile-avatar"
@@ -191,24 +203,27 @@ export default function Profile() {
             </div>
 
             {/* Follow button */}
-            {user_id !== loggedInUserId && (
+            {user_id !== loggedInUserId ? (
               <button
                 className={`follow-btn ${!isFollowing ? "followed" : ""}`}
                 onClick={handleFollowToggle}
               >
                 {isFollowing ? "Followed" : "Follow"}
               </button>
-            )}
+            ) : <button
+                className="follow-btn followed"
+                onClick={handleEditProfile}
+              >
+                {"Edit Profile"}
+              </button> }
           </div>
         </div>
-
-       
-      </div> 
-      {userInfo.bio && (
+        {userInfo.bio && (
           <div className="profile-bio">
             <p className="bio-content">{userInfo.bio}</p>
           </div>
         )}
+      
 
       {/* Currently Watching */}
       <div className="favorite-shows">
@@ -236,19 +251,17 @@ export default function Profile() {
         <div className="user-ratings">
           <div className="rating-cards-container">
             {ratingsWithImages.map((rating: any) => (
-              <div className="rating-card" key={rating.show_id}>
-                <img
-                  src={rating.image_url}
-                  alt={rating.name}
-                  className="rating-show-img"
-                />
-                <div className="rating-details">
-                  <div className="rating-score">{rating.rating}</div>
-                  <div className="rating-text">
-                    <p>{rating.comment}</p>
-                  </div>
-                </div>
-              </div>
+              <ReviewCard
+                key={rating.show_id}
+                showId={rating.show_id}
+                userId={rating.user_id}
+                userName={rating.user_name}
+                userProfilePic={rating.user_profile_pic}
+                comment={rating.comment}
+                rating={rating.rating}
+                showImageUrl={rating.image_url}
+                showName={rating.name}
+              />
             ))}
           </div>
         </div>

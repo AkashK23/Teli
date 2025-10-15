@@ -33,16 +33,18 @@ export default function Login() {
       const response = await axios.post(`${url}/auth/google`, {
         token: credentialResponse.credential
       });
+      console.log(response)
 
       if (response.data.user && response.data.user.id) {
-        // Set the user ID in context and localStorage
         setUserId(response.data.user.id);
-        
-        // Navigate to home page
-        navigate("/");
-      } else {
-        setError("Invalid response from server");
+
+        if (response.data.message == "User created successfully") {
+          navigate("/onboarding");
+        } else {
+          navigate("/");
+        }
       }
+
     } catch (err) {
       console.error("Login error:", err);
       if (axios.isAxiosError(err) && err.response) {

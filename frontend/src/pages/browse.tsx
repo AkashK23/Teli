@@ -3,86 +3,11 @@ import axios from "axios";
 import { Link } from 'react-router-dom';
 import { useUser } from "../UserContext";
 import { readSync } from "fs";
+import MultiSelectDropdown from "../components/MultiSelectDropdown";
+import SingleSelectDropdown from "../components/SingleSelectDropdown";
+import GeneratePageDots from "../components/GeneratePageDots";
 
-/* Multiple Select Dropdown Function */
-interface MultiSelectProps {
-  label: string;
-  options: (string | { label: string; years: string[] })[];
-  selected: string[];
-  setSelected: (values: string[]) => void;
-}
 
-const MultiSelectDropdown: React.FC<MultiSelectProps> = ({ label, options, selected, setSelected }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const toggleOption = (value: string) => {
-    setSelected(
-      selected.includes(value)
-        ? selected.filter((item) => item !== value)
-        : [...selected, value]
-    );
-  };
-
-  useEffect(() => {
-    setIsOpen(false);
-  }, [selected]);
-
-  return (
-    <div className="multi-select-container">
-      <div className="dropdown-header" onClick={() => setIsOpen(!isOpen)}>
-        <span className="dropdown-label">
-          {selected.length === 0 ? label : selected.join(", ")}
-        </span>
-        <span className="arrow">{isOpen ? "▲" : "▼"}</span>
-      </div>
-      {isOpen && (
-        <div className="dropdown-list">
-          {options.map((option, index) => {
-            if (typeof option === "string") {
-              return (
-                <label key={option} className="dropdown-item">
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(option)}
-                    onChange={() => toggleOption(option)}
-                  />
-                  {option}
-                </label>
-              );
-            } else {
-              return (
-                <div key={index}>
-                  <div className="decade-header">{option.label}</div>
-                  {option.years.map((year) => (
-                    <label key={year} className="dropdown-item">
-                      <input
-                        type="checkbox"
-                        checked={selected.includes(year)}
-                        onChange={() => toggleOption(year)}
-                      />
-                      {year}
-                    </label>
-                  ))}
-                </div>
-              );
-            }
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
-
-interface Option {
-  label: string;
-  value: string;
-}
-
-interface SingleDropdownProps {
-  selected: string;
-  setSelected: (value: string) => void;
-  options: Option[]; // <-- options now passed in as a prop
-}
 
 const sortOptions = [
   { label: "Most Popular", value: "popular" },
@@ -97,81 +22,19 @@ const watchStatusOptions = [
   { label: "Watched", value: "watched" },
 ];
 
-const SingleDropdown: React.FC<SingleDropdownProps> = ({ selected, setSelected, options }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const handleOptionSelect = (value: string) => {
-    if (selected === value) {
-      setSelected("");
-    } else {
-      setSelected(value);
-    }
-    setIsOpen(false);
-  };
-
-  
-
-  return (
-    <div className="multi-select-container">
-      <div className="dropdown-header" onClick={() => setIsOpen(!isOpen)}>
-        <span className="dropdown-label">
-          {selected === "" ? "" : options.find((option) => option.value === selected)?.label}
-        </span>
-        <span className="arrow">{isOpen ? "▲" : "▼"}</span>
-      </div>
-      {isOpen && (
-        <div className="dropdown-list">
-          {options.map((option) => (
-            <label key={option.value} className="dropdown-item">
-              <input
-                type="checkbox"
-                checked={selected === option.value}
-                onChange={() => handleOptionSelect(option.value)}
-              />
-              {option.label}
-            </label>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-/* Page Tracker Function */
-const generatePageDots = (
-  currentPage: number,
-  totalPages: number
-): (number | string)[] => {
-  const pages: (number | string)[] = [];
-
-  if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
-    return pages;
-  }
-
-  // Show ellipsis after
-  if (currentPage > 2) {
-    pages.push("...");
-  }
-
-  // Middle range
-  for (
-    let i = Math.max(1, currentPage - 1);
-    i <= Math.min(totalPages, currentPage + 1);
-    i++
-  ) {
-    pages.push(i);
-  }
-
-  // Show ellipsis after
-  if (currentPage < totalPages - 3) {
-    pages.push("...");
-  }
-
-  return pages;
-};
-
-// type WatchStatus = "want_to_watch" | "currently_watching" | "watched" | "";
+// const streamingServices = [
+//   "Netflix",
+//   "Hulu",
+//   "Amazon Prime Video",
+//   "Disney+",
+//   "HBO Max",
+//   "Apple TV+",
+//   "Peacock",
+//   "Paramount+",
+//   "YouTube",
+//   "Tubi",
+//   "Crunchyroll",
+// ];
 
 
 /* Browse Page */
@@ -206,7 +69,7 @@ export default function Browse() {
 
   const isFirstLoad = useRef(true);
 
-  const pageDots = generatePageDots(currentPage, totalPages);
+  const pageDots = GeneratePageDots(currentPage, totalPages);
   const goPrev = () => {
     setCurrentPage((p) => (p > 1 ? p - 1 : p));
   };
@@ -214,23 +77,6 @@ export default function Browse() {
   const goNext = () => {
     setCurrentPage((p) => (p < totalPages ? p + 1 : p));
   };
-
-  const streamingServices = [
-    "Netflix",
-    "Hulu",
-    "Amazon Prime Video",
-    "Disney+",
-    "HBO Max",
-    "Apple TV+",
-    "Peacock",
-    "Paramount+",
-    "YouTube",
-    "Tubi",
-    "Crunchyroll",
-  ];
-
-  const getCodeFromLabel = (label: string, options: CodeLabel[]) =>
-    options.find((opt) => opt.label === label)?.code || "";
 
   /* Pull filter options from backend */
   useEffect(() => {
@@ -482,26 +328,16 @@ export default function Browse() {
           className="filters-column"
           style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
         >
-          <div className="filter-group">
+          {/* <div className="filter-group">
             <label className="filter-label">Sort By</label>
-            <SingleDropdown
+            <SingleSelectDropdown
               selected={sortBy}
               setSelected={updateSortBy}
               options={sortOptions}
             />
-          </div>
+          </div> */}
 
-          <div className="filter-group">
-            <label className="filter-label">Genre</label>
-            <MultiSelectDropdown
-              label=""
-              options={genreOptions.map((g) => g.label)}
-              selected={genre}
-              setSelected={updateGenre}
-            />
-          </div>
-
-          <div className="filter-group">
+          {/* <div className="filter-group">
             <label className="filter-label">Streaming Service</label>
             <MultiSelectDropdown
               label=""
@@ -509,7 +345,7 @@ export default function Browse() {
               selected={service}
               setSelected={updateService}
             />
-          </div>
+          </div> */}
 
           <div className="filter-group">
             <label className="filter-label">Country</label>
@@ -532,13 +368,23 @@ export default function Browse() {
           </div>
 
           <div className="filter-group">
+            <label className="filter-label">Genre</label>
+            <MultiSelectDropdown
+              label=""
+              options={genreOptions.map((g) => g.label)}
+              selected={genre}
+              setSelected={updateGenre}
+            />
+          </div>
+
+          {/* <div className="filter-group">
             <label className="filter-label">Watch Status</label>
-            <SingleDropdown
+            <SingleSelectDropdown
               selected={watchStatus}
               setSelected={updateWatchStatus}
               options={watchStatusOptions}
             />
-          </div>
+          </div> */}
 
           <div style={{ marginTop: "1rem", textAlign: "center" }}>
             <button
@@ -594,7 +440,7 @@ export default function Browse() {
                     <img
                       src={imageUrl}
                       alt={show.name}
-                      className="search-result-img"
+                      className="search-result-img-show"
                     />
                     <p>{show.name}</p>
                   </div>

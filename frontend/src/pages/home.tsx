@@ -3,6 +3,8 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import { useUser } from "../UserContext";
 
+import ReviewCard from "../components/ReviewCard";
+
 /* Home Page */
 export default function Home() {
   const [userInfo, setUserInfo] = useState<any>(null);
@@ -10,8 +12,7 @@ export default function Home() {
   const [ratingsWithImages, setRatingsWithImages] = useState<any[]>([]);
   const [popularShows, setPopularShows] = useState<any[]>([]);
   const [currentlyWatching, setCurrentlyWatching] = useState<any[]>([]);
-  const [currentlyWatchingWithImages, setCurrentlyWatchingWithImages] =
-    useState<any[]>([]);
+  const [currentlyWatchingWithImages, setCurrentlyWatchingWithImages] = useState<any[]>([]);
   const [newFromFriends, setNewFromFriends] = useState<any[]>([]);
 
   const [loading, setLoading] = useState({
@@ -33,6 +34,7 @@ export default function Home() {
         // User info
         const res = await axios.get(`${url}/user/${user_id}`);
         setUserInfo(res.data);
+        console.log(res)
 
         // Currently watching
         const currentlyWatching_backend = await axios.get(
@@ -51,6 +53,7 @@ export default function Home() {
         // User feed (reviews)
         const ratings_backend = await axios.get(`${url}/users/${user_id}/feed`);
         const fetchedRatings = ratings_backend.data.feed;
+        console.log(fetchedRatings)
         setRatings(fetchedRatings);
 
         // Fetch show images for ratings
@@ -63,6 +66,7 @@ export default function Home() {
               const imageUrl = imagePath?.startsWith("http")
                 ? imagePath
                 : `https://image.tmdb.org/t/p/w500${imagePath}`;
+              const userReviewInfo = await axios.get(`${url}/user/${rating.user_id}`);
               return {
                 ...rating,
                 show_name: showData?.name,
@@ -71,6 +75,9 @@ export default function Home() {
                   showData?.thumbnail ||
                   imageUrl ||
                   null,
+                user_name: userReviewInfo.data.name,
+                user_id: userReviewInfo.data.id,
+                user_profile_pic: userReviewInfo.data.picture,
               };
             } catch {
               return { ...rating, image_url: null };
@@ -78,6 +85,7 @@ export default function Home() {
           })
         );
         setRatingsWithImages(updatedRatings);
+        console.log(updatedRatings);
         setLoading((prev) => ({ ...prev, reviews: false }));
 
         // New From Friends
@@ -217,24 +225,17 @@ export default function Home() {
           <div className="user-ratings">
             <div className="rating-cards-container">
               {ratingsWithImages.map((rating: any) => (
-                <div className="rating-card" key={rating.show_id}>
-                  <img
-                    src="https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
-                    className="profile-avatar-home"
-                  />
-                  <div className="rating-details">
-                    <div className="rating-text">
-                      <h4>{rating.user_name}</h4>
-                      <p>{rating.comment}</p>
-                    </div>
-                    <div className="rating-score">{rating.rating}</div>
-                  </div>
-                  <img
-                    src={rating.image_url}
-                    alt={rating.show_name}
-                    className="rating-show-img"
-                  />
-                </div>
+                <ReviewCard
+                  key={rating.show_id}
+                  showId={rating.show_id}
+                  userId={rating.user_id}
+                  userName={rating.user_name}
+                  userProfilePic={rating.user_profile_pic}
+                  comment={rating.comment}
+                  rating={rating.rating}
+                  showImageUrl={rating.image_url}
+                  showName={rating.name}
+                />
               ))}
             </div>
           </div>

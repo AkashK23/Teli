@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useUser } from "../UserContext";
+import ReviewCard from "../components/ReviewCard";
 
 export default function Activity() {
+  const [userInfo, setUserInfo] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"following" | "user">("following");
   const [followingReviews, setFollowingReviews] = useState<any[]>([]);
   const [userReviews, setUserReviews] = useState<any[]>([]);
@@ -12,6 +14,9 @@ export default function Activity() {
   useEffect(() => {
     const fetchReviews = async () => {
       try {
+        const userDataRes = await axios.get(`${url}/user/${user_id}`);
+        setUserInfo(userDataRes.data);
+
         const [followingRes, userRes] = await Promise.all([
           axios.get(`${url}/users/${user_id}/feed`),
           axios.get(`${url}/users/${user_id}/ratings`),
@@ -29,6 +34,7 @@ export default function Activity() {
                 const imageUrl = imagePath?.startsWith("http")
                   ? imagePath
                   : `https://image.tmdb.org/t/p/w500${imagePath}`;
+                const userReviewInfo = await axios.get(`${url}/user/${rating.user_id}`);
                 return {
                   ...rating,
                   show_name: showData?.name,
@@ -37,6 +43,9 @@ export default function Activity() {
                     showData?.thumbnail ||
                     imageUrl ||
                     null,
+                  user_name: userReviewInfo.data.name,
+                  user_id: userReviewInfo.data.id,
+                  user_profile_pic: userReviewInfo.data.picture,
                 };
               } catch (err) {
                 console.error("Failed to fetch image for:", rating.show_name);
@@ -48,6 +57,7 @@ export default function Activity() {
 
         setFollowingReviews(await enrichRatings(fetchedFollowingRatings));
         setUserReviews(await enrichRatings(fetchedUserRatings));
+        console.log(fetchedUserRatings);
       } catch (err) {
         console.error("Failed to fetch reviews:", err);
       }
@@ -64,24 +74,17 @@ export default function Activity() {
         <div className="user-ratings">
           <div className="rating-cards-container">
             {reviews.map((rating: any) => (
-              <div className="rating-card" key={rating.show_id}>
-                <img
-                  src="https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
-                  className="profile-avatar-home"
-                />
-                <div className="rating-details">
-                  <div className="rating-text">
-                    <h4>{rating.user_name}</h4>
-                    <p>{rating.comment}</p>
-                  </div>
-                  <div className="rating-score">{rating.rating}</div>
-                </div>
-                <img
-                  src={rating.image_url}
-                  alt={rating.name}
-                  className="rating-show-img"
-                />
-              </div>
+              <ReviewCard
+                key={rating.show_id}
+                showId={rating.show_id}
+                userId={rating.user_id}
+                userName={rating.user_name}
+                userProfilePic={rating.user_profile_pic}
+                comment={rating.comment}
+                rating={rating.rating}
+                showImageUrl={rating.image_url}
+                showName={rating.name}
+              />
             ))}
           </div>
         </div>
