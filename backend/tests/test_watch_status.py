@@ -194,6 +194,37 @@ class TestWatchStatusEndpoints:
         assert response.status_code == 400
         assert "errors" in response.get_json()
     
+    def test_update_watch_status_watched(self, get_client, setup_test_data):
+        client = get_client
+        # Use a unique show ID with timestamp to ensure it's new
+        unique_show_id = f"watched_show_{datetime.now(timezone.utc).timestamp()}"
+        payload = {
+            "user_id": setup_test_data["user1_id"],
+            "show_id": unique_show_id,
+            "status": "watched",
+            "notes": "Finished watching this amazing show"
+        }
+        
+        response = client.post(
+            "/update_watch_status",
+            json=payload,
+            headers={"Content-Type": "application/json"}
+        )
+        
+        assert response.status_code == 201
+        assert "id" in response.get_json()
+        assert response.get_json()["message"] == "Watch status added successfully"
+        
+        # Verify the status by getting it
+        get_response = client.get(
+            f"/users/{setup_test_data['user1_id']}/watch_status/{unique_show_id}"
+        )
+        
+        assert get_response.status_code == 200
+        status_data = get_response.get_json()
+        assert status_data["status"] == "watched"
+        assert status_data["notes"] == "Finished watching this amazing show"
+    
     def test_update_watch_status_user_not_found(self, get_client):
         client = get_client
         payload = {
@@ -289,6 +320,53 @@ class TestWatchStatusEndpoints:
     def test_get_want_to_watch_user_not_found(self, get_client):
         client = get_client
         response = client.get("/users/non_existent_user/want_to_watch")
+        
+        assert response.status_code == 404
+        assert response.get_json()["error"] == "User not found"
+    
+    def test_get_watched(self, get_client, setup_test_data):
+        client = get_client
+        # Add a show to watched for testing
+        payload = {
+            "user_id": setup_test_data["user1_id"],
+            "show_id": "the_wire",
+            "status": "watched",
+            "notes": "Finished this classic series"
+        }
+        
+        client.post(
+            "/update_watch_status",
+            json=payload,
+            headers={"Content-Type": "application/json"}
+        )
+        
+        response = client.get(f"/users/{setup_test_data['user1_id']}/watched")
+        
+        assert response.status_code == 200
+        shows = response.get_json()
+        assert isinstance(shows, list)
+        assert len(shows) > 0
+        
+        # Should include the newly added show
+        assert any(show["show_id"] == "the_wire" for show in shows)
+        
+        # All shows should have status "watched"
+        for show in shows:
+            assert show["status"] == "watched"
+    
+    def test_get_watched_empty(self, get_client, setup_test_data):
+        client = get_client
+        # User2 doesn't have any shows in watched
+        response = client.get(f"/users/{setup_test_data['user2_id']}/watched")
+        
+        assert response.status_code == 200
+        shows = response.get_json()
+        assert isinstance(shows, list)
+        assert len(shows) == 0
+    
+    def test_get_watched_user_not_found(self, get_client):
+        client = get_client
+        response = client.get("/users/non_existent_user/watched")
         
         assert response.status_code == 404
         assert response.get_json()["error"] == "User not found"

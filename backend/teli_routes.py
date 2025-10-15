@@ -348,6 +348,7 @@ def add_to_watchlist():
 class AddRatingRequest(BaseModel):
     user_id: str
     show_id: str
+    show_name_lowercase: str
     rating: int = Field(..., ge=1, le=10)  # Rating between 1-10
     comment: Optional[str] = None
 
@@ -586,6 +587,44 @@ def get_show_ratings(show_id):
         logger.error(f"Error getting show ratings: {e}")
         return jsonify({"error": str(e)}), 500
 
+@teli.route("/shows/<show_id>/average-rating", methods=["GET"])
+def get_show_average_rating(show_id):
+    try:
+        ratings_ref = db.collection("ratings").where(
+            filter=FieldFilter("show_id", "==", show_id))
+        docs = list(ratings_ref.stream())
+
+        total_ratings = len(docs)
+        
+        if total_ratings == 0:
+            result = {
+                "show_id": show_id,
+                "average_rating": None,
+                "total_ratings": 0
+            }
+            return jsonify(result), 200
+
+        # Calculate average rating
+        total_rating_sum = 0
+        for doc in docs:
+            rating_data = doc.to_dict()
+            rating_value = rating_data.get("rating", 0)
+            total_rating_sum += rating_value
+
+        average_rating = total_rating_sum / total_ratings
+        average_rating_rounded = round(average_rating, 2)
+
+        result = {
+            "show_id": show_id,
+            "average_rating": average_rating_rounded,
+            "total_ratings": total_ratings
+        }
+
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Error getting show average rating: {e}")
+        return jsonify({"error": "Database error occurred"}), 500
+
     
 class FollowRequest(BaseModel):
     follower_id: str
@@ -804,7 +843,7 @@ def server_error(e):
 class UpdateWatchStatusRequest(BaseModel):
     user_id: str
     show_id: str
-    status: str = Field(..., pattern="^(currently_watching|want_to_watch)$")
+    status: str = Field(..., pattern="^(currently_watching|want_to_watch|watched)$")
     current_season: Optional[int] = None
     current_episode: Optional[int] = None
     notes: Optional[str] = None
@@ -812,6 +851,11 @@ class UpdateWatchStatusRequest(BaseModel):
 class DeleteWatchStatusRequest(BaseModel):
     user_id: str
     show_id: str
+
+class SearchUserRatedShowsRequest(BaseModel):
+    query: str
+    page: Optional[int] = Field(default=1, ge=1)
+    limit: Optional[int] = Field(default=20, ge=1, le=100)
 
 @teli.route("/update_watch_status", methods=["POST"])
 def update_watch_status():
@@ -903,6 +947,32 @@ def get_want_to_watch(user_id):
     
     except Exception as e:
         logger.error(f"Error retrieving want to watch shows: {e}")
+        return jsonify({"error": "Database error occurred"}), 500
+
+@teli.route("/users/<user_id>/watched", methods=["GET"])
+def get_watched(user_id):
+    try:
+        # Check if user exists
+        user_ref = db.collection("users").document(user_id).get()
+        if not user_ref.exists:
+            return jsonify({"error": "User not found"}), 404
+            
+        # Query for shows with "watched" status
+        status_query = db.collection("watch_status").where(
+            filter=FieldFilter("user_id", "==", user_id)).where(
+                filter=FieldFilter("status", "==", "watched")).stream()
+        
+        # Prepare result list
+        result = []
+        for doc in status_query:
+            status_data = doc.to_dict()
+            status_data["id"] = doc.id
+            result.append(status_data)
+            
+        return jsonify(result), 200
+    
+    except Exception as e:
+        logger.error(f"Error retrieving watched shows: {e}")
         return jsonify({"error": "Database error occurred"}), 500
 
 @teli.route("/users/<user_id>/watch_status/<show_id>", methods=["GET"])
@@ -1175,3 +1245,93 @@ def delete_user_and_related_data(user_id):
     except Exception as e:
         logger.error(f"Error in delete_user_and_related_data: {e}")
         return {"success": False, "error": str(e)}
+
+@teli.route("/users/<user_id>/rated-shows/search", methods=["GET"])
+def search_user_rated_shows(user_id):
+    """
+    Search for shows that a specific user has rated.
+    This searches within the Firebase database using the stored show_name_lowercase field.
+    """
+    try:
+        # Check if user exists
+        user_ref = db.collection("users").document(user_id).get()
+        if not user_ref.exists:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Get query parameter and validate it's not empty
+        query = request.args.get('query', '').strip()
+        if not query:
+            return jsonify({"errors": [{"loc": ["query"], "msg": "Query parameter is required and cannot be empty", "type": "value_error"}]}), 400
+        
+        # Get and validate pagination parameters
+        try:
+            page = int(request.args.get('page', 1))
+            if page < 1:
+                page = 1
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid parameter format"}), 400
+        
+        try:
+            limit = int(request.args.get('limit', 20))
+            if limit < 1:
+                limit = 20
+            elif limit > 100:
+                limit = 100
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid parameter format"}), 400
+        
+        # Get all ratings for this user first, then filter in memory
+        # This avoids the Firestore composite index requirement
+        ratings_query = db.collection("ratings").where(
+            filter=FieldFilter("user_id", "==", user_id)).stream()
+        
+        # Process results and filter by query
+        matching_shows = []
+        query_lower = query.lower()
+        
+        for rating_doc in ratings_query:
+            rating_data = rating_doc.to_dict()
+            rating_data["id"] = rating_doc.id
+            
+            show_name_lowercase = rating_data.get("show_name_lowercase", "")
+            
+            # Check if query matches (prefix or contains)
+            if (query_lower in show_name_lowercase or 
+                show_name_lowercase.startswith(query_lower)):
+                matching_shows.append(rating_data)
+        
+        # Sort by relevance (exact matches first, then prefix matches)
+        def sort_key(rating):
+            show_name = rating.get('show_name_lowercase', '')
+            
+            if show_name == query_lower:
+                return (0, show_name)  # Exact match first
+            elif show_name.startswith(query_lower):
+                return (1, show_name)  # Prefix match
+            else:
+                return (2, show_name)  # Contains match
+        
+        matching_shows.sort(key=sort_key)
+        
+        # Calculate pagination
+        total_results = len(matching_shows)
+        total_pages = (total_results + limit - 1) // limit if total_results > 0 else 1
+        start_index = (page - 1) * limit
+        end_index = start_index + limit
+        
+        # Get the page of results
+        page_results = matching_shows[start_index:end_index]
+        
+        result = {
+            "results": page_results,
+            "total_results": total_results,
+            "total_pages": total_pages,
+            "current_page": page,
+            "limit": limit
+        }
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        logger.error(f"Error searching user rated shows: {e}")
+        return jsonify({"error": "Database error occurred"}), 500

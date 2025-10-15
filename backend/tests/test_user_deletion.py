@@ -79,6 +79,7 @@ class TestUserDeletion:
         rating_data = {
             "user_id": user_id,
             "show_id": show_id,
+            "show_name_lowercase": show_id.replace("_", " "),
             "rating": rating,
             "comment": comment
         }

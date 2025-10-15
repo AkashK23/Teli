@@ -74,6 +74,7 @@ def setup_test_data(get_client, get_db):
         rating_payload = {
             "user_id": user1_id,
             "show_id": show1,
+            "show_name_lowercase": "breaking bad",
             "rating": 9,
             "comment": f"Great show! Rating {i+1}"
         }
@@ -87,6 +88,7 @@ def setup_test_data(get_client, get_db):
         rating_payload = {
             "user_id": user2_id,
             "show_id": show1,
+            "show_name_lowercase": "breaking bad",
             "rating": 8,
             "comment": f"Loved it! Rating {i+1}"
         }
@@ -101,6 +103,7 @@ def setup_test_data(get_client, get_db):
         rating_payload = {
             "user_id": user1_id,
             "show_id": show2,
+            "show_name_lowercase": "stranger things",
             "rating": 8,
             "comment": f"Great show! Rating {i+1}"
         }
@@ -114,6 +117,7 @@ def setup_test_data(get_client, get_db):
         rating_payload = {
             "user_id": user3_id,
             "show_id": show2,
+            "show_name_lowercase": "stranger things",
             "rating": 7,
             "comment": f"Good show! Rating {i+1}"
         }
@@ -128,6 +132,7 @@ def setup_test_data(get_client, get_db):
         rating_payload = {
             "user_id": user2_id,
             "show_id": show3,
+            "show_name_lowercase": "better call saul",
             "rating": 9,
             "comment": f"Epic show! Rating {i+1}"
         }
@@ -141,6 +146,7 @@ def setup_test_data(get_client, get_db):
         rating_payload = {
             "user_id": user3_id,
             "show_id": show3,
+            "show_name_lowercase": "better call saul",
             "rating": 8,
             "comment": f"Great finale! Rating {i+1}"
         }

@@ -61,6 +61,7 @@ def setup_test_data(get_client, get_db):
     rating_payload = {
         "user_id": user2_id,
         "show_id": "breaking_bad",
+        "show_name_lowercase": "breaking bad",
         "rating": 4,
         "comment": "Great show2!"
     }
@@ -328,6 +329,7 @@ class TestRatingEndpoints:
         payload = {
             "user_id": setup_test_data["user1_id"],
             "show_id": "better_call_saul",
+            "show_name_lowercase": "better call saul",
             "rating": 5,
             "comment": "Amazing spin-off!"
         }

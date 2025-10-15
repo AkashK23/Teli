@@ -42,7 +42,9 @@ http://localhost:5001
 - [Rating Endpoints](#rating-endpoints)
   - [Add Rating](#add-rating)
   - [Get User Ratings](#get-user-ratings)
+  - [Search User Rated Shows](#search-user-rated-shows)
   - [Get Show Ratings](#get-show-ratings)
+  - [Get Show Average Rating](#get-show-average-rating)
   - [Get Popular Shows](#get-popular-shows)
 - [Episode Rating Endpoints](#episode-rating-endpoints)
   - [Add Episode Rating](#add-episode-rating)
@@ -51,6 +53,7 @@ http://localhost:5001
   - [Update Watch Status](#update-watch-status)
   - [Get Currently Watching](#get-currently-watching)
   - [Get Want to Watch](#get-want-to-watch)
+  - [Get Watched](#get-watched)
   - [Get Watch Status](#get-watch-status)
   - [Delete Watch Status](#delete-watch-status)
 - [Watchlist Endpoints](#watchlist-endpoints)
@@ -1688,12 +1691,13 @@ Add or update a rating for a TV show.
 
 **Request Body**:
 
-| Field    | Type   | Required | Description                |
-|----------|--------|----------|----------------------------|
-| user_id  | string | Yes      | ID of the user             |
-| show_id  | string | Yes      | ID of the TV show          |
-| rating   | number | Yes      | Rating value (1-10)        |
-| comment  | string | No       | Optional review comment    |
+| Field               | Type   | Required | Description                |
+|---------------------|--------|----------|----------------------------|
+| user_id             | string | Yes      | ID of the user             |
+| show_id             | string | Yes      | ID of the TV show          |
+| show_name_lowercase | string | Yes      | Show name in lowercase for searching |
+| rating              | number | Yes      | Rating value (1-10)        |
+| comment             | string | No       | Optional review comment    |
 
 **Example Request**:
 
@@ -1702,7 +1706,8 @@ curl -X POST "http://localhost:5001/ratings" \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": "user123",
-    "show_id": "breaking_bad",
+    "show_id": "1396",
+    "show_name_lowercase": "breaking bad",
     "rating": 9,
     "comment": "One of the best shows ever made!"
   }'
@@ -1803,6 +1808,113 @@ curl -X GET "http://localhost:5001/users/user123/ratings"
   }
   ```
 
+### Search User Rated Shows
+
+Search for shows that a specific user has rated by show name. This searches within the Firebase database using stored show names, not the TMDB API.
+
+**URL**: `/users/:user_id/rated-shows/search`
+
+**Method**: `GET`
+
+**URL Parameters**:
+
+| Parameter | Type   | Required | Description                |
+|-----------|--------|----------|----------------------------|
+| user_id   | string | Yes      | The ID of the user         |
+
+**Query Parameters**:
+
+| Parameter | Type   | Required | Description                                |
+|-----------|--------|----------|--------------------------------------------|
+| query     | string | Yes      | The search term to find rated shows        |
+| page      | number | No       | Page number for pagination (default: 1)    |
+| limit     | number | No       | Results per page (default: 20, max: 100)   |
+
+**Example Request**:
+
+```bash
+curl -X GET "http://localhost:5001/users/user123/rated-shows/search?query=breaking"
+```
+
+**Example Request with Pagination**:
+
+```bash
+curl -X GET "http://localhost:5001/users/user123/rated-shows/search?query=breaking&page=1&limit=10"
+```
+
+**Example Response**:
+
+```json
+{
+  "results": [
+    {
+      "id": "rating123",
+      "user_id": "user123",
+      "show_id": "1396",
+      "show_name_lowercase": "breaking bad",
+      "rating": 9,
+      "comment": "One of the best shows ever made!",
+      "timestamp": "2024-05-30T14:22:10Z"
+    },
+    {
+      "id": "rating456",
+      "user_id": "user123",
+      "show_id": "1457",
+      "show_name_lowercase": "breaking point",
+      "rating": 7,
+      "comment": "Decent thriller series",
+      "timestamp": "2024-05-25T09:15:30Z"
+    }
+  ],
+  "total_results": 2,
+  "total_pages": 1,
+  "current_page": 1,
+  "limit": 20
+}
+```
+
+**Search Behavior**:
+- Case-insensitive matching on stored show names
+- Results are sorted by relevance:
+  1. Exact show name matches first
+  2. Show name prefix matches
+  3. Show name contains matches
+- Only searches within shows that the user has actually rated
+- Supports pagination for large result sets
+
+**Error Responses**:
+
+- `400 Bad Request`: Missing query parameter
+  ```json
+  {
+    "errors": [
+      {
+        "loc": ["query"],
+        "msg": "field required",
+        "type": "value_error.missing"
+      }
+    ]
+  }
+  ```
+- `400 Bad Request`: Invalid page parameter
+  ```json
+  {
+    "error": "Invalid parameter format"
+  }
+  ```
+- `404 Not Found`: User not found
+  ```json
+  {
+    "error": "User not found"
+  }
+  ```
+- `500 Internal Server Error`: Database error
+  ```json
+  {
+    "error": "Database error occurred"
+  }
+  ```
+
 ### Get Show Ratings
 
 Get all ratings for a specific TV show.
@@ -1845,6 +1957,55 @@ curl -X GET "http://localhost:5001/shows/breaking_bad/ratings"
   }
   // Additional ratings...
 ]
+```
+
+**Error Responses**:
+
+- `500 Internal Server Error`: Database error
+  ```json
+  {
+    "error": "Database error occurred"
+  }
+  ```
+
+### Get Show Average Rating
+
+Get the average rating for a specific TV show.
+
+**URL**: `/shows/:show_id/average-rating`
+
+**Method**: `GET`
+
+**URL Parameters**:
+
+| Parameter | Type   | Required | Description                |
+|-----------|--------|----------|----------------------------|
+| show_id   | string | Yes      | The ID of the TV show      |
+
+**Example Request**:
+
+```bash
+curl -X GET "http://localhost:5001/shows/1396/average-rating"
+```
+
+**Example Response (Show with ratings)**:
+
+```json
+{
+  "show_id": "1396",
+  "average_rating": 8.67,
+  "total_ratings": 42
+}
+```
+
+**Example Response (Show with no ratings)**:
+
+```json
+{
+  "show_id": "1396",
+  "average_rating": null,
+  "total_ratings": 0
+}
 ```
 
 **Error Responses**:
@@ -2136,7 +2297,7 @@ Add or update a watch status for a TV show.
 |-----------------|--------|----------|--------------------------------------------------|
 | user_id         | string | Yes      | ID of the user                                   |
 | show_id         | string | Yes      | ID of the TV show                                |
-| status          | string | Yes      | Status value ("currently_watching" or "want_to_watch") |
+| status          | string | Yes      | Status value ("currently_watching", "want_to_watch", or "watched") |
 | current_season  | number | No       | Current season number (for "currently_watching") |
 | current_episode | number | No       | Current episode number (for "currently_watching")|
 | notes           | string | No       | Optional notes about the show                    |
@@ -2182,7 +2343,7 @@ curl -X POST "http://localhost:5001/update_watch_status" \
     "errors": [
       {
         "loc": ["status"],
-        "msg": "string does not match pattern '^(currently_watching|want_to_watch)$'",
+        "msg": "string does not match pattern '^(currently_watching|want_to_watch|watched)$'",
         "type": "value_error.str.pattern"
       }
     ]
@@ -2303,6 +2464,65 @@ curl -X GET "http://localhost:5001/users/user123/want_to_watch"
     "status": "want_to_watch",
     "notes": "Classic HBO show",
     "updated_at": "2024-05-27T20:30:45Z"
+  }
+  // Additional shows...
+]
+```
+
+**Error Responses**:
+
+- `404 Not Found`: User not found
+  ```json
+  {
+    "error": "User not found"
+  }
+  ```
+- `500 Internal Server Error`: Database error
+  ```json
+  {
+    "error": "Database error occurred"
+  }
+  ```
+
+### Get Watched
+
+Get all shows that a user has watched.
+
+**URL**: `/users/:user_id/watched`
+
+**Method**: `GET`
+
+**URL Parameters**:
+
+| Parameter | Type   | Required | Description                |
+|-----------|--------|----------|----------------------------|
+| user_id   | string | Yes      | The ID of the user         |
+
+**Example Request**:
+
+```bash
+curl -X GET "http://localhost:5001/users/user123/watched"
+```
+
+**Example Response**:
+
+```json
+[
+  {
+    "id": "status456",
+    "user_id": "user123",
+    "show_id": "breaking_bad",
+    "status": "watched",
+    "notes": "One of the best shows ever made!",
+    "updated_at": "2024-05-30T14:22:10Z"
+  },
+  {
+    "id": "status789",
+    "user_id": "user123",
+    "show_id": "the_sopranos",
+    "status": "watched",
+    "notes": "Classic HBO series",
+    "updated_at": "2024-05-25T09:15:30Z"
   }
   // Additional shows...
 ]
@@ -2596,6 +2816,13 @@ Detailed show object (from show details endpoint) includes additional fields:
   "updated_at": "2024-05-30T14:22:10Z"
 }
 ```
+
+**Possible status values**:
+- `"currently_watching"`: User is currently watching the show
+- `"want_to_watch"`: User wants to watch the show
+- `"watched"`: User has finished watching the show
+
+**Note**: The `current_season` and `current_episode` fields are typically used only with the `"currently_watching"` status to track progress.
 
 ### Feed Item Object
 
