@@ -6,7 +6,7 @@ import { useUser } from "../UserContext";
 import ReviewCard from "../components/ReviewCard";
 
 export default function Profile() {
-  const url = `http://localhost:5001`;
+  const url = process.env.REACT_APP_API_URL;
   const { id } = useParams<{ id?: string }>();
   const loggedInUserId = useUser().userId;
   const navigate = useNavigate();
@@ -14,6 +14,7 @@ export default function Profile() {
   const user_id = id || loggedInUserId;
 
   const [userInfo, setUserInfo] = useState<any>(null);
+  const [showNumber, setShowNumber] = useState(0);
   const [following, setFollowing] = useState(0);
   const [followers, setFollowers] = useState(0);
   const [ratings, setRatings] = useState<any[]>([]);
@@ -35,6 +36,12 @@ export default function Profile() {
         console.log(user_id)
         console.log(loggedInUserId)
         console.log(id)
+
+        // Fetch show number
+        const W2Wres = await axios.get(`${url}/users/${user_id}/want_to_watch`);
+        const CWres = await axios.get(`${url}/users/${user_id}/currently_watching`);
+        const Wres = await axios.get(`${url}/users/${user_id}/watched`);
+        setShowNumber(W2Wres.data.length + CWres.data.length + Wres.data.length)
 
         // Fetch followers/following counts
         const followingRes = await axios.get(
@@ -160,70 +167,70 @@ export default function Profile() {
   return (
     <div>
       {/* Profile Header + Bio */}
-        <div className="profile-header">
-          <div className="profile-pic">
-            <img
-              src={
-                userInfo?.picture
-                  ? userInfo.picture.slice(0, -4) + "1080"
-                  : "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
-              }
-              referrerPolicy="no-referrer"
-              className="profile-avatar"
-            />
-            <h4 className="username">
-              <b>{userInfo.name}</b>
-            </h4>
-          </div>
-          <div className="profile-stats">
-            {/* Stats Row */}
-            <div className="stats-row">
+      <div className="profile-header">
+        <div className="profile-pic">
+          <img
+            src={
+              userInfo?.picture
+                ? userInfo.picture.slice(0, -4) + "1080"
+                : "/avatar.jpg"
+            }
+            referrerPolicy="no-referrer"
+            className="profile-avatar"
+          />
+          <h4 className="username">
+            <b>{userInfo.name}</b>
+          </h4>
+        </div>
+        <div className="profile-stats">
+          {/* Stats Row */}
+          <div className="stats-row">
+            <Link to={`/users/${user_id}/yourshows`} className="stat-link">
               <div className="stat">
                 <div className="stat-number">
-                  <b>{ratings.length}</b>
+                  <b>{showNumber}</b>
                 </div>
                 <div className="stat-label">Shows</div>
               </div>
-              <Link to={`/users/${user_id}/following`} className="stat-link">
-                <div className="stat">
-                  <div className="stat-number">
-                    <b>{following}</b>
-                  </div>
-                  <div className="stat-label">Following</div>
+            </Link>
+            <Link to={`/users/${user_id}/following`} className="stat-link">
+              <div className="stat">
+                <div className="stat-number">
+                  <b>{following}</b>
                 </div>
-              </Link>
-              <Link to={`/users/${user_id}/followers`} className="stat-link">
-                <div className="stat">
-                  <div className="stat-number">
-                    <b>{followers}</b>
-                  </div>
-                  <div className="stat-label">Followers</div>
+                <div className="stat-label">Following</div>
+              </div>
+            </Link>
+            <Link to={`/users/${user_id}/followers`} className="stat-link">
+              <div className="stat">
+                <div className="stat-number">
+                  <b>{followers}</b>
                 </div>
-              </Link>
-            </div>
+                <div className="stat-label">Followers</div>
+              </div>
+            </Link>
+          </div>
 
-            {/* Follow button */}
-            {user_id !== loggedInUserId ? (
-              <button
-                className={`follow-btn ${!isFollowing ? "followed" : ""}`}
-                onClick={handleFollowToggle}
-              >
-                {isFollowing ? "Followed" : "Follow"}
-              </button>
-            ) : <button
-                className="follow-btn followed"
-                onClick={handleEditProfile}
-              >
-                {"Edit Profile"}
-              </button> }
-          </div>
+          {/* Follow button */}
+          {user_id !== loggedInUserId ? (
+            <button
+              className={`follow-btn ${!isFollowing ? "followed" : ""}`}
+              onClick={handleFollowToggle}
+            >
+              {isFollowing ? "Followed" : "Follow"}
+            </button>
+          ) : (
+            <button className="follow-btn followed" onClick={handleEditProfile}>
+              {"Edit Profile"}
+            </button>
+          )}
         </div>
-        {userInfo.bio && (
-          <div className="profile-bio">
-            <p className="bio-content">{userInfo.bio}</p>
-          </div>
-        )}
-      
+      </div>
+      {userInfo.bio && (
+        <div className="profile-bio">
+          <p className="bio-content">{userInfo.bio}</p>
+        </div>
+      )}
 
       {/* Currently Watching */}
       <div className="favorite-shows">

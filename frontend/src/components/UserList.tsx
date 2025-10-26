@@ -15,7 +15,7 @@ const UserList: React.FC<UserListProps> = ({ users }) => {
               src={
                 user?.picture
                   ? user.picture.slice(0, -4) + "1080"
-                  : "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
+                  : "/avatar.jpg"
               }
               alt={user.name}
               className="following-avatar"

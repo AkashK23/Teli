@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../UserContext";
@@ -6,7 +6,7 @@ import { useUser } from "../UserContext";
 export default function EditProfile() {
   const { userId } = useUser();
   const navigate = useNavigate();
-  const url = "http://localhost:5001";
+  const url = process.env.REACT_APP_API_URL;
 
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -120,7 +120,7 @@ export default function EditProfile() {
         </div>
 
         {/* Picture */}
-        <div className="onboarding-field">
+        {/* <div className="onboarding-field">
           <label>Profile Picture</label>
           {picture && (
             <img
@@ -132,7 +132,7 @@ export default function EditProfile() {
               className="onboarding-pic-preview"
             />
           )}
-        </div>
+        </div> */}
 
         {/* Bio */}
         <div className="onboarding-field">

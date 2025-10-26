@@ -1,41 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import  {useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { Link } from 'react-router-dom';
 import { useUser } from "../UserContext";
-import { readSync } from "fs";
 import MultiSelectDropdown from "../components/MultiSelectDropdown";
-import SingleSelectDropdown from "../components/SingleSelectDropdown";
-import GeneratePageDots from "../components/GeneratePageDots";
-
-
-
-const sortOptions = [
-  { label: "Most Popular", value: "popular" },
-  { label: "Highest Rating", value: "rating" },
-  { label: "Newest", value: "newest" },
-  { label: "Recommended", value: "recommended" },
-];
-
-const watchStatusOptions = [
-  { label: "Want to Watch", value: "want_to_watch" },
-  { label: "Currently Watching", value: "currently_watching" },
-  { label: "Watched", value: "watched" },
-];
-
-// const streamingServices = [
-//   "Netflix",
-//   "Hulu",
-//   "Amazon Prime Video",
-//   "Disney+",
-//   "HBO Max",
-//   "Apple TV+",
-//   "Peacock",
-//   "Paramount+",
-//   "YouTube",
-//   "Tubi",
-//   "Crunchyroll",
-// ];
-
+import ShowsGrid from "../components/ShowsGrid";
 
 /* Browse Page */
 export default function Browse() {
@@ -47,13 +14,11 @@ export default function Browse() {
     label: string;
   }
 
-  const url = `http://localhost:5001`;
+  const url = process.env.REACT_APP_API_URL;
   const user_id = useUser().userId;
 
   const [genre, setGenre] = useState<string[]>([]);
   const [genres, setGenres] = useState<string[]>([]);
-  // const [minYear, setMinYear] = useState(1920);
-  // const [maxYear, setMaxYear] = useState(new Date().getFullYear());
   const [service, setService] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("");
   const [country, setCountry] = useState<string[]>([]);
@@ -68,15 +33,6 @@ export default function Browse() {
   const [watchStatus, setWatchStatus] = useState("");
 
   const isFirstLoad = useRef(true);
-
-  const pageDots = GeneratePageDots(currentPage, totalPages);
-  const goPrev = () => {
-    setCurrentPage((p) => (p > 1 ? p - 1 : p));
-  };
-
-  const goNext = () => {
-    setCurrentPage((p) => (p < totalPages ? p + 1 : p));
-  };
 
   /* Pull filter options from backend */
   useEffect(() => {
@@ -222,14 +178,6 @@ export default function Browse() {
     try {
       const res = await axios.get(`${url}/users/${user_id}/${newWatchStatus}`);
       const watchStatusShows = res.data;
-      // const watchStatusIds = new Set(
-      //   watchStatusShows.map((show: { id: number; title: string }) => show.id)
-      // );
-      // const intersection = popularShows.filter((show) =>
-      //   watchStatusIds.has(show.id)
-      // );
-
-      
 
       // Immediately fetch images after setting ratings
       const updatedWatchStatusShows = await Promise.all(
@@ -256,7 +204,6 @@ export default function Browse() {
       );
       setPopularShows(updatedWatchStatusShows || []);
       setTotalPages(Math.floor(updatedWatchStatusShows.length / 20 + 1));
-      // console.log(Math.floor(updatedWatchStatusShows.length/20+1));
     } catch (error) {
       console.error("Error fetching want to watch shows:", error);
       setPopularShows([]);
@@ -421,172 +368,13 @@ export default function Browse() {
       </div>
 
       {/* Show Grid */}
-      <div style={{ flex: 1, padding: "1rem" }}>
-        {popularShows.length > 0 && (
-          <div className="search-results-grid">
-            {popularShows.map((show) => {
-              const imagePath = show.image_url || show.poster_path;
-              const imageUrl = imagePath?.startsWith("http")
-                ? imagePath
-                : `https://image.tmdb.org/t/p/w500${imagePath}`;
-
-              return (
-                <Link
-                  to={`/show/${encodeURIComponent(show.show_id || show.id)}`}
-                  key={show.show_id || show.id || show.name}
-                  className="search-result-link"
-                >
-                  <div className="search-result">
-                    <img
-                      src={imageUrl}
-                      alt={show.name}
-                      className="search-result-img-show"
-                    />
-                    <p>{show.name}</p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Page Ticker */}
-        <div
-          style={{ width: "320px", margin: "40px auto", userSelect: "none" }}
-        >
-          <nav
-            aria-label="Pagination"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {/* First page « */}
-            <button
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-              style={{
-                cursor: currentPage === 1 ? "not-allowed" : "pointer",
-                fontSize: "24px",
-                border: "none",
-                background: "none",
-                marginRight: 12,
-                userSelect: "none",
-              }}
-              aria-label="First page"
-            >
-              ◀◀
-            </button>
-
-            {/* Previous page ◀ */}
-            <button
-              onClick={goPrev}
-              disabled={currentPage === 1}
-              aria-label="Previous page"
-              style={{
-                cursor: currentPage === 1 ? "not-allowed" : "pointer",
-                fontSize: "24px",
-                border: "none",
-                background: "none",
-                marginRight: 12,
-                userSelect: "none",
-              }}
-            >
-              ◀
-            </button>
-
-            {/* Page Dots */}
-            <ul
-              style={{
-                display: "flex",
-                gap: 24,
-                listStyle: "none",
-                padding: 0,
-                margin: 0,
-              }}
-            >
-              {pageDots.map((page, idx) => {
-                if (page === "...") {
-                  return (
-                    <li
-                      key={`ellipsis-${idx}`}
-                      style={{ width: 24, textAlign: "center", fontSize: 18 }}
-                    >
-                      &hellip;
-                    </li>
-                  );
-                }
-
-                const isActive = page === currentPage;
-
-                return (
-                  <li
-                    key={page}
-                    style={{ textAlign: "center", cursor: "pointer" }}
-                  >
-                    <div
-                      onClick={() => setCurrentPage(Number(page))}
-                      style={{
-                        width: 16,
-                        height: 16,
-                        margin: "0 auto",
-                        borderRadius: "50%",
-                        backgroundColor: isActive ? "blue" : "#ccc",
-                        transition: "background-color 0.2s",
-                      }}
-                    />
-                    <div
-                      style={{
-                        marginTop: 6,
-                        fontSize: 14,
-                        color: isActive ? "blue" : "#333",
-                        fontWeight: isActive ? "bold" : "normal",
-                      }}
-                    >
-                      {page}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-
-            {/* Next page ▶ */}
-            <button
-              onClick={goNext}
-              disabled={currentPage === totalPages}
-              aria-label="Next page"
-              style={{
-                cursor: currentPage === totalPages ? "not-allowed" : "pointer",
-                fontSize: "24px",
-                border: "none",
-                background: "none",
-                marginLeft: 12,
-                userSelect: "none",
-              }}
-            >
-              ▶
-            </button>
-
-            {/* Last page » */}
-            <button
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
-              style={{
-                cursor: currentPage === totalPages ? "not-allowed" : "pointer",
-                fontSize: "24px",
-                border: "none",
-                background: "none",
-                marginLeft: 12,
-                userSelect: "none",
-              }}
-              aria-label="Last page"
-            >
-              ▶▶
-            </button>
-          </nav>
-        </div>
-      </div>
+      <ShowsGrid
+        items={popularShows}
+        searchType="shows"
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 }

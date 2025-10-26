@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { useUser } from "../UserContext";
@@ -22,7 +22,7 @@ export default function Home() {
     reviews: true,
   });
 
-  const url = `http://localhost:5001`;
+  const url = process.env.REACT_APP_API_URL;
   const user_id = useUser().userId;
 
   /* Pull user info and shows */
@@ -31,6 +31,7 @@ export default function Home() {
 
     const fetchData = async () => {
       try {
+        console.log(url)
         // User info
         const res = await axios.get(`${url}/user/${user_id}`);
         setUserInfo(res.data);
@@ -67,6 +68,7 @@ export default function Home() {
                 ? imagePath
                 : `https://image.tmdb.org/t/p/w500${imagePath}`;
               const userReviewInfo = await axios.get(`${url}/user/${rating.user_id}`);
+              console.log(userReviewInfo.data.picture);
               return {
                 ...rating,
                 show_name: showData?.name,

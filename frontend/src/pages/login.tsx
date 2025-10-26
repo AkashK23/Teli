@@ -1,19 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import axios from "axios";
 import { useUser } from "../UserContext";
 import { useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
-import { jwtDecode } from "jwt-decode";
-
-type GooglePayload = {
-  sub: string;
-  email: string;
-  name: string;
-  picture: string;
-};
 
 export default function Login() {
-  const url = `http://localhost:5001`;
+  const url = process.env.REACT_APP_API_URL;
   const { setUserId } = useUser();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -62,27 +54,27 @@ export default function Login() {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.loginBox}>
-        <h1 style={styles.title}>Teli</h1>
-        <p style={styles.slogan}>Channel What You Love</p>
+    <div className="login-container">
+      <div className="login-box">
+        <h1 className="login-title">Teli</h1>
+        <p className="login-slogan">Channel What You Love</p>
         
-        <div style={styles.divider} />
+        <div className="login-divider" />
         
-        <h2 style={styles.subtitle}>Sign in to continue</h2>
-        <p style={styles.description}>
+        <h2 className="login-subtitle">Sign in to continue</h2>
+        <p className="login-description">
           Use your Google account to sign in and start tracking your favorite shows
         </p>
 
         {error && (
-          <div style={styles.errorMessage}>
+          <div className="login-error-message">
             {error}
           </div>
         )}
 
-        <div style={styles.googleButtonContainer}>
+        <div className="login-google-button-container">
           {loading ? (
-            <div style={styles.loadingContainer}>
+            <div className="login-loading-container">
               <p>Signing in...</p>
             </div>
           ) : (
@@ -98,88 +90,10 @@ export default function Login() {
           )}
         </div>
 
-        <p style={styles.privacyNote}>
+        <p className="login-privacy-note">
           By signing in, you agree to our Terms of Service and Privacy Policy
         </p>
       </div>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    minHeight: "calc(100vh - 80px)", // Account for navbar height
-    backgroundColor: "#f5f5f5",
-    padding: "2rem",
-  },
-  loginBox: {
-    maxWidth: "450px",
-    width: "100%",
-    padding: "3rem",
-    borderRadius: "12px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-    textAlign: "center" as const,
-    fontFamily: "Arial, sans-serif",
-    background: "#fff",
-  },
-  title: {
-    fontSize: "3rem",
-    marginBottom: "0.5rem",
-    color: "#333",
-    fontWeight: "bold",
-  },
-  slogan: {
-    fontSize: "1.1rem",
-    color: "#666",
-    marginBottom: "2rem",
-    fontStyle: "italic",
-  },
-  divider: {
-    height: "1px",
-    backgroundColor: "#e0e0e0",
-    margin: "2rem 0",
-  },
-  subtitle: {
-    fontSize: "1.5rem",
-    marginBottom: "0.5rem",
-    color: "#333",
-    fontWeight: "600",
-  },
-  description: {
-    fontSize: "1rem",
-    color: "#666",
-    marginBottom: "2rem",
-    lineHeight: "1.5",
-  },
-  googleButtonContainer: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    margin: "2rem 0",
-    minHeight: "50px",
-  },
-  loadingContainer: {
-    padding: "1rem",
-    color: "#666",
-    fontSize: "1rem",
-  },
-  errorMessage: {
-    backgroundColor: "#ffebee",
-    color: "#d32f2f",
-    padding: "12px 16px",
-    borderRadius: "8px",
-    marginBottom: "1.5rem",
-    fontSize: "0.95rem",
-    textAlign: "left" as const,
-    border: "1px solid #ffcdd2",
-  },
-  privacyNote: {
-    fontSize: "0.85rem",
-    color: "#999",
-    marginTop: "2rem",
-    lineHeight: "1.4",
-  },
-};

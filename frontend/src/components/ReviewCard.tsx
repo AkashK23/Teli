@@ -25,7 +25,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({
   const navigate = useNavigate();
   const profilePic =
     (userProfilePic ? userProfilePic.slice(0, -4) + "1080" : null) ||
-    "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg";
+    "/avatar.jpg";
 
 const goToProfile = (e: React.MouseEvent) => {
     e.stopPropagation(); // prevent card click

@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import UserList from "../components/UserList";
@@ -6,7 +6,7 @@ import UserList from "../components/UserList";
 export default function Followers() {
   const { userId } = useParams<{ userId: string }>();
   const [followers, setFollowers] = useState<any[]>([]);
-  const url = "http://localhost:5001";
+  const url = process.env.REACT_APP_API_URL;
 
   useEffect(() => {
     const fetchFollowers = async () => {

@@ -8,10 +8,9 @@ export default function Navbar() {
   const [searchInput, setSearchInput] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [searchType, setSearchType] = useState<"shows" | "users">("shows");
   const navigate = useNavigate();
-  const url = `http://localhost:5001`;
+  const url = process.env.REACT_APP_API_URL;
   const { userId, setUserId } = useUser();
 
   /* Find search suggestions */
@@ -99,9 +98,6 @@ export default function Navbar() {
             <CustomLink to="/profile">Profile</CustomLink>
           </>
         )}
-
-        {/* <CustomLink to="/activity">Activity</CustomLink>
-        <CustomLink to="/profile">Profile</CustomLink> */}
         {userId ? (
           <button onClick={handleLogout} className="logout-btn">
             Logout

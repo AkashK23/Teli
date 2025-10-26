@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useUser } from "../UserContext";
 import ReviewCard from "../components/ReviewCard";
@@ -8,7 +8,7 @@ export default function Activity() {
   const [activeTab, setActiveTab] = useState<"following" | "user">("following");
   const [followingReviews, setFollowingReviews] = useState<any[]>([]);
   const [userReviews, setUserReviews] = useState<any[]>([]);
-  const url = `http://localhost:5001`;
+  const url = process.env.REACT_APP_API_URL;
   const user_id = useUser().userId;
 
   useEffect(() => {
@@ -93,29 +93,27 @@ export default function Activity() {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.tabContainer}>
+    <div className="activity-container">
+      <div className="activity-tabContainer">
         <div
           onClick={() => setActiveTab("following")}
-          style={{
-            ...styles.tab,
-            ...(activeTab === "following" ? styles.activeTab : {}),
-          }}
+          className={`activity-tab ${
+            activeTab === "following" ? "activity-activeTab" : ""
+          }`}
         >
           Following
         </div>
         <div
           onClick={() => setActiveTab("user")}
-          style={{
-            ...styles.tab,
-            ...(activeTab === "user" ? styles.activeTab : {}),
-          }}
+          className={`activity-tab ${
+            activeTab === "user" ? "activity-activeTab" : ""
+          }`}
         >
           You
         </div>
       </div>
 
-      <div style={styles.contentContainer}>
+      <div className="activity.contentContainer">
         {activeTab === "following"
           ? renderReviews(followingReviews)
           : renderReviews(userReviews)}
@@ -123,39 +121,3 @@ export default function Activity() {
     </div>
   );
 }
-
-const styles = {
-  container: {
-    maxWidth: "600px",
-    margin: "3rem auto",
-    padding: "2rem",
-  },
-  title: {
-    textAlign: "center" as const,
-    fontSize: "2rem",
-    marginBottom: "1.5rem",
-  },
-  tabContainer: {
-    display: "flex",
-    borderRadius: "6px",
-    overflow: "hidden",
-    border: "1px solid #ccc",
-    marginBottom: "2rem",
-  },
-  tab: {
-    flex: 1,
-    textAlign: "center" as const,
-    padding: "0.75rem",
-    cursor: "pointer",
-    backgroundColor: "#f5f5f5",
-    fontWeight: 600,
-    transition: "background-color 0.2s ease",
-  },
-  activeTab: {
-    backgroundColor: "#333",
-    color: "white",
-  },
-  contentContainer: {
-    marginTop: "1rem",
-  },
-};

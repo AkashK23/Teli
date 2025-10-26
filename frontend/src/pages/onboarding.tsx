@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../UserContext";
@@ -6,15 +6,15 @@ import { useUser } from "../UserContext";
 export default function Onboarding() {
   const { userId } = useUser();
   const navigate = useNavigate();
-  const url = "http://localhost:5001";
+  const url = process.env.REACT_APP_API_URL;
 
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [picture, setPicture] = useState("");
   const [bio, setBio] = useState("");
-  const [watched, setWatched] = useState<string[]>([]);
-  const [currentlyWatching, setCurrentlyWatching] = useState<string[]>([]);
+  const [watched, setWatched] = useState<any[]>([]);
+  const [currentlyWatching, setCurrentlyWatching] = useState<any[]>([]);
 
   const [popularShows, setPopularShows] = useState<any[]>([]);
   const [mostWatchedShows, setMostWatchedShows] = useState<any[]>([]);
@@ -40,13 +40,13 @@ export default function Onboarding() {
             page: 1,
             },
         });
-        setMostWatchedShows(mostWatchedShows_backend.data.results);
+        setPopularShows(mostWatchedShows_backend.data.results);
         console.log(mostWatchedShows_backend.data.results);
 
         const popularShows_backend = await axios.get(`${url}/shows/popular`, {
           params: { timeframe: 100, num_most_popular: 20 },
         });
-        setPopularShows(popularShows_backend.data.popular_shows);
+        setMostWatchedShows(popularShows_backend.data.popular_shows);
         console.log(popularShows_backend.data.popular_shows);
       } catch (err) {
         console.error("Error fetching user info:", err);
@@ -56,6 +56,7 @@ export default function Onboarding() {
   }, [userId]);
 
   const handleSubmit = async () => {
+    console.log(watched)
     try {
       const resUpdate = await axios.put(`${url}/user/${userId}/profile`, {
         username,
@@ -66,23 +67,28 @@ export default function Onboarding() {
       });
       console.log(resUpdate);
 
-      const requestsWatched = watched.map((show) =>
-        axios.post(`${url}/update_watch_status`, {
+      const requestsWatched = watched.map((show) => {
+        const payload = {
           user_id: userId,
-          show_id: show,
+          show_id: String(show.id),
           status: "watched",
-        })
-      );
+        };
+        console.log("Watched paylod:", payload)
+        return axios.post(`${url}/update_watch_status`, payload);
+      });
+
 
       await Promise.all(requestsWatched);
 
-      const requestsCurrentlyWatching = currentlyWatching.map((show) =>
-        axios.post(`${url}/update_watch_status`, {
+      const requestsCurrentlyWatching = currentlyWatching.map((show) => {
+        const payload = {
           user_id: userId,
-          show_id: show,
-          status: "currently Watching",
-        })
-      );
+          show_id: String(show.id),
+          status: "currently_watching",
+        };
+        console.log("CurrentlyWatching paylod:", payload);
+        return axios.post(`${url}/update_watch_status`, payload);
+      });
 
       await Promise.all(requestsCurrentlyWatching);
 
@@ -120,19 +126,21 @@ export default function Onboarding() {
         </div>
 
         {/* Picture */}
-        <div className="onboarding-field">
+        {/* <div className="onboarding-field">
           <label>Profile Picture</label>
           {picture && (
             <img
+              key={picture}
               src={
                 picture
                   ? picture.replace(/=s\d+-c$/, "=s512-c")
-                  : "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg"
+                  : "/avatar.jpg"
               }
+              alt="Profile"
               className="onboarding-pic-preview"
             />
           )}
-        </div>
+        </div> */}
 
         {/* Bio */}
         <div className="onboarding-field">
@@ -145,7 +153,7 @@ export default function Onboarding() {
           <label>Shows You've Watched</label>
           <div className="horizontal-scroll-container">
             {mostWatchedShows.map((show) => {
-              const isWatched = watched.some((s: any) => s.id === show.id);
+              const isWatched = watched.some((s) => s.id === show.id);
 
               const imageUrl = show.poster_path?.startsWith("http")
                 ? show.poster_path
@@ -154,13 +162,12 @@ export default function Onboarding() {
               return (
                 <div
                   key={show.id}
-                  className={`scroll-show-item ${isWatched ? "watched" : ""}`}
+                  className={`scroll-show-item ${isWatched ? "selected" : ""}`}
                   onClick={() => {
                     if (!isWatched) {
-                      setWatched([...watched, show]);
+                      setWatched([...watched, show]); // store full show
                     } else {
-                      // Optional: unselect if clicked again
-                      setWatched(watched.filter((s: any) => s.id !== show.id));
+                      setWatched(watched.filter((s) => s.id !== show.id));
                     }
                   }}
                 >
@@ -176,7 +183,9 @@ export default function Onboarding() {
           <label>Currently Watching</label>
           <div className="horizontal-scroll-container">
             {popularShows.map((show) => {
-              const isCurrentlyWatching = currentlyWatching.some((s: any) => s.id === show.id);
+              const isCurrentlyWatching = currentlyWatching.some(
+                (s: any) => s.id === show.id
+              );
 
               const imageUrl = show.poster_path?.startsWith("http")
                 ? show.poster_path
@@ -186,14 +195,16 @@ export default function Onboarding() {
                 <div
                   key={show.id}
                   className={`scroll-show-item ${
-                    isCurrentlyWatching ? "currently watching" : ""
+                    isCurrentlyWatching ? "selected" : ""
                   }`}
                   onClick={() => {
                     if (!isCurrentlyWatching) {
                       setCurrentlyWatching([...currentlyWatching, show]);
                     } else {
                       // Optional: unselect if clicked again
-                      setWatched(currentlyWatching.filter((s: any) => s.id !== show.id));
+                      setCurrentlyWatching(
+                        currentlyWatching.filter((s: any) => s.id !== show.id)
+                      );
                     }
                   }}
                 >

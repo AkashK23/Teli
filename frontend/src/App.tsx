@@ -1,7 +1,3 @@
-import React ,{ useEffect, useState } from "react";
-import axios from "axios";
-
-
 import Navbar from "./Navbar"
 import "./styles.css"
 import Home from "./pages/home";
@@ -15,6 +11,7 @@ import Followers from './pages/followers';
 import Following from './pages/following';
 import Onboarding from "./pages/onboarding";
 import EditProfile from "./pages/editProfile";
+import YourShows from "./pages/yourShows";
 
 import { Routes, Route } from "react-router-dom";
 import { UserProvider } from "./UserContext";
@@ -26,15 +23,13 @@ function App() {
           <Navbar />
           <div className="container">
             <Routes>
-              {/* <Route path="/" element={<Home />} /> */}
               <Route path="/browse" element={<Browse />} />
               <Route path="/show/:id" element={<ShowDetails />} />
               <Route path="/search" element={<Search />} />
-              {/* <Route path="/activity" element={<Activity />} />
-              <Route path="/profile" element={<Profile />} /> */}
               <Route path="/login" element={<Login />} />
               <Route path="/users/:userId/followers" element={<Followers />} />
               <Route path="/users/:userId/following" element={<Following />} />
+              <Route path="/users/:userId/yourshows" element={<YourShows />} />
               <Route path="/onboarding" element={<Onboarding />} />
 
               <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
@@ -42,6 +37,7 @@ function App() {
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/editprofile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
+              
               
             </Routes>
           </div>

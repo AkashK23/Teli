@@ -1,14 +1,13 @@
 import { useParams } from 'react-router-dom';
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useUser } from "../UserContext";
-import ProtectedSection from "../components/ProtectedSection";
 
 type WatchStatus = "want_to_watch" | "currently_watching" | "watched" | "";
 
  /* Show details page */
 export default function ShowDetails() {
-  const url = `http://localhost:5001`;
+  const url = process.env.REACT_APP_API_URL;
   const user_id = useUser().userId;
 
   const { id } = useParams();
@@ -27,28 +26,64 @@ export default function ShowDetails() {
     Record<number, { open: boolean; rating: number; text: string }>
   >({});
   const [watchStatus, setWatchStatus] = useState<WatchStatus>("");
+  const [avgRating, setAvgRating] = useState<number | null>(null);
+  const [ratingCount, setRatingCount] = useState<number>(0);
+
 
   /* Pull show data from backend */
   useEffect(() => {
+    let isMounted = true; // prevent race conditions
+
     const fetchData = async () => {
       try {
+        // 🔹 Reset all show-specific states right away
         setSelectedSeason(null);
         setSeasonEpisodes([]);
         setShowData(null);
+        setWatchStatus(""); // reset watch status
+        setReviews([]);
+        setUserHasRated(false);
+        setRating(0);
+        setReviewText("");
+        setEpisodeReviews([]);
+        setEpisodeReviewStates({});
         setLoadingShow(true);
-        const res = await axios.get(`${url}/shows/${id}`);
-        setShowData(res.data);
 
-        // await fetchReviews();
+        const res = await axios.get(`${url}/shows/${id}`);
+        if (isMounted) setShowData(res.data);
       } catch (err) {
         console.error("Failed to fetch show details:", err);
       } finally {
-        setLoadingShow(false);
+        if (isMounted) setLoadingShow(false);
       }
     };
 
     fetchData();
+
+    return () => {
+      isMounted = false; // ✅ prevents stale updates if you navigate quickly
+    };
   }, [id]);
+
+  /* Get average rating of show */
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchAverageRating = async () => {
+      try {
+        const res = await axios.get(`${url}/shows/${id}/average-rating`);
+        if (res.data) {
+          setAvgRating(res.data.average_rating);
+          setRatingCount(res.data.total_ratings);
+        }
+      } catch (err) {
+        console.error("Failed to fetch average rating:", err);
+      }
+    };
+
+    fetchAverageRating();
+  }, [id]);
+
 
   // Fetch user review if userId exists
   useEffect(() => {
@@ -94,7 +129,7 @@ export default function ShowDetails() {
     const fetchWatchStatus = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5001/users/${user_id}/watch_status/${id}`
+          `${url}/users/${user_id}/watch_status/${id}`
         );
         console.log(res.data.status);
         if (res.data?.status) {
@@ -170,6 +205,7 @@ export default function ShowDetails() {
     const payload = {
       user_id: user_id, // Replace with actual user ID
       show_id: id, // ID from URL params
+      show_name_lowercase: showData.name.toLowerCase(),
       rating: rating,
       comment: reviewText,
     };
@@ -284,7 +320,6 @@ export default function ShowDetails() {
     const newStatus = event.target.value as WatchStatus;
     setWatchStatus(newStatus);
 
-    
     if (newStatus == "") {
       const payload = {
         user_id: user_id,
@@ -297,9 +332,7 @@ export default function ShowDetails() {
       } catch (err) {
         console.error("Error changing watch status:", err);
       }
-
-    }
-    else {
+    } else {
       const payload = {
         user_id: user_id,
         show_id: id,
@@ -342,16 +375,69 @@ export default function ShowDetails() {
           style={{ width: "300px", borderRadius: "10px" }}
         />
         <div>
-          <h1 style={{ marginBottom: "1rem" }}>{showData.name}</h1>
-          <p>
-            {showData.first_air_date?.slice(0, 4)}-
-            {showData.last_air_date?.slice(0, 4)}
-          </p>
-          {showData.networks?.[0]?.name && (
-            <p>
-              <strong>Network:</strong> {showData.networks[0].name}
-            </p>
-          )}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: "2rem",
+              gap: "2rem",
+            }}
+          >
+            {/* LEFT: Title + Metadata */}
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <h1 style={{ margin: 0, fontSize: "2.2rem", fontWeight: 700 }}>
+                {showData.name}
+              </h1>
+              <p>
+                {showData.first_air_date?.slice(0, 4)}-
+                {showData.last_air_date?.slice(0, 4)}
+              </p>
+              {showData.networks?.[0]?.name && (
+                <p>
+                  <strong>Network:</strong> {showData.networks[0].name}
+                </p>
+              )}
+            </div>
+
+            {/* RIGHT: Rating */}
+            {avgRating !== null && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "#333",
+                  color: "white",
+                  borderRadius: "16px",
+                  width: "110px",
+                  height: "110px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                  flexShrink: 0,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "2.6rem",
+                    fontWeight: "bold",
+                    lineHeight: "1.1",
+                  }}
+                >
+                  {avgRating.toFixed(1)}
+                </div>
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#ccc",
+                    marginTop: "4px",
+                  }}
+                >
+                  ({ratingCount} ratings)
+                </div>
+              </div>
+            )}
+          </div>           
           <p>
             <strong>Overview:</strong>{" "}
             {showData.overview || "No description available."}

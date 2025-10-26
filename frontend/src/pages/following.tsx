@@ -6,7 +6,7 @@ import UserList from "../components/UserList";
 export default function Following() {
   const { userId } = useParams<{ userId: string }>();
   const [following, setFollowing] = useState<any[]>([]);
-  const url = "http://localhost:5001";
+  const url = process.env.REACT_APP_API_URL;
 
   useEffect(() => {
     const fetchFollowing = async () => {
