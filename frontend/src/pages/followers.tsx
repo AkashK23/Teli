@@ -6,6 +6,7 @@ import UserList from "../components/UserList";
 export default function Followers() {
   const { userId } = useParams<{ userId: string }>();
   const [followers, setFollowers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const url = process.env.REACT_APP_API_URL;
 
   useEffect(() => {
@@ -25,11 +26,23 @@ export default function Followers() {
         setFollowers(followerData);
       } catch (err) {
         console.error("Failed to fetch following:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchFollowers();
   }, [userId]);
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
 
   return (
     <div className="following-page">

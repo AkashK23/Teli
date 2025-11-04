@@ -19,7 +19,6 @@ export default function ShowDetails() {
   const [submitted, setSubmitted] = useState(false);
   const [reviews, setReviews] = useState<any[]>([]);
   const [userHasRated, setUserHasRated] = useState(false);
-  const [loadingShow, setLoadingShow] = useState(true);
   const [loadingReview, setLoadingReview] = useState(true);
   const [episodeReviews, setEpisodeReviews] = useState<any[]>([]);
   const [episodeReviewStates, setEpisodeReviewStates] = useState<
@@ -28,6 +27,9 @@ export default function ShowDetails() {
   const [watchStatus, setWatchStatus] = useState<WatchStatus>("");
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [ratingCount, setRatingCount] = useState<number>(0);
+  const [isEditingReview, setIsEditingReview] = useState(false);
+  const [loading, setLoading] = useState(true);
+
 
 
   /* Pull show data from backend */
@@ -47,14 +49,13 @@ export default function ShowDetails() {
         setReviewText("");
         setEpisodeReviews([]);
         setEpisodeReviewStates({});
-        setLoadingShow(true);
 
         const res = await axios.get(`${url}/shows/${id}`);
         if (isMounted) setShowData(res.data);
       } catch (err) {
         console.error("Failed to fetch show details:", err);
       } finally {
-        if (isMounted) setLoadingShow(false);
+        setLoading(false);
       }
     };
 
@@ -114,9 +115,7 @@ export default function ShowDetails() {
         }
       } catch (err) {
         console.error("Failed to fetch user review:", err);
-      } finally {
-        setLoadingReview(false);
-      }
+      } 
     };
 
     fetchUserReview();
@@ -137,6 +136,8 @@ export default function ShowDetails() {
         }
       } catch (err) {
         console.error("Error fetching watch status:", err);
+      } finally {
+        setLoadingReview(false);
       }
     };
 
@@ -356,7 +357,14 @@ export default function ShowDetails() {
     // }
   };
 
-  if (loadingShow) return <div>Loading show details...</div>;
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: "1000px", margin: "2rem auto", padding: "0 1rem" }}>
@@ -437,7 +445,7 @@ export default function ShowDetails() {
                 </div>
               </div>
             )}
-          </div>           
+          </div>
           <p>
             <strong>Overview:</strong>{" "}
             {showData.overview || "No description available."}
@@ -505,119 +513,159 @@ export default function ShowDetails() {
                         <p>{review.comment}</p>
                       </div>
                     </div>
+                    <button
+                      onClick={() => setIsEditingReview((prev) => !prev)}
+                      style={{
+                        backgroundColor: "transparent",
+                        color: "#333",
+                        border: "1px solid #33",
+                        padding: "0.4rem 1rem",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        fontSize: "0.9rem",
+                        alignSelf: "center",
+                        marginLeft: "1rem",
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => (
+                        (e.currentTarget.style.color = "white"),
+                        (e.currentTarget.style.backgroundColor = "#333")
+                      )}
+                      onMouseLeave={(e) => (
+                        (e.currentTarget.style.color = "#333"),
+                        (e.currentTarget.style.backgroundColor = "transparent")
+                      )}
+                    >
+                      {isEditingReview ? "Cancel" : "Update"}
+                    </button>
                   </div>
                 ))}
             </div>
           )}
 
           {/* Write a Review Section */}
-
-          <div style={{ marginTop: "3rem" }}>
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
-            >
-              <div>
-                <div style={{ marginTop: "2rem" }}>
-                  {userHasRated ? (
-                    <h2 className="text-lg font-semibold mb-2">
-                      Update Review
-                    </h2>
-                  ) : (
-                    <h2 className="text-lg font-semibold mb-2">Review</h2>
-                  )}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <input
-                      type="range"
-                      min="0"
-                      max="10"
-                      value={rating}
-                      onChange={(e) => setRating(Number(e.target.value))}
+          {(!userHasRated || isEditingReview) && (
+            <div style={{ marginTop: "2rem" }}>
+              {!userHasRated && (
+                <h2
+                  className="text-lg font-semibold mb-2"
+                  style={{ marginTop: "2rem" }}
+                >
+                  Review
+                </h2>
+              )}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem",
+                  alignItems: "center",
+                }}
+              >
+                <div>
+                  <div>
+                    <div
                       style={{
-                        width: "90%",
-                        appearance: "none",
-                        height: "6px",
-                        background: "#ddd",
-                        borderRadius: "5px",
-                        outline: "none",
-                        padding: "0",
-                        margin: "0",
-                      }}
-                    />
-                    <span
-                      style={{
-                        fontWeight: "bold",
-                        fontSize: "3rem",
-                        color: "#333",
+                        display: "flex",
+                        alignItems: "center",
+                        width: "50rem",
                         marginLeft: "1rem",
-                        width: "40px",
-                        textAlign: "right",
-                        marginRight: "2rem",
                       }}
                     >
-                      {rating}
-                    </span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="10"
+                        value={rating}
+                        onChange={(e) => setRating(Number(e.target.value))}
+                        style={{
+                          width: "90%",
+                          appearance: "none",
+                          height: "6px",
+                          background: "#ddd",
+                          borderRadius: "5px",
+                          outline: "none",
+                          padding: "0",
+                          margin: "0",
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontWeight: "bold",
+                          fontSize: "3rem",
+                          color: "#333",
+                          marginLeft: "1rem",
+                          width: "40px",
+                          textAlign: "right",
+                          marginRight: "2rem",
+                        }}
+                      >
+                        {rating}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div>
-                <textarea
-                  id="reviewText"
-                  value={reviewText}
-                  onChange={(e) => setReviewText(e.target.value)}
-                  rows={4}
-                  placeholder="What did you think of this show?"
-                  style={{
-                    width: "100%",
-                    padding: "1rem",
-                    fontSize: "1rem",
-                    borderRadius: "8px",
-                    border: "1px solid #ccc",
-                    resize: "vertical",
-                  }}
-                />
-              </div>
+                <div>
+                  <textarea
+                    id="reviewText"
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    rows={4}
+                    placeholder="What did you think of this show?"
+                    style={{
+                      width: "50rem",
+                      padding: "1rem",
+                      fontSize: "1rem",
+                      borderRadius: "8px",
+                      border: "1px solid #ccc",
+                      resize: "vertical",
+                      justifyContent: "center",
+                    }}
+                  />
+                </div>
 
-              {userHasRated ? (
-                <button
-                  onClick={handleReviewSubmit}
-                  style={{
-                    backgroundColor: "#333",
-                    color: "white",
-                    border: "none",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    width: "fit-content",
-                  }}
-                >
-                  Update Review
-                </button>
-              ) : (
-                <button
-                  onClick={handleReviewSubmit}
-                  style={{
-                    backgroundColor: "#333",
-                    color: "white",
-                    border: "none",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    width: "fit-content",
-                  }}
-                >
-                  Submit Review
-                </button>
-              )}
-              {submitted && <p style={{ color: "green" }}>Review submitted!</p>}
+                {userHasRated ? (
+                  <button
+                    onClick={handleReviewSubmit}
+                    style={{
+                      backgroundColor: "#333",
+                      color: "white",
+                      border: "none",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      width: "fit-content",
+                      fontSize: "1rem",
+                      marginLeft: "40rem",
+                    }}
+                  >
+                    Update Review
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleReviewSubmit}
+                    style={{
+                      backgroundColor: "#333",
+                      color: "white",
+                      border: "none",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      width: "fit-content",
+                      fontSize: "1rem",
+                      marginLeft: "40rem",
+                    }}
+                  >
+                    Submit Review
+                  </button>
+                )}
+                {submitted && (
+                  <p style={{ color: "green" }}>Review submitted!</p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
 

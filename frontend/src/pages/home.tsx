@@ -2,73 +2,77 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { useUser } from "../UserContext";
-
 import ReviewCard from "../components/ReviewCard";
 
-/* Home Page */
 export default function Home() {
   const [userInfo, setUserInfo] = useState<any>(null);
-  const [ratings, setRatings] = useState<any[]>([]);
   const [ratingsWithImages, setRatingsWithImages] = useState<any[]>([]);
   const [popularShows, setPopularShows] = useState<any[]>([]);
-  const [currentlyWatching, setCurrentlyWatching] = useState<any[]>([]);
   const [currentlyWatchingWithImages, setCurrentlyWatchingWithImages] = useState<any[]>([]);
   const [newFromFriends, setNewFromFriends] = useState<any[]>([]);
-
-  const [loading, setLoading] = useState({
-    currentlyWatching: true,
-    popular: true,
-    newFromFriends: true,
-    reviews: true,
-  });
+  const [loading, setLoading] = useState(true);
 
   const url = process.env.REACT_APP_API_URL;
   const user_id = useUser().userId;
 
-  /* Pull user info and shows */
   useEffect(() => {
     if (!user_id) return;
 
     const fetchData = async () => {
       try {
-        console.log(url)
-        // User info
-        const res = await axios.get(`${url}/user/${user_id}`);
-        setUserInfo(res.data);
-        console.log(res)
+        // Fetch everything in parallel
+        const [
+          userRes,
+          currentlyWatchingRes,
+          popularRes,
+          ratingsRes
+        ] = await Promise.all([
+          axios.get(`${url}/user/${user_id}`),
+          axios.get(`${url}/users/${user_id}/currently_watching`),
+          axios.get(`${url}/shows/popular`, { params: { timeframe: 100, num_most_popular: 4 } }),
+          axios.get(`${url}/users/${user_id}/feed`)
+        ]);
 
-        // Currently watching
-        const currentlyWatching_backend = await axios.get(
-          `${url}/users/${user_id}/currently_watching`
-        );
-        setCurrentlyWatching(currentlyWatching_backend.data);
-        setLoading((prev) => ({ ...prev, currentlyWatching: false }));
+        setUserInfo(userRes.data);
+        const currentlyWatching = currentlyWatchingRes.data;
+        const popularShows_backend = popularRes.data.popular_shows;
+        const fetchedRatings = ratingsRes.data.feed;
 
-        // Popular shows
-        const popularShows_backend = await axios.get(`${url}/shows/popular`, {
-          params: { timeframe: 100, num_most_popular: 4 },
-        });
-        setPopularShows(popularShows_backend.data.popular_shows);
-        setLoading((prev) => ({ ...prev, popular: false }));
-
-        // User feed (reviews)
-        const ratings_backend = await axios.get(`${url}/users/${user_id}/feed`);
-        const fetchedRatings = ratings_backend.data.feed;
-        console.log(fetchedRatings)
-        setRatings(fetchedRatings);
-
-        // Fetch show images for ratings
-        const updatedRatings = await Promise.all(
-          fetchedRatings.map(async (rating: any) => {
+        // Fetch images for currently watching
+        const updatedCurrentlyWatching = await Promise.all(
+          currentlyWatching.map(async (show: any) => {
             try {
-              const res = await axios.get(`${url}/shows/${rating.show_id}`);
+              const res = await axios.get(`${url}/shows/${show.show_id}`);
               const showData = res.data;
               const imagePath = showData.poster_path;
               const imageUrl = imagePath?.startsWith("http")
                 ? imagePath
                 : `https://image.tmdb.org/t/p/w500${imagePath}`;
-              const userReviewInfo = await axios.get(`${url}/user/${rating.user_id}`);
-              console.log(userReviewInfo.data.picture);
+              return {
+                ...show,
+                image_url:
+                  showData?.image_url || showData?.thumbnail || imageUrl || null,
+                name: showData.name || show.show_name,
+              };
+            } catch {
+              return { ...show, image_url: null };
+            }
+          })
+        );
+
+        // Fetch show + user data for reviews
+        const updatedRatings = await Promise.all(
+          fetchedRatings.map(async (rating: any) => {
+            try {
+              const [showRes, userRes] = await Promise.all([
+                axios.get(`${url}/shows/${rating.show_id}`),
+                axios.get(`${url}/user/${rating.user_id}`),
+              ]);
+              const showData = showRes.data;
+              const imagePath = showData.poster_path;
+              const imageUrl = imagePath?.startsWith("http")
+                ? imagePath
+                : `https://image.tmdb.org/t/p/w500${imagePath}`;
               return {
                 ...rating,
                 show_name: showData?.name,
@@ -77,20 +81,17 @@ export default function Home() {
                   showData?.thumbnail ||
                   imageUrl ||
                   null,
-                user_name: userReviewInfo.data.name,
-                user_id: userReviewInfo.data.id,
-                user_profile_pic: userReviewInfo.data.picture,
+                user_name: userRes.data.name,
+                user_id: userRes.data.id,
+                user_profile_pic: userRes.data.picture,
               };
             } catch {
               return { ...rating, image_url: null };
             }
           })
         );
-        setRatingsWithImages(updatedRatings);
-        console.log(updatedRatings);
-        setLoading((prev) => ({ ...prev, reviews: false }));
 
-        // New From Friends
+        // New from friends
         const top3Ratings = updatedRatings.slice(0, 3);
         const newShows = await Promise.all(
           top3Ratings.map(async (rating: any) => {
@@ -115,65 +116,40 @@ export default function Home() {
             }
           })
         );
+
+        setCurrentlyWatchingWithImages(updatedCurrentlyWatching);
+        setPopularShows(popularShows_backend);
+        setRatingsWithImages(updatedRatings);
         setNewFromFriends(newShows.filter(Boolean));
-        setLoading((prev) => ({ ...prev, newFromFriends: false }));
       } catch (err) {
         console.error("Failed to fetch user/home data:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
   }, [user_id]);
 
-  /* Fetch images for currently watching shows */
-  useEffect(() => {
-    const fetchImagesForCurrentlyWatching = async () => {
-      const updatedShows = await Promise.all(
-        currentlyWatching.map(async (show: any) => {
-          try {
-            const res = await axios.get(`${url}/shows/${show.show_id}`);
-            const showData = res.data;
-            const imagePath = showData.poster_path;
-            const imageUrl = imagePath?.startsWith("http")
-              ? imagePath
-              : `https://image.tmdb.org/t/p/w500${imagePath}`;
-            return {
-              ...show,
-              image_url:
-                showData?.image_url || showData?.thumbnail || imageUrl || null,
-              name: showData.name || show.show_name,
-            };
-          } catch {
-            return { ...show, image_url: null };
-          }
-        })
-      );
-      setCurrentlyWatchingWithImages(updatedShows);
-    };
-
-    if (currentlyWatching.length > 0) {
-      fetchImagesForCurrentlyWatching();
-    }
-  }, [currentlyWatching]);
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="page-container">
+    <div className="page-container fade-in">
       {/* You're Watching */}
-      {!loading.currentlyWatching && currentlyWatchingWithImages.length > 0 && (
+      {currentlyWatchingWithImages.length > 0 && (
         <>
           <h1 className="headings">You're Watching</h1>
           <div className="scroll-container">
             {currentlyWatchingWithImages.slice(0, 4).map((show) => (
-              <Link
-                to={`/show/${show.show_id}`}
-                key={show.show_id}
-                className="show-link"
-              >
-                <img
-                  src={show.image_url}
-                  alt={show.name}
-                  className="show-icon home-icon"
-                />
+              <Link to={`/show/${show.show_id}`} key={show.show_id} className="show-link">
+                <img src={show.image_url} alt={show.name} className="show-icon home-icon" />
               </Link>
             ))}
           </div>
@@ -181,7 +157,7 @@ export default function Home() {
       )}
 
       {/* Popular This Week */}
-      {!loading.popular && popularShows.length > 0 && (
+      {popularShows.length > 0 && (
         <>
           <h1 className="headings">Popular This Week</h1>
           <div className="scroll-container">
@@ -199,21 +175,13 @@ export default function Home() {
       )}
 
       {/* New From Friends */}
-      {!loading.newFromFriends && newFromFriends.length > 0 && (
+      {newFromFriends.length > 0 && (
         <>
           <h1 className="headings">New From Friends</h1>
           <div className="scroll-container">
             {newFromFriends.map((show) => (
-              <Link
-                to={`/show/${show.show_id}`}
-                key={show.show_id}
-                className="show-link"
-              >
-                <img
-                  src={show.image_url}
-                  alt={show.name}
-                  className="show-icon home-icon"
-                />
+              <Link to={`/show/${show.show_id}`} key={show.show_id} className="show-link">
+                <img src={show.image_url} alt={show.name} className="show-icon home-icon" />
               </Link>
             ))}
           </div>
@@ -221,14 +189,14 @@ export default function Home() {
       )}
 
       {/* Recent Reviews */}
-      {!loading.reviews && ratingsWithImages.length > 0 && (
+      {ratingsWithImages.length > 0 && (
         <div className="review-container">
           <h3 className="headings">Recent Reviews</h3>
           <div className="user-ratings">
             <div className="rating-cards-container">
               {ratingsWithImages.map((rating: any) => (
                 <ReviewCard
-                  key={rating.show_id}
+                  key={`${rating.user_id}-${rating.show_id}`}
                   showId={rating.show_id}
                   userId={rating.user_id}
                   userName={rating.user_name}
@@ -236,7 +204,7 @@ export default function Home() {
                   comment={rating.comment}
                   rating={rating.rating}
                   showImageUrl={rating.image_url}
-                  showName={rating.name}
+                  showName={rating.show_name}
                 />
               ))}
             </div>

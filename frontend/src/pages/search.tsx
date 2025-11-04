@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import ShowsGrid from "../components/ShowsGrid";
 
-/* Search Page */
 export default function Search() {
   const [searchedShows, setSearchedShows] = useState<any[]>([]);
   const [searchedUsers, setSearchedUsers] = useState<any[]>([]);
-  const [searchType, setSearchType] = useState<"shows" | "users">("shows"); // <-- toggle state
+  const [searchType, setSearchType] = useState<"shows" | "users">("shows");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [searchInput, setSearchInput] = useState(""); // <-- search bar state
+
   const location = useLocation();
+  const navigate = useNavigate();
 
   const queryParams = new URLSearchParams(location.search);
   const query = queryParams.get("query") || "";
@@ -19,52 +21,70 @@ export default function Search() {
   /* Sync state with query params */
   useEffect(() => {
     setSearchType(typeParam);
+    setSearchInput(query);
     setCurrentPage(1);
-    console.log(typeParam)
-  }, [typeParam]);
-  
+  }, [typeParam, query]);
 
-  /* Pull search results from backend */
+  /* Fetch search results */
   useEffect(() => {
     const fetchSearchResults = async () => {
       if (!query.trim()) return;
 
       try {
         if (searchType === "shows") {
-          const response = await axios.get("http://127.0.0.1:5001/shows/search", {
-            params: { query, page: currentPage },
-          });
+          const response = await axios.get(
+            "http://127.0.0.1:5001/shows/search",
+            {
+              params: { query, page: currentPage },
+            }
+          );
 
-          if (response.data?.results?.length > 0) {
-            setSearchedShows(response.data.results);
-            setTotalPages(response.data.total_pages);
-          } else {
-            setSearchedShows([]);
-          }
-        } else if (searchType === "users") {
-          const response = await axios.get("http://127.0.0.1:5001/users/search", {
-            params: { query, page: currentPage },
-          });
+          setSearchedShows(response.data?.results || []);
+          setTotalPages(response.data?.total_pages || 1);
+        } else {
+          const response = await axios.get(
+            "http://127.0.0.1:5001/users/search",
+            {
+              params: { query, page: currentPage },
+            }
+          );
 
-          if (response.data?.results?.length > 0) {
-            setSearchedUsers(response.data.results);
-            setTotalPages(response.data.total_pages);
-          } else {
-            setSearchedUsers([]);
-          }
+          setSearchedUsers(response.data?.results || []);
+          setTotalPages(response.data?.total_pages || 1);
         }
       } catch (error) {
         console.error("Error fetching search results:", error);
-        if (searchType === "shows") setSearchedShows([]);
-        else setSearchedUsers([]);
+        setSearchedShows([]);
+        setSearchedUsers([]);
       }
     };
 
     fetchSearchResults();
   }, [query, currentPage, searchType]);
 
+  /* Handle search submission */
+  const handleSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmedQuery = searchInput.trim();
+    if (!trimmedQuery) return;
+    navigate(
+      `/search?query=${encodeURIComponent(trimmedQuery)}&type=${searchType}`
+    );
+  };
+
   return (
     <div className="content-wrapper">
+      {/* Search Bar */}
+      <form className="search-bar-container" onSubmit={handleSearch}>
+        <input
+          type="text"
+          value={searchInput}
+          placeholder="Search shows or users..."
+          onChange={(e) => setSearchInput(e.target.value)}
+          className="search-bar-input"
+        />
+      </form>
+
       {/* Toggle Tabs */}
       <div className="toggle-container">
         <div
@@ -88,11 +108,12 @@ export default function Search() {
         <div className={`toggle-slider ${searchType}`} />
       </div>
 
+      {/* Search results message */}
       <div className="search-results-message">
         Showing search results for "<b>{query}</b>"
       </div>
 
-      {/* Search results grid */}
+      {/* Results */}
       {searchType === "shows" && searchedShows.length > 0 && (
         <ShowsGrid
           items={searchedShows}

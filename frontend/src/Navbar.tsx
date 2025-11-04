@@ -1,5 +1,5 @@
-import { Link, useMatch, useResolvedPath, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { Link, useMatch, useResolvedPath, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useUser } from "./UserContext";
 
@@ -12,6 +12,17 @@ export default function Navbar() {
   const navigate = useNavigate();
   const url = process.env.REACT_APP_API_URL;
   const { userId, setUserId } = useUser();
+  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  const location = useLocation();
+
+  /* Clear search when going to a new page */
+  useEffect(() => {
+    setSearchInput("");
+    setSuggestions([]);
+    setSelectedIndex(-1);
+  }, [location.pathname]);
 
   /* Find search suggestions */
   useEffect(() => {
@@ -74,6 +85,22 @@ export default function Navbar() {
     }
   };
 
+  /* Handle dropown disappearance */
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownVisible(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+
   const handleLogout = () => {
     setUserId(null);
     localStorage.removeItem("user_id"); // Use consistent key with UserContext
@@ -109,6 +136,7 @@ export default function Navbar() {
 
       {/* Search Bar */}
       <div
+        ref={dropdownRef}
         className="nav-search"
         style={{ position: "relative", width: "250px" }}
       >
@@ -120,27 +148,14 @@ export default function Navbar() {
           onChange={(e) => {
             setSearchInput(e.target.value);
             setSelectedIndex(-1);
+            setIsDropdownVisible(true);
           }}
           onKeyDown={handleKeyDown}
-          onBlur={() => setTimeout(() => setSuggestions([]), 150)}
+          onFocus={() => setIsDropdownVisible(true)}
         />
 
-        {/* Suggestions Dropdown */}
-        {(suggestions.length > 0 || searchInput.trim()) && (
-          <div
-            style={{
-              position: "absolute",
-              top: "100%",
-              left: 0,
-              width: "100%",
-              background: "#fff",
-              border: "1px solid #ccc",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-              zIndex: 1000,
-              maxHeight: "300px",
-              overflowY: "auto",
-            }}
-          >
+        {isDropdownVisible && (
+          <div className="search-dropdown visible">
             {/* Toggle Slider */}
             <div
               style={{
@@ -192,7 +207,7 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* Search Results */}
+            {/* Suggestions */}
             <ul
               style={{
                 listStyle: "none",
@@ -204,46 +219,66 @@ export default function Navbar() {
                 flexDirection: "column",
               }}
             >
-              {suggestions.map((s, index) => {
-                const isSelected = index === selectedIndex;
-                const img =
-                  searchType === "shows" ? s.poster_path?.startsWith("http") ? s.poster_path
-                      : `https://image.tmdb.org/t/p/w92${s.poster_path}`
-                    : (s.picture
+              {suggestions.length > 0
+                ? suggestions.map((s, index) => {
+                    const isSelected = index === selectedIndex;
+                    const img =
+                      searchType === "shows"
+                        ? s.poster_path?.startsWith("http")
+                          ? s.poster_path
+                          : `https://image.tmdb.org/t/p/w92${s.poster_path}`
+                        : s.picture
                         ? s.picture.slice(0, -4) + "1080"
-                        : "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg")
+                        : "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg";
 
-                return (
-                  <li
-                    key={s.id}
-                    onMouseDown={() => handleSelect(s.name, s.id)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      padding: "10px",
-                      cursor: "pointer",
-                      backgroundColor: isSelected ? "#f0f0f0" : "#fff",
-                      borderBottom: "1px solid #eee",
-                    }}
-                    onMouseEnter={() => setSelectedIndex(index)}
-                  >
-                    <img
-                      src={img}
-                      alt={s.name}
-                      className={searchType === "shows" ? "search-suggestions-show" : "search-suggestions-user"}
-                    />
-                    <span
+                    return (
+                      <li
+                        key={s.id}
+                        onMouseDown={() => handleSelect(s.name, s.id)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          padding: "10px",
+                          cursor: "pointer",
+                          backgroundColor: isSelected ? "#f0f0f0" : "#fff",
+                          borderBottom: "1px solid #eee",
+                        }}
+                        onMouseEnter={() => setSelectedIndex(index)}
+                      >
+                        <img
+                          src={img}
+                          alt={s.name}
+                          className={
+                            searchType === "shows"
+                              ? "search-suggestions-show"
+                              : "search-suggestions-user"
+                          }
+                        />
+                        <span
+                          style={{
+                            fontSize: "15px",
+                            lineHeight: "1.2",
+                            color: "#000",
+                            marginLeft: "10px",
+                          }}
+                        >
+                          {s.name}
+                        </span>
+                      </li>
+                    );
+                  })
+                : searchInput.trim() && (
+                    <li
                       style={{
-                        fontSize: "15px",
-                        lineHeight: "1.2",
-                        color: "#000",
+                        padding: "10px",
+                        textAlign: "center",
+                        color: "#777",
+                        fontSize: "14px",
                       }}
                     >
-                      {s.name}
-                    </span>
-                  </li>
-                );
-              })}
+                      No results found.
+                    </li>
+                  )}
             </ul>
           </div>
         )}

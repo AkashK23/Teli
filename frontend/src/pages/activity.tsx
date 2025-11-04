@@ -8,6 +8,7 @@ export default function Activity() {
   const [activeTab, setActiveTab] = useState<"following" | "user">("following");
   const [followingReviews, setFollowingReviews] = useState<any[]>([]);
   const [userReviews, setUserReviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const url = process.env.REACT_APP_API_URL;
   const user_id = useUser().userId;
 
@@ -34,7 +35,9 @@ export default function Activity() {
                 const imageUrl = imagePath?.startsWith("http")
                   ? imagePath
                   : `https://image.tmdb.org/t/p/w500${imagePath}`;
-                const userReviewInfo = await axios.get(`${url}/user/${rating.user_id}`);
+                const userReviewInfo = await axios.get(
+                  `${url}/user/${rating.user_id}`
+                );
                 return {
                   ...rating,
                   show_name: showData?.name,
@@ -60,6 +63,8 @@ export default function Activity() {
         console.log(fetchedUserRatings);
       } catch (err) {
         console.error("Failed to fetch reviews:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -91,6 +96,15 @@ export default function Activity() {
       </div>
     );
   };
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="activity-container">

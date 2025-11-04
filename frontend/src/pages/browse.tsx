@@ -31,6 +31,7 @@ export default function Browse() {
   const [totalPages, setTotalPages] = useState(1);
   const [filtersReady, setFiltersReady] = useState(false);
   const [watchStatus, setWatchStatus] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const isFirstLoad = useRef(true);
 
@@ -89,6 +90,8 @@ export default function Browse() {
         setFiltersReady(true);
       } catch (err) {
         console.error("Failed to fetch user:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -258,6 +261,15 @@ export default function Browse() {
     setWatchStatus("");
     setCurrentPage(1);
   };
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="browse-container" style={{ display: "flex" }}>

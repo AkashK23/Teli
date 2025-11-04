@@ -160,7 +160,14 @@ export default function Profile() {
     navigate(`/editprofile`);
   };
 
-  if (loading) return <div>Loading profile...</div>;
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   const isOwnProfile = user_id === loggedInUserId;
 
@@ -184,7 +191,9 @@ export default function Profile() {
         </div>
         <div className="profile-stats">
           {/* Stats Row */}
+          
           <div className="stats-row">
+            {showNumber > 0 ? (
             <Link to={`/users/${user_id}/yourshows`} className="stat-link">
               <div className="stat">
                 <div className="stat-number">
@@ -193,22 +202,48 @@ export default function Profile() {
                 <div className="stat-label">Shows</div>
               </div>
             </Link>
-            <Link to={`/users/${user_id}/following`} className="stat-link">
+            ) : (
+              <div className="stat">
+                <div className="stat-number">
+                  <b>{showNumber}</b>
+                </div>
+                <div className="stat-label">Shows</div>
+              </div>
+            )}
+            {following > 0 ? (
+              <Link to={`/users/${user_id}/following`} className="stat-link">
+                <div className="stat">
+                  <div className="stat-number">
+                    <b>{following}</b>
+                  </div>
+                  <div className="stat-label">Following</div>
+                </div>
+              </Link>
+            ) : (
               <div className="stat">
                 <div className="stat-number">
                   <b>{following}</b>
                 </div>
                 <div className="stat-label">Following</div>
               </div>
-            </Link>
-            <Link to={`/users/${user_id}/followers`} className="stat-link">
+            )}
+            {followers > 0 ? (
+              <Link to={`/users/${user_id}/followers`} className="stat-link">
+                <div className="stat">
+                  <div className="stat-number">
+                    <b>{followers}</b>
+                  </div>
+                  <div className="stat-label">Followers</div>
+                </div>
+              </Link>
+            ) : (
               <div className="stat">
                 <div className="stat-number">
                   <b>{followers}</b>
                 </div>
                 <div className="stat-label">Followers</div>
               </div>
-            </Link>
+            )}
           </div>
 
           {/* Follow button */}
@@ -217,7 +252,7 @@ export default function Profile() {
               className={`follow-btn ${!isFollowing ? "followed" : ""}`}
               onClick={handleFollowToggle}
             >
-              {isFollowing ? "Followed" : "Follow"}
+              {isFollowing ? "Following" : "Follow"}
             </button>
           ) : (
             <button className="follow-btn followed" onClick={handleEditProfile}>
