@@ -28,7 +28,7 @@ def setup_test_data(get_client, get_db):
     
     # Add users
     response1 = client.post(
-        "/add_user",
+        "/api/add_user",
         json=user1_payload,
         headers={"Content-Type": "application/json"}
     )
@@ -36,11 +36,11 @@ def setup_test_data(get_client, get_db):
         user1_id = response1.get_json()["id"]
     else:
         # If user already exists, get their ID
-        users = client.get("/get_users").get_json()
+        users = client.get("/api/get_users").get_json()
         user1_id = next((u["id"] for u in users if u["email"] == "popular_test_user1@example.com"), "popular_test_user1")
     
     response2 = client.post(
-        "/add_user",
+        "/api/add_user",
         json=user2_payload,
         headers={"Content-Type": "application/json"}
     )
@@ -48,11 +48,11 @@ def setup_test_data(get_client, get_db):
         user2_id = response2.get_json()["id"]
     else:
         # If user already exists, get their ID
-        users = client.get("/get_users").get_json()
+        users = client.get("/api/get_users").get_json()
         user2_id = next((u["id"] for u in users if u["email"] == "popular_test_user2@example.com"), "popular_test_user2")
     
     response3 = client.post(
-        "/add_user",
+        "/api/add_user",
         json=user3_payload,
         headers={"Content-Type": "application/json"}
     )
@@ -60,7 +60,7 @@ def setup_test_data(get_client, get_db):
         user3_id = response3.get_json()["id"]
     else:
         # If user already exists, get their ID
-        users = client.get("/get_users").get_json()
+        users = client.get("/api/get_users").get_json()
         user3_id = next((u["id"] for u in users if u["email"] == "popular_test_user3@example.com"), "popular_test_user3")
     
     # Add ratings for different shows
@@ -79,7 +79,7 @@ def setup_test_data(get_client, get_db):
             "comment": f"Great show! Rating {i+1}"
         }
         client.post(
-            "/ratings",
+            "/api/ratings",
             json=rating_payload,
             headers={"Content-Type": "application/json"}
         )
@@ -93,7 +93,7 @@ def setup_test_data(get_client, get_db):
             "comment": f"Loved it! Rating {i+1}"
         }
         client.post(
-            "/ratings",
+            "/api/ratings",
             json=rating_payload,
             headers={"Content-Type": "application/json"}
         )
@@ -108,7 +108,7 @@ def setup_test_data(get_client, get_db):
             "comment": f"Great show! Rating {i+1}"
         }
         client.post(
-            "/ratings",
+            "/api/ratings",
             json=rating_payload,
             headers={"Content-Type": "application/json"}
         )
@@ -122,7 +122,7 @@ def setup_test_data(get_client, get_db):
             "comment": f"Good show! Rating {i+1}"
         }
         client.post(
-            "/ratings",
+            "/api/ratings",
             json=rating_payload,
             headers={"Content-Type": "application/json"}
         )
@@ -137,7 +137,7 @@ def setup_test_data(get_client, get_db):
             "comment": f"Epic show! Rating {i+1}"
         }
         client.post(
-            "/ratings",
+            "/api/ratings",
             json=rating_payload,
             headers={"Content-Type": "application/json"}
         )
@@ -151,7 +151,7 @@ def setup_test_data(get_client, get_db):
             "comment": f"Great finale! Rating {i+1}"
         }
         client.post(
-            "/ratings",
+            "/api/ratings",
             json=rating_payload,
             headers={"Content-Type": "application/json"}
         )
@@ -178,7 +178,7 @@ class TestPopularShowsEndpoints:
         client = get_client
         
         # Make the request
-        response = client.get('/shows/popular')
+        response = client.get('/api/shows/popular')
         
         # Check the response
         assert response.status_code == 200
@@ -219,7 +219,7 @@ class TestPopularShowsEndpoints:
         client = get_client
         
         # Make the request with custom parameters
-        response = client.get('/shows/popular?timeframe=30&num_most_popular=2')
+        response = client.get('/api/shows/popular?timeframe=30&num_most_popular=2')
         
         # Check the response
         assert response.status_code == 200
@@ -251,7 +251,7 @@ class TestPopularShowsEndpoints:
     def test_get_popular_shows_invalid_timeframe(self, get_client):
         """Test getting popular shows with invalid timeframe parameter"""
         client = get_client
-        response = client.get('/shows/popular?timeframe=invalid')
+        response = client.get('/api/shows/popular?timeframe=invalid')
         assert response.status_code == 400
         data = response.get_json()
         assert 'error' in data
@@ -260,7 +260,7 @@ class TestPopularShowsEndpoints:
     def test_get_popular_shows_invalid_num_most_popular(self, get_client):
         """Test getting popular shows with invalid num_most_popular parameter"""
         client = get_client
-        response = client.get('/shows/popular?num_most_popular=invalid')
+        response = client.get('/api/shows/popular?num_most_popular=invalid')
         assert response.status_code == 400
         data = response.get_json()
         assert 'error' in data
@@ -269,7 +269,7 @@ class TestPopularShowsEndpoints:
     def test_get_popular_shows_negative_timeframe(self, get_client):
         """Test getting popular shows with negative timeframe parameter"""
         client = get_client
-        response = client.get('/shows/popular?timeframe=-1')
+        response = client.get('/api/shows/popular?timeframe=-1')
         assert response.status_code == 400
         data = response.get_json()
         assert 'error' in data

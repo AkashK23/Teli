@@ -68,7 +68,7 @@ class TestUpdateUserProfile:
             "picture": "https://example.com/new-pic.jpg"
         }
 
-        response = client.put('/user/user123/profile', 
+        response = client.put('/api/user/user123/profile', 
                             data=json.dumps(request_data),
                             content_type='application/json')
 
@@ -98,7 +98,7 @@ class TestUpdateUserProfile:
             "bio": "Just updating my bio"
         }
 
-        response = client.put('/user/user123/profile', 
+        response = client.put('/api/user/user123/profile', 
                             data=json.dumps(request_data),
                             content_type='application/json')
 
@@ -121,7 +121,7 @@ class TestUpdateUserProfile:
             "name": "New Name"
         }
 
-        response = client.put('/user/nonexistent/profile', 
+        response = client.put('/api/user/nonexistent/profile', 
                             data=json.dumps(request_data),
                             content_type='application/json')
 
@@ -143,7 +143,7 @@ class TestUpdateUserProfile:
             "username": "existinguser"
         }
 
-        response = client.put('/user/user123/profile', 
+        response = client.put('/api/user/user123/profile', 
                             data=json.dumps(request_data),
                             content_type='application/json')
 
@@ -165,7 +165,7 @@ class TestUpdateUserProfile:
             "email": "existing@example.com"
         }
 
-        response = client.put('/user/user123/profile', 
+        response = client.put('/api/user/user123/profile', 
                             data=json.dumps(request_data),
                             content_type='application/json')
 
@@ -179,7 +179,7 @@ class TestUpdateUserProfile:
             "email": "invalid-email"
         }
 
-        response = client.put('/user/user123/profile', 
+        response = client.put('/api/user/user123/profile', 
                             data=json.dumps(request_data),
                             content_type='application/json')
 
@@ -189,7 +189,7 @@ class TestUpdateUserProfile:
 
     def test_update_profile_empty_request(self, client):
         """Test profile update with empty request body"""
-        response = client.put('/user/user123/profile', 
+        response = client.put('/api/user/user123/profile', 
                             data=json.dumps({}),
                             content_type='application/json')
 
@@ -209,7 +209,7 @@ class TestUpdateUserProfile:
             "username": "johndoe"  # Same as current username
         }
 
-        response = client.put('/user/user123/profile', 
+        response = client.put('/api/user/user123/profile', 
                             data=json.dumps(request_data),
                             content_type='application/json')
 
@@ -230,7 +230,7 @@ class TestUpdateUserProfile:
             "email": "john@example.com"  # Same as current email
         }
 
-        response = client.put('/user/user123/profile', 
+        response = client.put('/api/user/user123/profile', 
                             data=json.dumps(request_data),
                             content_type='application/json')
 
@@ -251,7 +251,7 @@ class TestUpdateUserProfile:
             "name": "New Name"
         }
 
-        response = client.put('/user/user123/profile', 
+        response = client.put('/api/user/user123/profile', 
                             data=json.dumps(request_data),
                             content_type='application/json')
 
@@ -284,7 +284,7 @@ class TestUpdateUserProfile:
             "name": "Jane Smith"
         }
 
-        response = client.put('/user/user123/profile', 
+        response = client.put('/api/user/user123/profile', 
                             data=json.dumps(request_data),
                             content_type='application/json')
 
@@ -295,7 +295,7 @@ class TestUpdateUserProfile:
 
     def test_update_profile_invalid_json(self, client):
         """Test profile update with invalid JSON"""
-        response = client.put('/user/user123/profile', 
+        response = client.put('/api/user/user123/profile', 
                             data="invalid json",
                             content_type='application/json')
 
@@ -315,7 +315,7 @@ class TestUpdateUserProfile:
             "name": "Updated Name"
         }
 
-        response = client.put('/user/user123/profile', 
+        response = client.put('/api/user/user123/profile', 
                             data=json.dumps(request_data),
                             content_type='application/json')
 

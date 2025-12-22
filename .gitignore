@@ -10,6 +10,12 @@ backend/serviceAccountKey.json
 # ignore auth token
 backend/authorizationToken.txt
 
+# Ignore environment variables files
+.env
+backend/.env
+frontend/.env.local
+frontend/.env.production
+
 # Ignore pycache files
 # Python cache files
 **/__pycache__/
@@ -22,3 +28,6 @@ backend/authorizationToken.txt
 # Ignore specific vscode settings
 .vscode/*
 !.vscode/settings.json
+
+# Ignore setup script (contains sensitive prompts)
+setup.sh

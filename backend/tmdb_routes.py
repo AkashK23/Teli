@@ -8,20 +8,33 @@ logger = logging.getLogger(__name__)
 tmdb = Blueprint("tmdb", __name__)
 
 def get_tmdb_authorization_token():
-    try:
-        # Get the directory where this file is located
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        token_path = os.path.join(current_dir, "authorizationToken.txt")
-        
-        with open(token_path, 'r') as file:
-            data = file.read()
-        return data
-    except FileNotFoundError:
-        logger.error("TMDB authorization token file not found")
-        return None
-    except Exception as e:
-        logger.error(f"Error reading TMDB token: {e}")
-        return None
+    """Get TMDB API key from environment variable or file."""
+    result = None
+    
+    # Try to get TMDB API key from environment variable first
+    tmdb_api_key = os.environ.get('TMDB_API_KEY')
+    
+    if tmdb_api_key:
+        logger.info("Using TMDB API key from environment variable")
+        result = tmdb_api_key.strip()
+    else:
+        # Fall back to authorization token file for local development
+        try:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            token_path = os.path.join(current_dir, "authorizationToken.txt")
+            
+            with open(token_path, 'r') as file:
+                data = file.read().strip()
+            logger.info("Using TMDB API key from authorization token file")
+            result = data
+        except FileNotFoundError:
+            logger.error("TMDB API key not found. Set TMDB_API_KEY environment variable or provide authorizationToken.txt file")
+            result = None
+        except Exception as e:
+            logger.error(f"Error reading TMDB token file: {e}")
+            result = None
+    
+    return result
 
 TMDB_API_KEY = get_tmdb_authorization_token()
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
