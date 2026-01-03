@@ -11,7 +11,7 @@ backend/serviceAccountKey.json
 backend/authorizationToken.txt
 
 # Ignore environment variables files
-.env
+.env.local
 backend/.env
 frontend/.env.local
 frontend/.env.production
