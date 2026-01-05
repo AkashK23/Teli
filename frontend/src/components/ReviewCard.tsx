@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import ShowTooltip from "../components/ShowTooltip";
 
 interface ReviewCardProps {
   showId: string;
@@ -10,6 +11,10 @@ interface ReviewCardProps {
   rating?: number;
   showImageUrl?: string;
   showName?: string;
+  overview?: string;
+  averageRating?: number;
+  firstAirDate?: string;
+  compact?: boolean;
 }
 
 const ReviewCard: React.FC<ReviewCardProps> = ({
@@ -21,6 +26,10 @@ const ReviewCard: React.FC<ReviewCardProps> = ({
   rating,
   showImageUrl,
   showName,
+  overview,
+  averageRating,
+  firstAirDate,
+  compact,
 }) => {
   const navigate = useNavigate();
   const profilePic =
@@ -37,7 +46,11 @@ const goToShow = () => {
 };
 
   return (
-    <div className="rating-card" key={showId} onClick={goToShow}>
+    <div
+      className={`rating-card ${compact ? "compact" : ""}`}
+      key={showId}
+      onClick={goToShow}
+    >
       <img
         src={profilePic}
         className="profile-avatar-home"
@@ -50,17 +63,26 @@ const goToShow = () => {
           <div onClick={goToProfile}>
             <h4>{userName}</h4>
           </div>
-          <p>{comment}</p>
+          <p className="rating-comment">{comment}</p>
         </div>
         <div className="rating-score">{rating}</div>
       </div>
 
       {showImageUrl && (
-        <img
-          src={showImageUrl}
-          alt={showName || "Show poster"}
-          className="rating-show-img"
-        />
+        <ShowTooltip
+          show={{
+            name: showName,
+            first_air_date: firstAirDate,
+            overview: overview,
+            rating: averageRating,
+          }}
+        >
+          <img
+            src={showImageUrl}
+            alt={showName || "Show poster"}
+            className="rating-show-img"
+          />
+        </ShowTooltip>
       )}
     </div>
   );

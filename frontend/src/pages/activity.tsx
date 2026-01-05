@@ -2,15 +2,23 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useUser } from "../UserContext";
 import ReviewCard from "../components/ReviewCard";
+import { useLocation } from "react-router-dom";
 
 export default function Activity() {
   const [userInfo, setUserInfo] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"following" | "user">("following");
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const initialTab = params.get("tab") || "following"; // default
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [followingReviews, setFollowingReviews] = useState<any[]>([]);
   const [userReviews, setUserReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const url = process.env.REACT_APP_API_URL;
   const user_id = useUser().userId;
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -38,6 +46,9 @@ export default function Activity() {
                 const userReviewInfo = await axios.get(
                   `${url}/user/${rating.user_id}`
                 );
+                const ratingRes = await axios.get(
+                  `${url}/shows/${rating.show_id}/average-rating`
+                );
                 return {
                   ...rating,
                   show_name: showData?.name,
@@ -49,6 +60,9 @@ export default function Activity() {
                   user_name: userReviewInfo.data.name,
                   user_id: userReviewInfo.data.id,
                   user_profile_pic: userReviewInfo.data.picture,
+                  overview: showData.overview,
+                  first_air_date: showData.first_air_date,
+                  average_rating: ratingRes.data.average_rating,
                 };
               } catch (err) {
                 console.error("Failed to fetch image for:", rating.show_name);
@@ -77,10 +91,10 @@ export default function Activity() {
     ) : (
       <div className="review-container">
         <div className="user-ratings">
-          <div className="rating-cards-container">
+          <div className="review-cards-container">
             {reviews.map((rating: any) => (
               <ReviewCard
-                key={rating.show_id}
+                key={`${rating.user_id}-${rating.show_id}`}
                 showId={rating.show_id}
                 userId={rating.user_id}
                 userName={rating.user_name}
@@ -88,7 +102,11 @@ export default function Activity() {
                 comment={rating.comment}
                 rating={rating.rating}
                 showImageUrl={rating.image_url}
-                showName={rating.name}
+                showName={rating.show_name}
+                overview={rating.overview}
+                averageRating={rating.average_rating}
+                firstAirDate={rating.first_air_date}
+                compact={false}
               />
             ))}
           </div>
@@ -107,7 +125,7 @@ export default function Activity() {
   }
 
   return (
-    <div className="activity-container">
+    <div className="page-container">
       <div className="activity-tabContainer">
         <div
           onClick={() => setActiveTab("following")}

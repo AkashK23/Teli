@@ -99,7 +99,7 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="onboarding-container">
+    <div className="page-container">
       <h1 className="onboarding-title">Welcome to Teli 🎉</h1>
       <p className="onboarding-subtitle">Let’s set up your profile</p>
 
