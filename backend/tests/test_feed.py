@@ -23,7 +23,7 @@ def setup_test_data(get_client, get_db):
     }
     
     response1 = client.post(
-        "/add_user",
+        "/api/add_user",
         json=user1_payload,
         headers={"Content-Type": "application/json"}
     )
@@ -31,11 +31,11 @@ def setup_test_data(get_client, get_db):
         user1_id = response1.get_json()["id"]
     else:
         # If user already exists, get their ID
-        users = client.get("/get_users").get_json()
+        users = client.get("/api/get_users").get_json()
         user1_id = next((u["id"] for u in users if u["email"] == "user1@example.com"), "test_user_1")
     
     response2 = client.post(
-        "/add_user",
+        "/api/add_user",
         json=user2_payload,
         headers={"Content-Type": "application/json"}
     )
@@ -43,7 +43,7 @@ def setup_test_data(get_client, get_db):
         user2_id = response2.get_json()["id"]
     else:
         # If user already exists, get their ID
-        users = client.get("/get_users").get_json()
+        users = client.get("/api/get_users").get_json()
         user2_id = next((u["id"] for u in users if u["email"] == "user2@example.com"), "test_user_2")
         
     # Create follow relationship
@@ -52,7 +52,7 @@ def setup_test_data(get_client, get_db):
         "followee_id": user2_id
     }
     client.post(
-        "/follow",
+        "/api/follow",
         json=follow_payload,
         headers={"Content-Type": "application/json"}
     )
@@ -66,7 +66,7 @@ def setup_test_data(get_client, get_db):
         "comment": "Great show2!"
     }
     client.post(
-        "/ratings",
+        "/api/ratings",
         json=rating_payload,
         headers={"Content-Type": "application/json"}
     )
@@ -85,7 +85,7 @@ def setup_test_data(get_client, get_db):
 class TestBasicEndpoints:
     def test_hello_endpoint(self, get_client):
         client = get_client
-        response = client.get("/")
+        response = client.get("/api/")
         assert response.status_code == 200
         assert response.get_json()["message"] == "Hello from Teli!"
 
@@ -101,7 +101,7 @@ class TestUserEndpoints:
             "bio": "Bio for New User"
         }
         response = client.post(
-            "/add_user",
+            "/api/add_user",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -116,7 +116,7 @@ class TestUserEndpoints:
             "bio": "Just a bio"
         }
         response = client.post(
-            "/add_user",
+            "/api/add_user",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -131,7 +131,7 @@ class TestUserEndpoints:
             "username": "invalidemail"
         }
         response = client.post(
-            "/add_user",
+            "/api/add_user",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -141,7 +141,7 @@ class TestUserEndpoints:
     
     def test_get_users(self, get_client):
         client = get_client
-        response = client.get("/get_users")
+        response = client.get("/api/get_users")
         assert response.status_code == 200
         users = response.get_json()
         assert isinstance(users, list)
@@ -162,7 +162,7 @@ class TestUserEndpoints:
             "bio": "Bio for Get User"
         }
         add_response = client.post(
-            "/add_user",
+            "/api/add_user",
             json=add_payload,
             headers={"Content-Type": "application/json"}
         )
@@ -172,7 +172,7 @@ class TestUserEndpoints:
         user_id = add_response.get_json()["id"]
         
         # Now test the get user endpoint
-        get_response = client.get(f"/user/{user_id}")
+        get_response = client.get(f"/api/user/{user_id}")
         assert get_response.status_code == 200
         
         user_data = get_response.get_json()
@@ -187,7 +187,7 @@ class TestUserEndpoints:
         client = get_client
         # Use a non-existent ID
         fake_id = "nonexistent-user-id"
-        response = client.get(f"/user/{fake_id}")
+        response = client.get(f"/api/user/{fake_id}")
         
         assert response.status_code == 404
         assert "error" in response.get_json()
@@ -201,7 +201,7 @@ class TestWatchlistEndpoints:
             "show_id": "game_of_thrones"
         }
         response = client.post(
-            "/add_to_watchlist",
+            "/api/add_to_watchlist",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -216,7 +216,7 @@ class TestWatchlistEndpoints:
             "user_id": "some_user"
         }
         response = client.post(
-            "/add_to_watchlist",
+            "/api/add_to_watchlist",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -227,7 +227,7 @@ class TestTMDBEndpoints:
     def test_search_shows(self, get_client):
         client = get_client
         query = "breaking bad"
-        response = client.get(f"/shows/search?query={query}")
+        response = client.get(f"/api/shows/search?query={query}")
         assert response.status_code == 200
         response_json = response.get_json()
         assert "total_pages" in response_json
@@ -264,7 +264,7 @@ class TestTMDBEndpoints:
             "with_runtime.gte": 20,
             "with_runtime.lte": 60
         }
-        response = client.get("/shows/filter", query_string=query_params)
+        response = client.get("/api/shows/filter", query_string=query_params)
         assert response.status_code == 200
         response_json = response.get_json()
         assert "results" in response_json
@@ -298,27 +298,27 @@ class TestTMDBEndpoints:
     
     def test_search_shows_missing_query(self, get_client):
         client = get_client
-        response = client.get("/shows/search")
+        response = client.get("/api/shows/search")
         assert response.status_code == 400
         assert "error" in response.get_json()
     
     def test_get_genres(self, get_client):
         client = get_client
-        response = client.get("/genres")
+        response = client.get("/api/genres")
         assert response.status_code == 200
         json_response = response.get_json()
         assert "data" in json_response
     
     def test_get_languages(self, get_client):
         client = get_client
-        response = client.get("/languages")
+        response = client.get("/api/languages")
         assert response.status_code == 200
         json_response = response.get_json()
         assert "data" in json_response
     
     def test_get_countries(self, get_client):
         client = get_client
-        response = client.get("/countries")
+        response = client.get("/api/countries")
         assert response.status_code == 200
         json_response = response.get_json()
         assert "data" in json_response
@@ -334,7 +334,7 @@ class TestRatingEndpoints:
             "comment": "Amazing spin-off!"
         }
         response = client.post(
-            "/ratings",
+            "/api/ratings",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -352,7 +352,7 @@ class TestRatingEndpoints:
             "comment": "Test comment"
         }
         response = client.post(
-            "/ratings",
+            "/api/ratings",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -361,7 +361,7 @@ class TestRatingEndpoints:
     
     def test_get_user_ratings(self, get_client, setup_test_data):
         client = get_client
-        response = client.get(f"/users/{setup_test_data['user2_id']}/ratings")
+        response = client.get(f"/api/users/{setup_test_data['user2_id']}/ratings")
         assert response.status_code == 200
         ratings = response.get_json()
         assert isinstance(ratings, list)
@@ -371,7 +371,7 @@ class TestRatingEndpoints:
     
     def test_get_show_ratings(self, get_client, setup_test_data):
         client = get_client
-        response = client.get(f"/shows/{setup_test_data['show_id']}/ratings")
+        response = client.get(f"/api/shows/{setup_test_data['show_id']}/ratings")
         assert response.status_code == 200
         ratings = response.get_json()
         assert isinstance(ratings, list)
@@ -391,7 +391,7 @@ class TestFollowEndpoints:
             "bio": "Bio for Follow Test"
         }
         user_response = client.post(
-            "/add_user",
+            "/api/add_user",
             json=new_user_payload,
             headers={"Content-Type": "application/json"}
         )
@@ -403,7 +403,7 @@ class TestFollowEndpoints:
             "followee_id": new_user_id
         }
         response = client.post(
-            "/follow",
+            "/api/follow",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -419,7 +419,7 @@ class TestFollowEndpoints:
             "followee_id": setup_test_data["user2_id"]
         }
         client.post(
-            "/follow",
+            "/api/follow",
             json=follow_payload,
             headers={"Content-Type": "application/json"}
         )
@@ -430,7 +430,7 @@ class TestFollowEndpoints:
             "followee_id": setup_test_data["user2_id"]
         }
         response = client.post(
-            "/unfollow",
+            "/api/unfollow",
             json=unfollow_payload,
             headers={"Content-Type": "application/json"}
         )
@@ -439,14 +439,14 @@ class TestFollowEndpoints:
         
         # Follow again for other tests
         client.post(
-            "/follow",
+            "/api/follow",
             json=follow_payload,
             headers={"Content-Type": "application/json"}
         )
     
     def test_get_following(self, get_client, setup_test_data):
         client = get_client
-        response = client.get(f"/users/{setup_test_data['user1_id']}/following")
+        response = client.get(f"/api/users/{setup_test_data['user1_id']}/following")
         assert response.status_code == 200
         following = response.get_json()["following"]
         assert isinstance(following, list)
@@ -454,7 +454,7 @@ class TestFollowEndpoints:
     
     def test_get_followers(self, get_client, setup_test_data):
         client = get_client
-        response = client.get(f"/users/{setup_test_data['user2_id']}/followers")
+        response = client.get(f"/api/users/{setup_test_data['user2_id']}/followers")
         assert response.status_code == 200
         followers = response.get_json()["followers"]
         assert isinstance(followers, list)
@@ -463,7 +463,7 @@ class TestFollowEndpoints:
 class TestFeedEndpoints:
     def test_get_feed(self, get_client, setup_test_data):
         client = get_client
-        response = client.get(f"/users/{setup_test_data['user1_id']}/feed")
+        response = client.get(f"/api/users/{setup_test_data['user1_id']}/feed")
         assert response.status_code == 200
         feed = response.get_json()["feed"]
         assert isinstance(feed, list)
@@ -476,12 +476,12 @@ class TestFeedEndpoints:
         client = get_client
         # Create a timestamp for pagination
         start_after = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat().replace("+00:00", "Z")
-        response = client.get(f"/users/{setup_test_data['user1_id']}/feed?start_after={start_after}")
+        response = client.get(f"/api/users/{setup_test_data['user1_id']}/feed?start_after={start_after}")
         assert response.status_code == 200
         assert "feed" in response.get_json()
     
     def test_get_feed_invalid_pagination(self, get_client, setup_test_data):
         client = get_client
-        response = client.get(f"/users/{setup_test_data['user1_id']}/feed?start_after=invalid-date")
+        response = client.get(f"/api/users/{setup_test_data['user1_id']}/feed?start_after=invalid-date")
         assert response.status_code == 400
         assert "error" in response.get_json()

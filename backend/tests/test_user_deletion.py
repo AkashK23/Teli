@@ -63,7 +63,7 @@ class TestUserDeletion:
             "bio": f"Test bio{username_suffix}"
         }
         
-        response = self.client.post("/add_user", 
+        response = self.client.post("/api/add_user", 
                                   json=user_data,
                                   content_type="application/json")
         
@@ -84,7 +84,7 @@ class TestUserDeletion:
             "comment": comment
         }
         
-        response = self.client.post("/ratings",
+        response = self.client.post("/api/ratings",
                                   json=rating_data,
                                   content_type="application/json")
         
@@ -106,7 +106,7 @@ class TestUserDeletion:
             "comment": "Amazing episode!"
         }
         
-        response = self.client.post("/episode_ratings",
+        response = self.client.post("/api/episode_ratings",
                                   json=episode_rating_data,
                                   content_type="application/json")
         
@@ -128,7 +128,7 @@ class TestUserDeletion:
             "notes": "Really enjoying this!"
         }
         
-        response = self.client.post("/update_watch_status",
+        response = self.client.post("/api/update_watch_status",
                                   json=watch_data,
                                   content_type="application/json")
         
@@ -146,7 +146,7 @@ class TestUserDeletion:
             "show_id": show_id
         }
         
-        response = self.client.post("/add_to_watchlist",
+        response = self.client.post("/api/add_to_watchlist",
                                   json=watchlist_data,
                                   content_type="application/json")
         
@@ -164,7 +164,7 @@ class TestUserDeletion:
             "followee_id": followee_id
         }
         
-        response = self.client.post("/follow",
+        response = self.client.post("/api/follow",
                                   json=follow_data,
                                   content_type="application/json")
         
@@ -181,18 +181,18 @@ class TestBasicUserDeletion(TestUserDeletion):
         user_id, user_data = self.create_test_user("_basic")
         
         # Verify user exists
-        response = self.client.get(f"/user/{user_id}")
+        response = self.client.get(f"/api/user/{user_id}")
         assert response.status_code == 200
         
         # Delete the user
-        response = self.client.delete(f"/user/{user_id}")
+        response = self.client.delete(f"/api/user/{user_id}")
         assert response.status_code == 200
         
         result = json.loads(response.data)
         assert result["message"] == "User deleted successfully"
         
         # Verify user no longer exists
-        response = self.client.get(f"/user/{user_id}")
+        response = self.client.get(f"/api/user/{user_id}")
         assert response.status_code == 404
         
         # Remove from cleanup list since it's already deleted
@@ -200,7 +200,7 @@ class TestBasicUserDeletion(TestUserDeletion):
     
     def test_delete_nonexistent_user(self):
         """Test deletion of non-existent user returns 404"""
-        response = self.client.delete("/user/nonexistent123")
+        response = self.client.delete("/api/user/nonexistent123")
         assert response.status_code == 404
         
         result = json.loads(response.data)
@@ -222,25 +222,25 @@ class TestRatingsCleanup(TestUserDeletion):
         rating2_id = self.add_rating(user2_id, show_id, 9, "User 2 rating")
         
         # Verify both ratings exist
-        response = self.client.get(f"/shows/{show_id}/ratings")
+        response = self.client.get(f"/api/shows/{show_id}/ratings")
         assert response.status_code == 200
         ratings = json.loads(response.data)
         assert len(ratings) == 2
         
         # Verify user1's ratings exist
-        response = self.client.get(f"/users/{user1_id}/ratings")
+        response = self.client.get(f"/api/users/{user1_id}/ratings")
         assert response.status_code == 200
         user1_ratings = json.loads(response.data)
         assert len(user1_ratings) == 1
         assert user1_ratings[0]["comment"] == "User 1 rating"
         
         # Delete user1
-        response = self.client.delete(f"/user/{user1_id}")
+        response = self.client.delete(f"/api/user/{user1_id}")
         assert response.status_code == 200
         self.created_user_ids.remove(user1_id)
         
         # Verify user1's ratings are gone from show ratings
-        response = self.client.get(f"/shows/{show_id}/ratings")
+        response = self.client.get(f"/api/shows/{show_id}/ratings")
         assert response.status_code == 200
         remaining_ratings = json.loads(response.data)
         assert len(remaining_ratings) == 1
@@ -248,11 +248,11 @@ class TestRatingsCleanup(TestUserDeletion):
         assert remaining_ratings[0]["user_id"] == user2_id
         
         # Verify user1's ratings endpoint returns 404
-        response = self.client.get(f"/users/{user1_id}/ratings")
+        response = self.client.get(f"/api/users/{user1_id}/ratings")
         assert response.status_code == 404
         
         # Verify user2's ratings are unaffected
-        response = self.client.get(f"/users/{user2_id}/ratings")
+        response = self.client.get(f"/api/users/{user2_id}/ratings")
         assert response.status_code == 200
         user2_ratings = json.loads(response.data)
         assert len(user2_ratings) == 1
@@ -271,32 +271,32 @@ class TestRatingsCleanup(TestUserDeletion):
         ep_rating3_id = self.add_episode_rating(user2_id, show_id, 1, 1, 7)
         
         # Verify user1's episode ratings exist
-        response = self.client.get(f"/users/{user1_id}/shows/{show_id}/season/1/ratings")
+        response = self.client.get(f"/api/users/{user1_id}/shows/{show_id}/season/1/ratings")
         assert response.status_code == 200
         user1_episodes = json.loads(response.data)
         assert len(user1_episodes) == 2
         
         # Verify specific episode rating exists
-        response = self.client.get(f"/users/{user1_id}/shows/{show_id}/season/1/ratings?episode_number=1")
+        response = self.client.get(f"/api/users/{user1_id}/shows/{show_id}/season/1/ratings?episode_number=1")
         assert response.status_code == 200
         episode_rating = json.loads(response.data)
         assert episode_rating["rating"] == 8
         
         # Delete user1
-        response = self.client.delete(f"/user/{user1_id}")
+        response = self.client.delete(f"/api/user/{user1_id}")
         assert response.status_code == 200
         self.created_user_ids.remove(user1_id)
         
         # Verify user1's episode ratings are gone
-        response = self.client.get(f"/users/{user1_id}/shows/{show_id}/season/1/ratings")
+        response = self.client.get(f"/api/users/{user1_id}/shows/{show_id}/season/1/ratings")
         assert response.status_code == 404
         
         # Verify specific episode rating is gone
-        response = self.client.get(f"/users/{user1_id}/shows/{show_id}/season/1/ratings?episode_number=1")
+        response = self.client.get(f"/api/users/{user1_id}/shows/{show_id}/season/1/ratings?episode_number=1")
         assert response.status_code == 404
         
         # Verify user2's episode ratings are unaffected
-        response = self.client.get(f"/users/{user2_id}/shows/{show_id}/season/1/ratings")
+        response = self.client.get(f"/api/users/{user2_id}/shows/{show_id}/season/1/ratings")
         assert response.status_code == 200
         user2_episodes = json.loads(response.data)
         assert len(user2_episodes) == 1
@@ -320,40 +320,40 @@ class TestSocialFeaturesCleanup(TestUserDeletion):
         self.follow_user(userC_id, userA_id)
         
         # Verify relationships exist
-        response = self.client.get(f"/users/{userA_id}/following")
+        response = self.client.get(f"/api/users/{userA_id}/following")
         assert response.status_code == 200
         following = json.loads(response.data)
         assert userB_id in following["following"]
         
-        response = self.client.get(f"/users/{userB_id}/followers")
+        response = self.client.get(f"/api/users/{userB_id}/followers")
         assert response.status_code == 200
         followers = json.loads(response.data)
         assert userA_id in followers["followers"]
         
-        response = self.client.get(f"/users/{userB_id}/following")
+        response = self.client.get(f"/api/users/{userB_id}/following")
         assert response.status_code == 200
         following = json.loads(response.data)
         assert userC_id in following["following"]
         
         # Delete userB
-        response = self.client.delete(f"/user/{userB_id}")
+        response = self.client.delete(f"/api/user/{userB_id}")
         assert response.status_code == 200
         self.created_user_ids.remove(userB_id)
         
         # Verify userA no longer follows userB
-        response = self.client.get(f"/users/{userA_id}/following")
+        response = self.client.get(f"/api/users/{userA_id}/following")
         assert response.status_code == 200
         following = json.loads(response.data)
         assert userB_id not in following["following"]
         
         # Verify userC no longer has userB as follower
-        response = self.client.get(f"/users/{userC_id}/followers")
+        response = self.client.get(f"/api/users/{userC_id}/followers")
         assert response.status_code == 200
         followers = json.loads(response.data)
         assert userB_id not in followers["followers"]
         
         # Verify userC still follows userA (unaffected relationship)
-        response = self.client.get(f"/users/{userC_id}/following")
+        response = self.client.get(f"/api/users/{userC_id}/following")
         assert response.status_code == 200
         following = json.loads(response.data)
         assert userA_id in following["following"]
@@ -381,33 +381,33 @@ class TestFeedCleanup(TestUserDeletion):
         rating3_id = self.add_rating(userA_id, "show3", 7, "A's rating")
         
         # Verify userA's feed contains userB's ratings
-        response = self.client.get(f"/users/{userA_id}/feed")
+        response = self.client.get(f"/api/users/{userA_id}/feed")
         assert response.status_code == 200
         feedA = json.loads(response.data)
         userB_items_in_A = [item for item in feedA["feed"] if item["user_id"] == userB_id]
         assert len(userB_items_in_A) >= 2  # Should have userB's ratings
         
         # Verify userC's feed contains userB's ratings
-        response = self.client.get(f"/users/{userC_id}/feed")
+        response = self.client.get(f"/api/users/{userC_id}/feed")
         assert response.status_code == 200
         feedC = json.loads(response.data)
         userB_items_in_C = [item for item in feedC["feed"] if item["user_id"] == userB_id]
         assert len(userB_items_in_C) >= 2  # Should have userB's ratings
         
         # Delete userB
-        response = self.client.delete(f"/user/{userB_id}")
+        response = self.client.delete(f"/api/user/{userB_id}")
         assert response.status_code == 200
         self.created_user_ids.remove(userB_id)
         
         # Verify userA's feed no longer contains userB's content
-        response = self.client.get(f"/users/{userA_id}/feed")
+        response = self.client.get(f"/api/users/{userA_id}/feed")
         assert response.status_code == 200
         feedA_after = json.loads(response.data)
         userB_items_after_A = [item for item in feedA_after["feed"] if item["user_id"] == userB_id]
         assert len(userB_items_after_A) == 0  # No userB content should remain
         
         # Verify userC's feed no longer contains userB's content
-        response = self.client.get(f"/users/{userC_id}/feed")
+        response = self.client.get(f"/api/users/{userC_id}/feed")
         assert response.status_code == 200
         feedC_after = json.loads(response.data)
         userB_items_after_C = [item for item in feedC_after["feed"] if item["user_id"] == userB_id]
@@ -415,7 +415,7 @@ class TestFeedCleanup(TestUserDeletion):
         
         # Verify userA's own content is unaffected (if they had any followers)
         # Since no one follows userA, their feed should be empty anyway
-        response = self.client.get(f"/users/{userA_id}/feed")
+        response = self.client.get(f"/api/users/{userA_id}/feed")
         assert response.status_code == 200
 
 
@@ -434,41 +434,41 @@ class TestWatchStatusCleanup(TestUserDeletion):
         status3_id = self.add_watch_status(user2_id, "show1", "currently_watching")
         
         # Verify user1's watch status exists
-        response = self.client.get(f"/users/{user1_id}/currently_watching")
+        response = self.client.get(f"/api/users/{user1_id}/currently_watching")
         assert response.status_code == 200
         watching = json.loads(response.data)
         assert len(watching) == 1
         assert watching[0]["show_id"] == "show1"
         
-        response = self.client.get(f"/users/{user1_id}/want_to_watch")
+        response = self.client.get(f"/api/users/{user1_id}/want_to_watch")
         assert response.status_code == 200
         want_to_watch = json.loads(response.data)
         assert len(want_to_watch) == 1
         assert want_to_watch[0]["show_id"] == "show2"
         
         # Verify specific watch status exists
-        response = self.client.get(f"/users/{user1_id}/watch_status/show1")
+        response = self.client.get(f"/api/users/{user1_id}/watch_status/show1")
         assert response.status_code == 200
         status = json.loads(response.data)
         assert status["status"] == "currently_watching"
         
         # Delete user1
-        response = self.client.delete(f"/user/{user1_id}")
+        response = self.client.delete(f"/api/user/{user1_id}")
         assert response.status_code == 200
         self.created_user_ids.remove(user1_id)
         
         # Verify user1's watch status is gone
-        response = self.client.get(f"/users/{user1_id}/currently_watching")
+        response = self.client.get(f"/api/users/{user1_id}/currently_watching")
         assert response.status_code == 404
         
-        response = self.client.get(f"/users/{user1_id}/want_to_watch")
+        response = self.client.get(f"/api/users/{user1_id}/want_to_watch")
         assert response.status_code == 404
         
-        response = self.client.get(f"/users/{user1_id}/watch_status/show1")
+        response = self.client.get(f"/api/users/{user1_id}/watch_status/show1")
         assert response.status_code == 404
         
         # Verify user2's watch status is unaffected
-        response = self.client.get(f"/users/{user2_id}/currently_watching")
+        response = self.client.get(f"/api/users/{user2_id}/currently_watching")
         assert response.status_code == 200
         user2_watching = json.loads(response.data)
         assert len(user2_watching) == 1
@@ -498,7 +498,7 @@ class TestWatchlistCleanup(TestUserDeletion):
         assert len(user2_watchlist) == 1
         
         # Delete user1
-        response = self.client.delete(f"/user/{user1_id}")
+        response = self.client.delete(f"/api/user/{user1_id}")
         assert response.status_code == 200
         self.created_user_ids.remove(user1_id)
         
@@ -545,66 +545,66 @@ class TestDataIntegrity(TestUserDeletion):
         self.follow_user(userB_id, userC_id)  # B follows C
         
         # Verify all data exists before deletion
-        response = self.client.get(f"/users/{userB_id}/ratings")
+        response = self.client.get(f"/api/users/{userB_id}/ratings")
         assert response.status_code == 200
         userB_ratings_before = json.loads(response.data)
         assert len(userB_ratings_before) == 1
         
-        response = self.client.get(f"/users/{userC_id}/following")
+        response = self.client.get(f"/api/users/{userC_id}/following")
         assert response.status_code == 200
         userC_following_before = json.loads(response.data)
         assert userB_id in userC_following_before["following"]
         
         # Delete userA (middle user with various relationships)
-        response = self.client.delete(f"/user/{userA_id}")
+        response = self.client.delete(f"/api/user/{userA_id}")
         assert response.status_code == 200
         self.created_user_ids.remove(userA_id)
         
         # Verify userB's data is completely intact
-        response = self.client.get(f"/user/{userB_id}")
+        response = self.client.get(f"/api/user/{userB_id}")
         assert response.status_code == 200
         userB_profile = json.loads(response.data)
         assert userB_profile["name"] == userB_data["name"]
         assert userB_profile["email"] == userB_data["email"]
         
-        response = self.client.get(f"/users/{userB_id}/ratings")
+        response = self.client.get(f"/api/users/{userB_id}/ratings")
         assert response.status_code == 200
         userB_ratings_after = json.loads(response.data)
         assert len(userB_ratings_after) == 1
         assert userB_ratings_after[0]["comment"] == "B's rating"
         
-        response = self.client.get(f"/users/{userB_id}/shows/show1/season/1/ratings")
+        response = self.client.get(f"/api/users/{userB_id}/shows/show1/season/1/ratings")
         assert response.status_code == 200
         userB_episodes = json.loads(response.data)
         assert len(userB_episodes) == 1
         assert userB_episodes[0]["episode_number"] == 2
         
         # Verify userC's data is completely intact
-        response = self.client.get(f"/user/{userC_id}")
+        response = self.client.get(f"/api/user/{userC_id}")
         assert response.status_code == 200
         userC_profile = json.loads(response.data)
         assert userC_profile["name"] == userC_data["name"]
         
-        response = self.client.get(f"/users/{userC_id}/ratings")
+        response = self.client.get(f"/api/users/{userC_id}/ratings")
         assert response.status_code == 200
         userC_ratings = json.loads(response.data)
         assert len(userC_ratings) == 1
         assert userC_ratings[0]["comment"] == "C's rating"
         
         # Verify follow relationships are properly updated
-        response = self.client.get(f"/users/{userB_id}/followers")
+        response = self.client.get(f"/api/users/{userB_id}/followers")
         assert response.status_code == 200
         userB_followers = json.loads(response.data)
         assert userA_id not in userB_followers["followers"]  # A is gone
         assert userC_id in userB_followers["followers"]      # C still follows B
         
-        response = self.client.get(f"/users/{userB_id}/following")
+        response = self.client.get(f"/api/users/{userB_id}/following")
         assert response.status_code == 200
         userB_following = json.loads(response.data)
         assert userC_id in userB_following["following"]      # B still follows C
         
         # Verify show ratings still include remaining users
-        response = self.client.get("/shows/show1/ratings")
+        response = self.client.get("/api/shows/show1/ratings")
         assert response.status_code == 200
         show1_ratings = json.loads(response.data)
         user_ids_in_ratings = [r["user_id"] for r in show1_ratings]
@@ -618,7 +618,7 @@ class TestErrorHandling(TestUserDeletion):
     def test_delete_nonexistent_user_detailed(self):
         """Test detailed error handling for non-existent user"""
         # Try to delete a user that never existed
-        response = self.client.delete("/user/never_existed_123")
+        response = self.client.delete("/api/user/never_existed_123")
         assert response.status_code == 404
         
         result = json.loads(response.data)
@@ -630,12 +630,12 @@ class TestErrorHandling(TestUserDeletion):
         # Create and delete a user
         user_id, _ = self.create_test_user("_already_deleted")
         
-        response = self.client.delete(f"/user/{user_id}")
+        response = self.client.delete(f"/api/user/{user_id}")
         assert response.status_code == 200
         self.created_user_ids.remove(user_id)
         
         # Try to delete the same user again
-        response = self.client.delete(f"/user/{user_id}")
+        response = self.client.delete(f"/api/user/{user_id}")
         assert response.status_code == 404
         
         result = json.loads(response.data)
@@ -680,34 +680,34 @@ class TestComplexScenarios(TestUserDeletion):
             self.follow_user(user_id, followee_id)  # Our user follows them
         
         # Verify extensive data exists
-        response = self.client.get(f"/users/{user_id}/ratings")
+        response = self.client.get(f"/api/users/{user_id}/ratings")
         assert response.status_code == 200
         ratings = json.loads(response.data)
         assert len(ratings) == 5
         
-        response = self.client.get(f"/users/{user_id}/following")
+        response = self.client.get(f"/api/users/{user_id}/following")
         assert response.status_code == 200
         following = json.loads(response.data)
         assert len(following["following"]) == 3
         
-        response = self.client.get(f"/users/{user_id}/followers")
+        response = self.client.get(f"/api/users/{user_id}/followers")
         assert response.status_code == 200
         followers_data = json.loads(response.data)
         assert len(followers_data["followers"]) == 3
         
         # Verify episode ratings exist
-        response = self.client.get(f"/users/{user_id}/shows/big_show/season/1/ratings")
+        response = self.client.get(f"/api/users/{user_id}/shows/big_show/season/1/ratings")
         assert response.status_code == 200
         episodes = json.loads(response.data)
         assert len(episodes) == 5  # 5 episodes in season 1
         
         # Verify watch status exists
-        response = self.client.get(f"/users/{user_id}/currently_watching")
+        response = self.client.get(f"/api/users/{user_id}/currently_watching")
         assert response.status_code == 200
         watching = json.loads(response.data)
         assert len(watching) == 2  # 2 currently watching (even indices)
         
-        response = self.client.get(f"/users/{user_id}/want_to_watch")
+        response = self.client.get(f"/api/users/{user_id}/want_to_watch")
         assert response.status_code == 200
         want_to_watch = json.loads(response.data)
         assert len(want_to_watch) == 1  # 1 want to watch (odd indices)
@@ -717,27 +717,27 @@ class TestComplexScenarios(TestUserDeletion):
         assert len(user_watchlist) == 4
         
         # Delete the user with extensive data
-        response = self.client.delete(f"/user/{user_id}")
+        response = self.client.delete(f"/api/user/{user_id}")
         assert response.status_code == 200
         self.created_user_ids.remove(user_id)
         
         # Verify complete deletion
-        response = self.client.get(f"/user/{user_id}")
+        response = self.client.get(f"/api/user/{user_id}")
         assert response.status_code == 404
         
         # Verify all ratings are gone
-        response = self.client.get(f"/users/{user_id}/ratings")
+        response = self.client.get(f"/api/users/{user_id}/ratings")
         assert response.status_code == 404
         
         # Verify all episode ratings are gone
-        response = self.client.get(f"/users/{user_id}/shows/big_show/season/1/ratings")
+        response = self.client.get(f"/api/users/{user_id}/shows/big_show/season/1/ratings")
         assert response.status_code == 404
         
         # Verify all watch status is gone
-        response = self.client.get(f"/users/{user_id}/currently_watching")
+        response = self.client.get(f"/api/users/{user_id}/currently_watching")
         assert response.status_code == 404
         
-        response = self.client.get(f"/users/{user_id}/want_to_watch")
+        response = self.client.get(f"/api/users/{user_id}/want_to_watch")
         assert response.status_code == 404
         
         # Verify all watchlist entries are gone
@@ -745,29 +745,29 @@ class TestComplexScenarios(TestUserDeletion):
         assert len(user_watchlist_after) == 0
         
         # Verify all follow relationships are gone
-        response = self.client.get(f"/users/{user_id}/following")
+        response = self.client.get(f"/api/users/{user_id}/following")
         assert response.status_code == 404
         
-        response = self.client.get(f"/users/{user_id}/followers")
+        response = self.client.get(f"/api/users/{user_id}/followers")
         assert response.status_code == 404
         
         # Verify followers no longer follow the deleted user
         for follower_id in followers:
-            response = self.client.get(f"/users/{follower_id}/following")
+            response = self.client.get(f"/api/users/{follower_id}/following")
             assert response.status_code == 200
             following_data = json.loads(response.data)
             assert user_id not in following_data["following"]
         
         # Verify followees no longer have the deleted user as follower
         for followee_id in followees:
-            response = self.client.get(f"/users/{followee_id}/followers")
+            response = self.client.get(f"/api/users/{followee_id}/followers")
             assert response.status_code == 200
             followers_data = json.loads(response.data)
             assert user_id not in followers_data["followers"]
         
         # Verify feeds are cleaned (check that deleted user's content is gone from followers' feeds)
         for follower_id in followers:
-            response = self.client.get(f"/users/{follower_id}/feed")
+            response = self.client.get(f"/api/users/{follower_id}/feed")
             assert response.status_code == 200
             feed_data = json.loads(response.data)
             deleted_user_items = [item for item in feed_data["feed"] if item["user_id"] == user_id]
@@ -809,32 +809,32 @@ class TestBatchOperationLimits(TestUserDeletion):
             self.follow_user(follower_id, user_id)
         
         # Verify data exists
-        response = self.client.get(f"/users/{user_id}/ratings")
+        response = self.client.get(f"/api/users/{user_id}/ratings")
         assert response.status_code == 200
         ratings = json.loads(response.data)
         assert len(ratings) == 20
         
-        response = self.client.get(f"/users/{user_id}/followers")
+        response = self.client.get(f"/api/users/{user_id}/followers")
         assert response.status_code == 200
         followers_data = json.loads(response.data)
         assert len(followers_data["followers"]) == 10
         
         # Delete the user with large dataset
-        response = self.client.delete(f"/user/{user_id}")
+        response = self.client.delete(f"/api/user/{user_id}")
         assert response.status_code == 200
         self.created_user_ids.remove(user_id)
         
         # Verify complete deletion
-        response = self.client.get(f"/user/{user_id}")
+        response = self.client.get(f"/api/user/{user_id}")
         assert response.status_code == 404
         
         # Verify all data is gone
-        response = self.client.get(f"/users/{user_id}/ratings")
+        response = self.client.get(f"/api/users/{user_id}/ratings")
         assert response.status_code == 404
         
         # Verify followers' feeds are cleaned
         for follower_id in followers:
-            response = self.client.get(f"/users/{follower_id}/feed")
+            response = self.client.get(f"/api/users/{follower_id}/feed")
             assert response.status_code == 200
             feed_data = json.loads(response.data)
             deleted_user_items = [item for item in feed_data["feed"] if item["user_id"] == user_id]

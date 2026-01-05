@@ -112,56 +112,56 @@ class TestUserSearch:
     
     def test_search_users_missing_query_parameter(self, get_client):
         """Test search without query parameter returns error"""
-        response = get_client.get('/users/search')
+        response = get_client.get("/api/users/search")
         assert response.status_code == 400
         data = json.loads(response.data)
         assert "Missing 'query' parameter" in data['error']
     
     def test_search_users_empty_query_parameter(self, get_client):
         """Test search with empty query parameter returns error"""
-        response = get_client.get('/users/search?query=')
+        response = get_client.get("/api/users/search?query=")
         assert response.status_code == 400
         data = json.loads(response.data)
         assert "Missing 'query' parameter" in data['error']
     
     def test_search_users_invalid_page_parameter(self, get_client):
         """Test search with invalid page parameter"""
-        response = get_client.get('/users/search?query=john&page=invalid')
+        response = get_client.get("/api/users/search?query=john&page=invalid")
         assert response.status_code == 400
         data = json.loads(response.data)
         assert "Page parameter must be a positive integer" in data['error']
     
     def test_search_users_invalid_limit_parameter(self, get_client):
         """Test search with invalid limit parameter"""
-        response = get_client.get('/users/search?query=john&limit=invalid')
+        response = get_client.get("/api/users/search?query=john&limit=invalid")
         assert response.status_code == 400
         data = json.loads(response.data)
         assert "Limit parameter must be a positive integer" in data['error']
     
     def test_search_users_negative_page(self, get_client):
         """Test search with negative page number defaults to 1"""
-        response = get_client.get('/users/search?query=john&page=-1')
+        response = get_client.get("/api/users/search?query=john&page=-1")
         assert response.status_code == 200
         data = json.loads(response.data)
         assert data['current_page'] == 1
     
     def test_search_users_limit_exceeds_maximum(self, get_client):
         """Test search with limit exceeding maximum gets capped"""
-        response = get_client.get('/users/search?query=john&limit=200')
+        response = get_client.get("/api/users/search?query=john&limit=200")
         assert response.status_code == 200
         data = json.loads(response.data)
         assert data['limit'] == 100
     
     def test_search_users_invalid_prefix_range(self, get_client):
         """Test search when prefix range is invalid"""
-        response = get_client.get('/users/search?query=')
+        response = get_client.get("/api/users/search?query=")
         assert response.status_code == 400
         data = json.loads(response.data)
         assert "Missing 'query' parameter" in data['error']
     
     def test_search_users_successful_search(self, get_client):
         """Test successful user search"""
-        response = get_client.get('/users/search?query=jo')
+        response = get_client.get("/api/users/search?query=jo")
         assert response.status_code == 200
         data = json.loads(response.data)
         
@@ -188,7 +188,7 @@ class TestUserSearch:
     
     def test_search_users_deduplication(self, get_client):
         """Test that duplicate users are removed from results"""
-        response = get_client.get('/users/search?query=john')
+        response = get_client.get("/api/users/search?query=john")
         assert response.status_code == 200
         data = json.loads(response.data)
         
@@ -214,7 +214,7 @@ class TestUserSearch:
         
         try:
             # Test first page
-            response = get_client.get('/users/search?query=user&page=1&limit=10')
+            response = get_client.get("/api/users/search?query=user&page=1&limit=10")
             assert response.status_code == 200
             data = json.loads(response.data)
             
@@ -224,7 +224,7 @@ class TestUserSearch:
             assert data['limit'] == 10
             
             # Test second page
-            response = get_client.get('/users/search?query=user&page=2&limit=10')
+            response = get_client.get("/api/users/search?query=user&page=2&limit=10")
             assert response.status_code == 200
             data = json.loads(response.data)
             
@@ -241,7 +241,7 @@ class TestUserSearch:
     
     def test_search_users_sorting_relevance(self, get_client):
         """Test that results are sorted by relevance"""
-        response = get_client.get('/users/search?query=john')
+        response = get_client.get("/api/users/search?query=john")
         assert response.status_code == 200
         data = json.loads(response.data)
         
@@ -263,7 +263,7 @@ class TestUserSearch:
     
     def test_search_users_no_results(self, get_client):
         """Test search with query that returns no results"""
-        response = get_client.get('/users/search?query=xyz123nonexistent')
+        response = get_client.get("/api/users/search?query=xyz123nonexistent")
         assert response.status_code == 200
         data = json.loads(response.data)
         
@@ -300,7 +300,7 @@ class TestAddUserWithLowercaseFields:
             'bio': 'Test user'
         }
         
-        response = get_client.post('/add_user', 
+        response = get_client.post("/api/add_user", 
                                  data=json.dumps(user_data),
                                  content_type='application/json')
         
@@ -330,7 +330,7 @@ class TestAddUserWithLowercaseFields:
         }
         
         # Add first user
-        response = get_client.post('/add_user', 
+        response = get_client.post("/api/add_user", 
                                  data=json.dumps(user_data),
                                  content_type='application/json')
         
@@ -346,7 +346,7 @@ class TestAddUserWithLowercaseFields:
             'bio': 'Second user'
         }
         
-        response = get_client.post('/add_user', 
+        response = get_client.post("/api/add_user", 
                                  data=json.dumps(user_data2),
                                  content_type='application/json')
         
@@ -364,7 +364,7 @@ class TestAddUserWithLowercaseFields:
         }
         
         # Add first user
-        response = get_client.post('/add_user', 
+        response = get_client.post("/api/add_user", 
                                  data=json.dumps(user_data),
                                  content_type='application/json')
         
@@ -380,7 +380,7 @@ class TestAddUserWithLowercaseFields:
             'bio': 'Second user'
         }
         
-        response = get_client.post('/add_user', 
+        response = get_client.post("/api/add_user", 
                                  data=json.dumps(user_data2),
                                  content_type='application/json')
         

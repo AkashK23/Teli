@@ -22,7 +22,7 @@ class TestSearchUserRatedShows:
             'bio': 'Test user for rated shows search'
         }
         
-        response = self.client.post('/add_user', 
+        response = self.client.post('/api/add_user', 
                                    data=json.dumps(user_data),
                                    content_type='application/json')
         
@@ -65,7 +65,7 @@ class TestSearchUserRatedShows:
         
         # Add ratings using the API endpoint
         for rating_data in test_ratings:
-            response = self.client.post('/ratings',
+            response = self.client.post('/api/ratings',
                                        data=json.dumps(rating_data),
                                        content_type='application/json')
             
@@ -90,7 +90,7 @@ class TestSearchUserRatedShows:
     
     def test_search_rated_shows_user_not_found(self, get_client):
         """Test search when user doesn't exist"""
-        response = get_client.get('/users/nonexistent_user/rated-shows/search?query=breaking')
+        response = get_client.get("/api/users/nonexistent_user/rated-shows/search?query=breaking")
         
         assert response.status_code == 404
         data = json.loads(response.data)
@@ -98,7 +98,7 @@ class TestSearchUserRatedShows:
     
     def test_search_rated_shows_missing_query(self, get_client):
         """Test search without query parameter"""
-        response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search')
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search')
         
         assert response.status_code == 400
         data = json.loads(response.data)
@@ -106,7 +106,7 @@ class TestSearchUserRatedShows:
     
     def test_search_rated_shows_invalid_page(self, get_client):
         """Test search with invalid page parameter"""
-        response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=breaking&page=invalid')
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=breaking&page=invalid')
         
         assert response.status_code == 400
         data = json.loads(response.data)
@@ -114,7 +114,7 @@ class TestSearchUserRatedShows:
     
     def test_search_rated_shows_invalid_limit(self, get_client):
         """Test search with invalid limit parameter"""
-        response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=breaking&limit=invalid')
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=breaking&limit=invalid')
         
         assert response.status_code == 400
         data = json.loads(response.data)
@@ -122,7 +122,7 @@ class TestSearchUserRatedShows:
     
     def test_search_rated_shows_successful_search(self, get_client):
         """Test successful search for rated shows"""
-        response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=breaking')
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=breaking')
         
         assert response.status_code == 200
         data = json.loads(response.data)
@@ -156,7 +156,7 @@ class TestSearchUserRatedShows:
     
     def test_search_rated_shows_exact_match(self, get_client):
         """Test search with exact show name match"""
-        response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=the office')
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=the office')
         
         assert response.status_code == 200
         data = json.loads(response.data)
@@ -167,7 +167,7 @@ class TestSearchUserRatedShows:
     
     def test_search_rated_shows_partial_match(self, get_client):
         """Test search with partial show name match"""
-        response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=office')
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=office')
         
         assert response.status_code == 200
         data = json.loads(response.data)
@@ -177,7 +177,7 @@ class TestSearchUserRatedShows:
     
     def test_search_rated_shows_no_results(self, get_client):
         """Test search when no shows match the query"""
-        response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=nonexistent')
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=nonexistent')
         
         assert response.status_code == 200
         data = json.loads(response.data)
@@ -188,7 +188,7 @@ class TestSearchUserRatedShows:
     
     def test_search_rated_shows_sorting_relevance(self, get_client):
         """Test that search results are sorted by relevance"""
-        response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=breaking')
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=breaking')
         
         assert response.status_code == 200
         data = json.loads(response.data)
@@ -216,7 +216,7 @@ class TestSearchUserRatedShows:
                 'comment': f'Test comment {i}'
             }
             
-            response = self.client.post('/ratings',
+            response = self.client.post('/api/ratings',
                                        data=json.dumps(rating_data),
                                        content_type='application/json')
             
@@ -226,7 +226,7 @@ class TestSearchUserRatedShows:
         
         try:
             # Test first page
-            response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=test&page=1&limit=10')
+            response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=test&page=1&limit=10')
             
             assert response.status_code == 200
             data = json.loads(response.data)
@@ -238,7 +238,7 @@ class TestSearchUserRatedShows:
             assert data["total_pages"] == 2
             
             # Test second page
-            response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=test&page=2&limit=10')
+            response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=test&page=2&limit=10')
             
             assert response.status_code == 200
             data = json.loads(response.data)
@@ -257,7 +257,7 @@ class TestSearchUserRatedShows:
     def test_search_rated_shows_case_insensitive(self, get_client):
         """Test that search is case insensitive"""
         # Test with uppercase query
-        response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=BREAKING')
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=BREAKING')
         
         assert response.status_code == 200
         data = json.loads(response.data)
@@ -270,14 +270,14 @@ class TestSearchUserRatedShows:
     def test_search_rated_shows_limit_validation(self, get_client):
         """Test limit parameter validation"""
         # Test with limit over maximum
-        response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=breaking&limit=150')
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=breaking&limit=150')
         
         assert response.status_code == 200
         data = json.loads(response.data)
         assert data["limit"] == 100  # Should be capped at 100
         
         # Test with negative limit - should use default
-        response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=breaking&limit=-5')
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=breaking&limit=-5')
         
         assert response.status_code == 200
         data = json.loads(response.data)
@@ -286,14 +286,14 @@ class TestSearchUserRatedShows:
     def test_search_rated_shows_page_validation(self, get_client):
         """Test page parameter validation"""
         # Test with negative page - should use default
-        response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=breaking&page=-1')
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=breaking&page=-1')
         
         assert response.status_code == 200
         data = json.loads(response.data)
         assert data["current_page"] == 1  # Should use default
         
         # Test with zero page - should use default
-        response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=breaking&page=0')
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=breaking&page=0')
         
         assert response.status_code == 200
         data = json.loads(response.data)
@@ -319,7 +319,7 @@ class TestAddRatingWithShowName:
             'bio': 'Test user for rating tests'
         }
         
-        response = self.client.post('/add_user', 
+        response = self.client.post('/api/add_user', 
                                    data=json.dumps(user_data),
                                    content_type='application/json')
         
@@ -353,7 +353,7 @@ class TestAddRatingWithShowName:
             'comment': 'Test rating'
         }
         
-        response = get_client.post('/ratings',
+        response = get_client.post("/api/ratings",
                                   data=json.dumps(rating_data),
                                   content_type='application/json')
         
@@ -383,7 +383,7 @@ class TestAddRatingWithShowName:
             # Missing show_name_lowercase
         }
         
-        response = get_client.post('/ratings',
+        response = get_client.post("/api/ratings",
                                   data=json.dumps(rating_data),
                                   content_type='application/json')
         
@@ -407,7 +407,7 @@ class TestAddRatingWithShowName:
             'comment': 'Initial rating'
         }
         
-        response = get_client.post('/ratings',
+        response = get_client.post("/api/ratings",
                                   data=json.dumps(rating_data),
                                   content_type='application/json')
         
@@ -425,7 +425,7 @@ class TestAddRatingWithShowName:
             'comment': 'Updated rating - even better!'
         }
         
-        response = get_client.post('/ratings',
+        response = get_client.post("/api/ratings",
                                   data=json.dumps(updated_rating_data),
                                   content_type='application/json')
         
@@ -442,7 +442,7 @@ class TestAddRatingWithShowName:
     
     def test_search_rated_shows_empty_query_returns_empty_results(self, get_client):
         """Test search with empty query returns empty results"""
-        response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=')
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=')
         
         assert response.status_code == 400
         data = json.loads(response.data)
@@ -458,7 +458,7 @@ class TestAddRatingWithShowName:
             'bio': 'User with no ratings'
         }
         
-        response = self.client.post('/add_user', 
+        response = self.client.post('/api/add_user', 
                                    data=json.dumps(user_data),
                                    content_type='application/json')
         
@@ -468,7 +468,7 @@ class TestAddRatingWithShowName:
         self.test_user_ids.append(no_ratings_user_id)
         
         # Search for rated shows
-        response = get_client.get(f'/users/{no_ratings_user_id}/rated-shows/search?query=breaking')
+        response = get_client.get(f'/api/users/{no_ratings_user_id}/rated-shows/search?query=breaking')
         
         assert response.status_code == 200
         data = json.loads(response.data)
@@ -502,7 +502,7 @@ class TestAddRatingWithShowName:
         
         # Add ratings for our test user
         for rating_data in test_ratings:
-            response = self.client.post('/ratings',
+            response = self.client.post('/api/ratings',
                                        data=json.dumps(rating_data),
                                        content_type='application/json')
             
@@ -518,7 +518,7 @@ class TestAddRatingWithShowName:
             'bio': 'Other user for testing'
         }
         
-        response = self.client.post('/add_user', 
+        response = self.client.post('/api/add_user', 
                                    data=json.dumps(other_user_data),
                                    content_type='application/json')
         
@@ -536,7 +536,7 @@ class TestAddRatingWithShowName:
             'comment': 'Other user rating'
         }
         
-        response = self.client.post('/ratings',
+        response = self.client.post('/api/ratings',
                                    data=json.dumps(other_rating_data),
                                    content_type='application/json')
         
@@ -545,7 +545,7 @@ class TestAddRatingWithShowName:
         self.test_rating_ids.append(other_rating_response['id'])
         
         # Search for our test user's rated shows
-        response = get_client.get(f'/users/{self.test_user_id}/rated-shows/search?query=breaking')
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=breaking')
         
         assert response.status_code == 200
         data = json.loads(response.data)

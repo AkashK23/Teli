@@ -17,7 +17,7 @@ def user_fixture(client, get_db):
     }
     
     response = client.post(
-        "/add_user",
+        "/api/add_user",
         json=user_payload,
         headers={"Content-Type": "application/json"}
     )
@@ -26,7 +26,7 @@ def user_fixture(client, get_db):
         user_id = response.get_json()["id"]
     else:
         # If user already exists, get their ID
-        users = client.get("/get_users").get_json()
+        users = client.get("/api/get_users").get_json()
         user_id = next((u["id"] for u in users if u["email"] == "episodeuser@example.com"), "test_episode_user")
     
     # Return user data for tests
@@ -52,7 +52,7 @@ def test_add_episode_rating(client, user_fixture):
     
     # Act
     response = client.post(
-        "/episode_ratings",
+        "/api/episode_ratings",
         data=json.dumps(rating_data),
         content_type="application/json"
     )
@@ -78,7 +78,7 @@ def test_add_episode_rating_missing_fields(client, user_fixture):
     
     # Act
     response = client.post(
-        "/episode_ratings",
+        "/api/episode_ratings",
         data=json.dumps(rating_data),
         content_type="application/json"
     )
@@ -103,7 +103,7 @@ def test_add_episode_rating_invalid_rating(client, user_fixture):
     
     # Act
     response = client.post(
-        "/episode_ratings",
+        "/api/episode_ratings",
         data=json.dumps(rating_data),
         content_type="application/json"
     )
@@ -127,7 +127,7 @@ def test_add_episode_rating_invalid_user(client):
     
     # Act
     response = client.post(
-        "/episode_ratings",
+        "/api/episode_ratings",
         data=json.dumps(rating_data),
         content_type="application/json"
     )
@@ -152,7 +152,7 @@ def test_add_episode_rating_update_existing(client, user_fixture):
     
     # Add initial rating
     client.post(
-        "/episode_ratings",
+        "/api/episode_ratings",
         data=json.dumps(rating_data),
         content_type="application/json"
     )
@@ -169,7 +169,7 @@ def test_add_episode_rating_update_existing(client, user_fixture):
     
     # Act
     response = client.post(
-        "/episode_ratings",
+        "/api/episode_ratings",
         data=json.dumps(updated_rating_data),
         content_type="application/json"
     )
@@ -182,7 +182,7 @@ def test_add_episode_rating_update_existing(client, user_fixture):
     assert data["message"] == "Rating added successfully!"
     
     # Verify the update by getting the rating
-    get_response = client.get(f"/users/{user_id}/shows/1396/season/1/ratings?episode_number=1")
+    get_response = client.get(f"/api/users/{user_id}/shows/1396/season/1/ratings?episode_number=1")
     get_data = json.loads(get_response.data)
     assert get_data["rating"] == 8
     assert get_data["comment"] == "Updated: Still great but not perfect"
@@ -222,13 +222,13 @@ def test_get_episode_ratings_for_season(client, user_fixture):
     
     for rating in episode_ratings:
         client.post(
-            "/episode_ratings",
+            "/api/episode_ratings",
             data=json.dumps(rating),
             content_type="application/json"
         )
     
     # Act
-    response = client.get(f"/users/{user_id}/shows/1396/season/1/ratings")
+    response = client.get(f"/api/users/{user_id}/shows/1396/season/1/ratings")
     
     # Assert
     assert response.status_code == 200
@@ -262,13 +262,13 @@ def test_get_episode_rating_for_specific_episode(client, user_fixture):
     }
     
     client.post(
-        "/episode_ratings",
+        "/api/episode_ratings",
         data=json.dumps(rating_data),
         content_type="application/json"
     )
     
     # Act
-    response = client.get(f"/users/{user_id}/shows/1396/season/1/ratings?episode_number=1")
+    response = client.get(f"/api/users/{user_id}/shows/1396/season/1/ratings?episode_number=1")
     
     # Assert
     assert response.status_code == 200
@@ -286,7 +286,7 @@ def test_get_episode_rating_for_specific_episode(client, user_fixture):
 def test_get_episode_rating_user_not_found(client):
     """Test getting episode ratings for a non-existent user."""
     # Act
-    response = client.get("/users/non_existent_user/shows/1396/season/1/ratings")
+    response = client.get("/api/users/non_existent_user/shows/1396/season/1/ratings")
     
     # Assert
     assert response.status_code == 404
@@ -299,7 +299,7 @@ def test_get_episode_rating_not_found(client, user_fixture):
     user_id = user_fixture["id"]
     
     # Act
-    response = client.get(f"/users/{user_id}/shows/1396/season/1/ratings?episode_number=999")
+    response = client.get(f"/api/users/{user_id}/shows/1396/season/1/ratings?episode_number=999")
     
     # Assert
     assert response.status_code == 404
@@ -312,7 +312,7 @@ def test_get_episode_ratings_invalid_season_number(client, user_fixture):
     user_id = user_fixture["id"]
     
     # Act
-    response = client.get(f"/users/{user_id}/shows/1396/season/invalid/ratings")
+    response = client.get(f"/api/users/{user_id}/shows/1396/season/invalid/ratings")
     
     # Assert
     assert response.status_code == 400
@@ -325,7 +325,7 @@ def test_get_episode_ratings_invalid_episode_number(client, user_fixture):
     user_id = user_fixture["id"]
     
     # Act
-    response = client.get(f"/users/{user_id}/shows/1396/season/1/ratings?episode_number=invalid")
+    response = client.get(f"/api/users/{user_id}/shows/1396/season/1/ratings?episode_number=invalid")
     
     # Assert
     assert response.status_code == 400
@@ -338,7 +338,7 @@ def test_get_episode_ratings_empty_result(client, user_fixture):
     user_id = user_fixture["id"]
     
     # Act
-    response = client.get(f"/users/{user_id}/shows/1396/season/5/ratings")
+    response = client.get(f"/api/users/{user_id}/shows/1396/season/5/ratings")
     
     # Assert
     assert response.status_code == 200

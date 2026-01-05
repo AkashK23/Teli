@@ -1,0 +1,21 @@
+{
+    "name": "teli-app",
+    "version": "1.0.0",
+    "description": "Teli TV Show Rating App - Full Stack Deployment",
+    "scripts": {
+        "build": "cd frontend && npm install && npm run build",
+        "postinstall": "npm run build"
+    },
+    "engines": {
+        "node": "18.x",
+        "npm": "9.x"
+    },
+    "keywords": [
+        "react",
+        "flask",
+        "tv-shows",
+        "rating"
+    ],
+    "author": "Teli Team",
+    "license": "MIT"
+}

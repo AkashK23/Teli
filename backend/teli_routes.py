@@ -1065,7 +1065,7 @@ def get_popular_shows():
                 # Import necessary modules
                 from flask import current_app
                 with current_app.test_client() as client:
-                    response = client.get(f"/shows/{show_id}")
+                    response = client.get(f"/api/shows/{show_id}")
                     if response.status_code == 200:
                         show_details = response.get_json()
                         # Add rating count for the specified timeframe

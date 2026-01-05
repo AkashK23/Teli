@@ -82,7 +82,7 @@ def test_get_show_average_rating_with_ratings(get_client):
     
     try:
         # Test the endpoint
-        response = client.get(f"/shows/{show_id}/average-rating")
+        response = client.get(f"/api/shows/{show_id}/average-rating")
         
         assert response.status_code == 200
         
@@ -106,7 +106,7 @@ def test_get_show_average_rating_no_ratings(get_client):
     # Use a unique show ID that definitely has no ratings
     show_id = generate_unique_id("empty_show")
     
-    response = client.get(f"/shows/{show_id}/average-rating")
+    response = client.get(f"/api/shows/{show_id}/average-rating")
     
     assert response.status_code == 200
     
@@ -148,7 +148,7 @@ def test_get_show_average_rating_single_rating(get_client):
     
     try:
         # Test the endpoint
-        response = client.get(f"/shows/{show_id}/average-rating")
+        response = client.get(f"/api/shows/{show_id}/average-rating")
         
         assert response.status_code == 200
         
@@ -211,7 +211,7 @@ def test_get_show_average_rating_decimal_precision(get_client):
     
     try:
         # Test the endpoint
-        response = client.get(f"/shows/{show_id}/average-rating")
+        response = client.get(f"/api/shows/{show_id}/average-rating")
         
         assert response.status_code == 200
         
@@ -280,7 +280,7 @@ def test_get_show_average_rating_with_complex_decimal(get_client):
     
     try:
         # Test the endpoint
-        response = client.get(f"/shows/{show_id}/average-rating")
+        response = client.get(f"/api/shows/{show_id}/average-rating")
         
         assert response.status_code == 200
         
@@ -347,7 +347,7 @@ def test_get_show_average_rating_with_fractional_result(get_client):
     
     try:
         # Test the endpoint
-        response = client.get(f"/shows/{show_id}/average-rating")
+        response = client.get(f"/api/shows/{show_id}/average-rating")
         
         assert response.status_code == 200
         

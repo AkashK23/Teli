@@ -14,7 +14,6 @@ export default function Search() {
   const url = process.env.REACT_APP_API_URL;
   const location = useLocation();
   const navigate = useNavigate();
-
   const queryParams = new URLSearchParams(location.search);
   const query = queryParams.get("query") || "";
   const typeParam = (queryParams.get("type") as "shows" | "users") || "shows";
@@ -34,7 +33,7 @@ export default function Search() {
       try {
         if (searchType === "shows") {
           const response = await axios.get(
-            "http://127.0.0.1:5001/shows/search",
+            `${url}/shows/search`,
             {
               params: { query, page: currentPage },
             }
@@ -62,7 +61,7 @@ export default function Search() {
           setTotalPages(response.data?.total_pages || 1);
         } else {
           const response = await axios.get(
-            "http://127.0.0.1:5001/users/search",
+            `${url}/users/search`,
             {
               params: { query, page: currentPage },
             }

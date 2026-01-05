@@ -7,7 +7,7 @@ This document provides comprehensive documentation for all API endpoints in the 
 All API endpoints are relative to the base URL:
 
 ```
-http://localhost:5001
+http://localhost:5001/api
 ```
 
 ## Table of Contents

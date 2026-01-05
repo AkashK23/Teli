@@ -9,7 +9,7 @@ class TestGoogleAuthentication:
     
     def test_google_auth_missing_token(self, get_client):
         """Test Google auth with missing token"""
-        response = get_client.post("/auth/google", 
+        response = get_client.post("/api/auth/google", 
                               json={},
                               content_type="application/json")
         
@@ -19,7 +19,7 @@ class TestGoogleAuthentication:
         
     def test_google_auth_invalid_token_format(self, get_client):
         """Test Google auth with invalid token format"""
-        response = get_client.post("/auth/google", 
+        response = get_client.post("/api/auth/google", 
                               json={"token": "invalid-token"},
                               content_type="application/json")
         
@@ -58,7 +58,7 @@ class TestGoogleAuthentication:
         mock_collection.where.return_value.limit.return_value = mock_query
         mock_db.collection.return_value = mock_collection
         
-        response = get_client.post("/auth/google", 
+        response = get_client.post("/api/auth/google", 
                               json={"token": test_token},
                               content_type="application/json")
         
@@ -98,7 +98,7 @@ class TestGoogleAuthentication:
         
         mock_db.collection.return_value = mock_collection
         
-        response = get_client.post("/auth/google", 
+        response = get_client.post("/api/auth/google", 
                               json={"token": test_token},
                               content_type="application/json")
         
@@ -160,7 +160,7 @@ class TestGoogleAuthentication:
         mock_collection.where.side_effect = where_side_effect
         mock_db.collection.return_value = mock_collection
         
-        response = get_client.post("/auth/google", 
+        response = get_client.post("/api/auth/google", 
                               json={"token": test_token},
                               content_type="application/json")
         
@@ -190,7 +190,7 @@ class TestGoogleAuthentication:
         # Mock database error
         mock_db.collection.side_effect = Exception("Database connection failed")
         
-        response = get_client.post("/auth/google", 
+        response = get_client.post("/api/auth/google", 
                               json={"token": test_token},
                               content_type="application/json")
         
@@ -231,7 +231,7 @@ class TestUserVerification:
     
     def test_verify_user_no_header(self, get_client):
         """Test verify user with no user ID header"""
-        response = get_client.get("/auth/verify")
+        response = get_client.get("/api/auth/verify")
         
         assert response.status_code == 401
         data = json.loads(response.data)
@@ -239,7 +239,7 @@ class TestUserVerification:
         
     def test_verify_user_invalid_id(self, get_client):
         """Test verify user with invalid user ID"""
-        response = get_client.get("/auth/verify", 
+        response = get_client.get("/api/auth/verify", 
                             headers={"X-User-ID": "invalid123"})
         
         assert response.status_code == 401
@@ -248,7 +248,7 @@ class TestUserVerification:
         
     def test_verify_user_valid_id(self, get_client):
         """Test verify user with valid user ID"""
-        response = get_client.get("/auth/verify", 
+        response = get_client.get("/api/auth/verify", 
                             headers={"X-User-ID": self.test_user_id})
         
         assert response.status_code == 200
@@ -266,7 +266,7 @@ class TestProtectedEndpoints:
     def test_protected_endpoint_no_auth(self, get_client):
         """Test accessing protected endpoint without authentication"""
         # Test a protected endpoint like getting user ratings
-        response = get_client.get("/users/user123/ratings")
+        response = get_client.get("/api/users/user123/ratings")
         
         # Currently returns 200 because endpoints aren't protected yet
         # This test documents the current behavior
@@ -283,7 +283,7 @@ class TestProtectedEndpoints:
         # Mock ratings query
         mock_db.collection.return_value.where.return_value.stream.return_value = []
         
-        response = get_client.get("/users/user123/ratings")
+        response = get_client.get("/api/users/user123/ratings")
         
         assert response.status_code == 200
         
@@ -316,7 +316,7 @@ class TestAuthenticationFlow:
         
         mock_auth_db.collection.return_value = mock_collection
         
-        response = get_client.post("/auth/google", 
+        response = get_client.post("/api/auth/google", 
                               json={"token": test_token},
                               content_type="application/json")
         
@@ -334,7 +334,7 @@ class TestAuthenticationFlow:
         }
         mock_auth_db.collection.return_value.document.return_value.get.return_value = mock_doc
         
-        response = get_client.get("/auth/verify", 
+        response = get_client.get("/api/auth/verify", 
                             headers={"X-User-ID": user_id})
         
         assert response.status_code == 200
@@ -352,6 +352,6 @@ class TestAuthenticationFlow:
         # Mock for the ratings query
         mock_teli_db.collection.return_value.where.return_value.stream.return_value = []
         
-        response = get_client.get(f"/users/{user_id}/ratings")
+        response = get_client.get(f"/api/users/{user_id}/ratings")
         
         assert response.status_code == 200

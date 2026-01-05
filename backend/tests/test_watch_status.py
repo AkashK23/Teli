@@ -23,7 +23,7 @@ def setup_test_data(get_client, get_db):
     }
     
     response1 = client.post(
-        "/add_user",
+        "/api/add_user",
         json=user1_payload,
         headers={"Content-Type": "application/json"}
     )
@@ -31,11 +31,11 @@ def setup_test_data(get_client, get_db):
         user1_id = response1.get_json()["id"]
     else:
         # If user already exists, get their ID
-        users = client.get("/get_users").get_json()
+        users = client.get("/api/get_users").get_json()
         user1_id = next((u["id"] for u in users if u["email"] == "watchuser1@example.com"), "test_watch_user_1")
     
     response2 = client.post(
-        "/add_user",
+        "/api/add_user",
         json=user2_payload,
         headers={"Content-Type": "application/json"}
     )
@@ -43,7 +43,7 @@ def setup_test_data(get_client, get_db):
         user2_id = response2.get_json()["id"]
     else:
         # If user already exists, get their ID
-        users = client.get("/get_users").get_json()
+        users = client.get("/api/get_users").get_json()
         user2_id = next((u["id"] for u in users if u["email"] == "watchuser2@example.com"), "test_watch_user_2")
     
     # Add some initial watch statuses
@@ -64,13 +64,13 @@ def setup_test_data(get_client, get_db):
     }
     
     client.post(
-        "/update_watch_status",
+        "/api/update_watch_status",
         json=currently_watching_payload,
         headers={"Content-Type": "application/json"}
     )
     
     client.post(
-        "/update_watch_status",
+        "/api/update_watch_status",
         json=want_to_watch_payload,
         headers={"Content-Type": "application/json"}
     )
@@ -103,7 +103,7 @@ class TestWatchStatusEndpoints:
         }
         
         response = client.post(
-            "/update_watch_status",
+            "/api/update_watch_status",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -124,7 +124,7 @@ class TestWatchStatusEndpoints:
         }
         
         response = client.post(
-            "/update_watch_status",
+            "/api/update_watch_status",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -135,7 +135,7 @@ class TestWatchStatusEndpoints:
         
         # Verify the update by getting the status
         get_response = client.get(
-            f"/users/{setup_test_data['user1_id']}/watch_status/{setup_test_data['currently_watching_show_id']}"
+            f"/api/users/{setup_test_data['user1_id']}/watch_status/{setup_test_data['currently_watching_show_id']}"
         )
         
         assert get_response.status_code == 200
@@ -156,7 +156,7 @@ class TestWatchStatusEndpoints:
         }
         
         response = client.post(
-            "/update_watch_status",
+            "/api/update_watch_status",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -166,7 +166,7 @@ class TestWatchStatusEndpoints:
         
         # Verify the status change
         get_response = client.get(
-            f"/users/{setup_test_data['user1_id']}/watch_status/{setup_test_data['want_to_watch_show_id']}"
+            f"/api/users/{setup_test_data['user1_id']}/watch_status/{setup_test_data['want_to_watch_show_id']}"
         )
         
         assert get_response.status_code == 200
@@ -186,7 +186,7 @@ class TestWatchStatusEndpoints:
         }
         
         response = client.post(
-            "/update_watch_status",
+            "/api/update_watch_status",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -206,7 +206,7 @@ class TestWatchStatusEndpoints:
         }
         
         response = client.post(
-            "/update_watch_status",
+            "/api/update_watch_status",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -217,7 +217,7 @@ class TestWatchStatusEndpoints:
         
         # Verify the status by getting it
         get_response = client.get(
-            f"/users/{setup_test_data['user1_id']}/watch_status/{unique_show_id}"
+            f"/api/users/{setup_test_data['user1_id']}/watch_status/{unique_show_id}"
         )
         
         assert get_response.status_code == 200
@@ -236,7 +236,7 @@ class TestWatchStatusEndpoints:
         }
         
         response = client.post(
-            "/update_watch_status",
+            "/api/update_watch_status",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -246,7 +246,7 @@ class TestWatchStatusEndpoints:
     
     def test_get_currently_watching(self, get_client, setup_test_data):
         client = get_client
-        response = client.get(f"/users/{setup_test_data['user1_id']}/currently_watching")
+        response = client.get(f"/api/users/{setup_test_data['user1_id']}/currently_watching")
         
         assert response.status_code == 200
         shows = response.get_json()
@@ -263,7 +263,7 @@ class TestWatchStatusEndpoints:
     def test_get_currently_watching_empty(self, get_client, setup_test_data):
         client = get_client
         # User2 doesn't have any shows in currently watching
-        response = client.get(f"/users/{setup_test_data['user2_id']}/currently_watching")
+        response = client.get(f"/api/users/{setup_test_data['user2_id']}/currently_watching")
         
         assert response.status_code == 200
         shows = response.get_json()
@@ -272,7 +272,7 @@ class TestWatchStatusEndpoints:
     
     def test_get_currently_watching_user_not_found(self, get_client):
         client = get_client
-        response = client.get("/users/non_existent_user/currently_watching")
+        response = client.get("/api/users/non_existent_user/currently_watching")
         
         assert response.status_code == 404
         assert response.get_json()["error"] == "User not found"
@@ -288,12 +288,12 @@ class TestWatchStatusEndpoints:
         }
         
         client.post(
-            "/update_watch_status",
+            "/api/update_watch_status",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
         
-        response = client.get(f"/users/{setup_test_data['user1_id']}/want_to_watch")
+        response = client.get(f"/api/users/{setup_test_data['user1_id']}/want_to_watch")
         
         assert response.status_code == 200
         shows = response.get_json()
@@ -310,7 +310,7 @@ class TestWatchStatusEndpoints:
     def test_get_want_to_watch_empty(self, get_client, setup_test_data):
         client = get_client
         # User2 doesn't have any shows in want to watch
-        response = client.get(f"/users/{setup_test_data['user2_id']}/want_to_watch")
+        response = client.get(f"/api/users/{setup_test_data['user2_id']}/want_to_watch")
         
         assert response.status_code == 200
         shows = response.get_json()
@@ -319,7 +319,7 @@ class TestWatchStatusEndpoints:
     
     def test_get_want_to_watch_user_not_found(self, get_client):
         client = get_client
-        response = client.get("/users/non_existent_user/want_to_watch")
+        response = client.get("/api/users/non_existent_user/want_to_watch")
         
         assert response.status_code == 404
         assert response.get_json()["error"] == "User not found"
@@ -335,12 +335,12 @@ class TestWatchStatusEndpoints:
         }
         
         client.post(
-            "/update_watch_status",
+            "/api/update_watch_status",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
         
-        response = client.get(f"/users/{setup_test_data['user1_id']}/watched")
+        response = client.get(f"/api/users/{setup_test_data['user1_id']}/watched")
         
         assert response.status_code == 200
         shows = response.get_json()
@@ -357,7 +357,7 @@ class TestWatchStatusEndpoints:
     def test_get_watched_empty(self, get_client, setup_test_data):
         client = get_client
         # User2 doesn't have any shows in watched
-        response = client.get(f"/users/{setup_test_data['user2_id']}/watched")
+        response = client.get(f"/api/users/{setup_test_data['user2_id']}/watched")
         
         assert response.status_code == 200
         shows = response.get_json()
@@ -366,7 +366,7 @@ class TestWatchStatusEndpoints:
     
     def test_get_watched_user_not_found(self, get_client):
         client = get_client
-        response = client.get("/users/non_existent_user/watched")
+        response = client.get("/api/users/non_existent_user/watched")
         
         assert response.status_code == 404
         assert response.get_json()["error"] == "User not found"
@@ -374,7 +374,7 @@ class TestWatchStatusEndpoints:
     def test_get_watch_status(self, get_client, setup_test_data):
         client = get_client
         response = client.get(
-            f"/users/{setup_test_data['user1_id']}/watch_status/{setup_test_data['currently_watching_show_id']}"
+            f"/api/users/{setup_test_data['user1_id']}/watch_status/{setup_test_data['currently_watching_show_id']}"
         )
         
         assert response.status_code == 200
@@ -391,7 +391,7 @@ class TestWatchStatusEndpoints:
     def test_get_watch_status_not_found(self, get_client, setup_test_data):
         client = get_client
         response = client.get(
-            f"/users/{setup_test_data['user1_id']}/watch_status/{setup_test_data['non_existent_show_id']}"
+            f"/api/users/{setup_test_data['user1_id']}/watch_status/{setup_test_data['non_existent_show_id']}"
         )
         
         assert response.status_code == 404
@@ -400,7 +400,7 @@ class TestWatchStatusEndpoints:
     def test_get_watch_status_user_not_found(self, get_client, setup_test_data):
         client = get_client
         response = client.get(
-            f"/users/non_existent_user/watch_status/{setup_test_data['currently_watching_show_id']}"
+            f"/api/users/non_existent_user/watch_status/{setup_test_data['currently_watching_show_id']}"
         )
         
         assert response.status_code == 404
@@ -416,7 +416,7 @@ class TestWatchStatusEndpoints:
         }
         
         client.post(
-            "/update_watch_status",
+            "/api/update_watch_status",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -428,7 +428,7 @@ class TestWatchStatusEndpoints:
         }
         
         response = client.post(
-            "/delete_watch_status",
+            "/api/delete_watch_status",
             json=delete_payload,
             headers={"Content-Type": "application/json"}
         )
@@ -438,7 +438,7 @@ class TestWatchStatusEndpoints:
         
         # Verify it's deleted
         get_response = client.get(
-            f"/users/{setup_test_data['user1_id']}/watch_status/show_to_delete"
+            f"/api/users/{setup_test_data['user1_id']}/watch_status/show_to_delete"
         )
         
         assert get_response.status_code == 404
@@ -451,7 +451,7 @@ class TestWatchStatusEndpoints:
         }
         
         response = client.post(
-            "/delete_watch_status",
+            "/api/delete_watch_status",
             json=payload,
             headers={"Content-Type": "application/json"}
         )
@@ -467,7 +467,7 @@ class TestWatchStatusEndpoints:
         }
         
         response = client.post(
-            "/delete_watch_status",
+            "/api/delete_watch_status",
             json=payload,
             headers={"Content-Type": "application/json"}
         )

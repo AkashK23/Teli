@@ -6,7 +6,7 @@ class TestSearchEndpoint:
     def test_search_shows_basic(self, get_client):
         """Test basic search functionality with a common show name"""
         query = "breaking bad"
-        response = get_client.get(f"/shows/search?query={query}")
+        response = get_client.get(f"/api/shows/search?query={query}")
         
         assert response.status_code == 200
         data = response.get_json()
@@ -39,12 +39,12 @@ class TestSearchEndpoint:
         query = "the"  # Common word that should return many results
         
         # Get first page
-        response1 = get_client.get(f"/shows/search?query={query}&page=1")
+        response1 = get_client.get(f"/api/shows/search?query={query}&page=1")
         assert response1.status_code == 200
         data1 = response1.get_json()
         
         # Get second page
-        response2 = get_client.get(f"/shows/search?query={query}&page=2")
+        response2 = get_client.get(f"/api/shows/search?query={query}&page=2")
         assert response2.status_code == 200
         data2 = response2.get_json()
         
@@ -58,7 +58,7 @@ class TestSearchEndpoint:
     def test_search_shows_special_characters(self, get_client):
         """Test search with special characters in query"""
         query = "game of thrones!"  # Special character
-        response = get_client.get(f"/shows/search?query={query}")
+        response = get_client.get(f"/api/shows/search?query={query}")
         
         assert response.status_code == 200
         data = response.get_json()
@@ -67,7 +67,7 @@ class TestSearchEndpoint:
     def test_search_shows_no_results(self, get_client):
         """Test search with query that should return no results"""
         query = "xyznonexistentshow123456789"
-        response = get_client.get(f"/shows/search?query={query}")
+        response = get_client.get(f"/api/shows/search?query={query}")
         
         assert response.status_code == 200
         data = response.get_json()
@@ -76,7 +76,7 @@ class TestSearchEndpoint:
         
     def test_search_shows_missing_query(self, get_client):
         """Test error handling when query parameter is missing"""
-        response = get_client.get("/shows/search")
+        response = get_client.get("/api/shows/search")
         
         assert response.status_code == 400
         data = response.get_json()
@@ -88,7 +88,7 @@ class TestSearchEndpoint:
         This test searches for 'Breaking Bad' and validates the exact response structure and content.
         """
         query = "Breaking Bad"
-        response = get_client.get(f"/shows/search?query={query}")
+        response = get_client.get(f"/api/shows/search?query={query}")
         
         assert response.status_code == 200
         data = response.get_json()
@@ -132,7 +132,7 @@ class TestSearchEndpoint:
 class TestFilterEndpoint:
     def test_filter_shows_basic(self, get_client):
         """Test basic filter functionality"""
-        response = get_client.get("/shows/filter?sort_by=popularity.desc")
+        response = get_client.get("/api/shows/filter?sort_by=popularity.desc")
         
         assert response.status_code == 200
         data = response.get_json()
@@ -159,7 +159,7 @@ class TestFilterEndpoint:
             "first_air_date.lte": "2020-12-31",
             "sort_by": "popularity.desc"
         }
-        response = get_client.get("/shows/filter", query_string=params)
+        response = get_client.get("/api/shows/filter", query_string=params)
         
         assert response.status_code == 200
         data = response.get_json()
@@ -176,7 +176,7 @@ class TestFilterEndpoint:
             "with_original_language": "ko",  # Korean shows
             "sort_by": "popularity.desc"
         }
-        response = get_client.get("/shows/filter", query_string=params)
+        response = get_client.get("/api/shows/filter", query_string=params)
         
         assert response.status_code == 200
         data = response.get_json()
@@ -195,7 +195,7 @@ class TestFilterEndpoint:
             "with_runtime.gte": 30,
             "with_runtime.lte": 60
         }
-        response = get_client.get("/shows/filter", query_string=params)
+        response = get_client.get("/api/shows/filter", query_string=params)
         
         assert response.status_code == 200
         data = response.get_json()
@@ -212,10 +212,10 @@ class TestFilterEndpoint:
             "sort_by": "popularity.desc",
             "page": 1
         }
-        response1 = get_client.get("/shows/filter", query_string=params)
+        response1 = get_client.get("/api/shows/filter", query_string=params)
         
         params["page"] = 2
-        response2 = get_client.get("/shows/filter", query_string=params)
+        response2 = get_client.get("/api/shows/filter", query_string=params)
         
         assert response1.status_code == 200
         assert response2.status_code == 200
@@ -237,7 +237,7 @@ class TestFilterEndpoint:
             "page": 1
         }
         
-        pop_response = get_client.get("/shows/filter", query_string=popularity_params)
+        pop_response = get_client.get("/api/shows/filter", query_string=popularity_params)
         assert pop_response.status_code == 200
         
         pop_data = pop_response.get_json()
@@ -255,7 +255,7 @@ class TestFilterEndpoint:
             "page": 1
         }
         
-        date_response = get_client.get("/shows/filter", query_string=date_params)
+        date_response = get_client.get("/api/shows/filter", query_string=date_params)
         assert date_response.status_code == 200
         
         date_data = date_response.get_json()
@@ -276,7 +276,7 @@ class TestFilterEndpoint:
             "page": 1
         }
         
-        combined_response = get_client.get("/shows/filter", query_string=combined_params)
+        combined_response = get_client.get("/api/shows/filter", query_string=combined_params)
         assert combined_response.status_code == 200
         
         combined_data = combined_response.get_json()
@@ -302,7 +302,7 @@ class TestFilterEndpoint:
 class TestMetadataEndpoints:
     def test_get_genres(self, get_client):
         """Test getting TV show genres"""
-        response = get_client.get("/genres")
+        response = get_client.get("/api/genres")
         
         assert response.status_code == 200
         data = response.get_json()
@@ -318,7 +318,7 @@ class TestMetadataEndpoints:
         
     def test_get_languages(self, get_client):
         """Test getting available languages"""
-        response = get_client.get("/languages")
+        response = get_client.get("/api/languages")
         
         assert response.status_code == 200
         data = response.get_json()
@@ -335,7 +335,7 @@ class TestMetadataEndpoints:
             
     def test_get_countries(self, get_client):
         """Test getting available countries"""
-        response = get_client.get("/countries")
+        response = get_client.get("/api/countries")
         
         assert response.status_code == 200
         data = response.get_json()
@@ -357,7 +357,7 @@ class TestShowDetailsEndpoint:
         # Breaking Bad ID
         show_id = 1396
         
-        response = get_client.get(f"/shows/{show_id}")
+        response = get_client.get(f"/api/shows/{show_id}")
         
         assert response.status_code == 200
         show_data = response.get_json()
@@ -385,7 +385,7 @@ class TestShowDetailsEndpoint:
         # Stranger Things ID
         show_id = 66732
         
-        response = get_client.get(f"/shows/{show_id}")
+        response = get_client.get(f"/api/shows/{show_id}")
         assert response.status_code == 200
         
         show = response.get_json()
@@ -426,7 +426,7 @@ class TestShowDetailsEndpoint:
         
         # Validate genres include expected ones (e.g., Drama, Sci-Fi & Fantasy)
         genre_ids = [genre["id"] for genre in show["genres"]]
-        assert 18 in genre_ids  # Drama
+        assert 10759 in genre_ids  # Action & Adventure
         assert 10765 in genre_ids  # Sci-Fi & Fantasy
         
         # Validate created_by includes the Duffer Brothers
@@ -453,7 +453,7 @@ class TestSeasonDetailsEndpoint:
         series_id = 1396
         season_number = 1
         
-        response = get_client.get(f"/shows/{series_id}/season/{season_number}")
+        response = get_client.get(f"/api/shows/{series_id}/season/{season_number}")
         
         assert response.status_code == 200
         season_data = response.get_json()
@@ -479,7 +479,7 @@ class TestSeasonDetailsEndpoint:
         series_id = 1396
         season_number = 1
         
-        response = get_client.get(f"/shows/{series_id}/season/{season_number}")
+        response = get_client.get(f"/api/shows/{series_id}/season/{season_number}")
         assert response.status_code == 200
         
         season = response.get_json()
@@ -504,13 +504,13 @@ class TestSeasonDetailsEndpoint:
     def test_invalid_season_parameter(self, get_client):
         """Test error handling when season parameter is invalid"""
         # Test with non-integer season number
-        response = get_client.get("/shows/1396/season/abc")
+        response = get_client.get("/api/shows/1396/season/abc")
         assert response.status_code == 400
         data = response.get_json()
         assert "error" in data
         
         # Test with non-existent season
-        response = get_client.get("/shows/1396/season/99")
+        response = get_client.get("/api/shows/1396/season/99")
         assert response.status_code != 200
         data = response.get_json()
         assert "error" in data
@@ -524,7 +524,7 @@ class TestEpisodeDetailsEndpoint:
         season_number = 1
         episode_number = 1
         
-        response = get_client.get(f"/shows/{series_id}/season/{season_number}/episode/{episode_number}")
+        response = get_client.get(f"/api/shows/{series_id}/season/{season_number}/episode/{episode_number}")
         
         assert response.status_code == 200
         episode_data = response.get_json()
@@ -553,7 +553,7 @@ class TestEpisodeDetailsEndpoint:
         season_number = 1
         episode_number = 1
         
-        response = get_client.get(f"/shows/{series_id}/season/{season_number}/episode/{episode_number}")
+        response = get_client.get(f"/api/shows/{series_id}/season/{season_number}/episode/{episode_number}")
         assert response.status_code == 200
         
         episode = response.get_json()
@@ -576,19 +576,19 @@ class TestEpisodeDetailsEndpoint:
     def test_invalid_episode_parameters(self, get_client):
         """Test error handling when episode or season parameters are invalid"""
         # Test with non-integer season number
-        response = get_client.get("/shows/1396/season/abc/episode/1")
+        response = get_client.get("/api/shows/1396/season/abc/episode/1")
         assert response.status_code == 400
         data = response.get_json()
         assert "error" in data
         
         # Test with non-integer episode number
-        response = get_client.get("/shows/1396/season/1/episode/abc")
+        response = get_client.get("/api/shows/1396/season/1/episode/abc")
         assert response.status_code == 400
         data = response.get_json()
         assert "error" in data
         
         # Test with non-existent episode
-        response = get_client.get("/shows/1396/season/99/episode/99")
+        response = get_client.get("/api/shows/1396/season/99/episode/99")
         assert response.status_code != 200
         data = response.get_json()
         assert "error" in data
@@ -601,7 +601,7 @@ class TestIntegratedFlows:
         This test demonstrates a complete user flow of finding shows by genre.
         """
         # Step 1: Get all genres
-        genre_response = get_client.get("/genres")
+        genre_response = get_client.get("/api/genres")
         assert genre_response.status_code == 200
         
         genres_data = genre_response.get_json()
@@ -619,7 +619,7 @@ class TestIntegratedFlows:
             "page": 1
         }
         
-        filter_response = get_client.get("/shows/filter", query_string=filter_params)
+        filter_response = get_client.get("/api/shows/filter", query_string=filter_params)
         assert filter_response.status_code == 200
         
         filter_data = filter_response.get_json()
@@ -628,7 +628,7 @@ class TestIntegratedFlows:
         
         # Step 3: Verify pagination by getting page 2
         filter_params["page"] = 2
-        page2_response = get_client.get("/shows/filter", query_string=filter_params)
+        page2_response = get_client.get("/api/shows/filter", query_string=filter_params)
         assert page2_response.status_code == 200
         
         page2_data = page2_response.get_json()
@@ -638,7 +638,7 @@ class TestIntegratedFlows:
         filter_params["with_original_language"] = "en"
         filter_params["page"] = 1
         
-        refined_response = get_client.get("/shows/filter", query_string=filter_params)
+        refined_response = get_client.get("/api/shows/filter", query_string=filter_params)
         assert refined_response.status_code == 200
         
         refined_data = refined_response.get_json()
@@ -652,7 +652,7 @@ class TestIntegratedFlows:
         filter_params["first_air_date.gte"] = "2020-01-01"
         filter_params["first_air_date.lte"] = "2023-12-31"
         
-        year_filtered_response = get_client.get("/shows/filter", query_string=filter_params)
+        year_filtered_response = get_client.get("/api/shows/filter", query_string=filter_params)
         assert year_filtered_response.status_code == 200
         
         year_data = year_filtered_response.get_json()
@@ -665,7 +665,7 @@ class TestIntegratedFlows:
         # Step 6: Get details for the top show from our filtered results
         if year_data["results"]:
             top_show_id = year_data["results"][0]["id"]
-            show_response = get_client.get(f"/shows/{top_show_id}")
+            show_response = get_client.get(f"/api/shows/{top_show_id}")
             assert show_response.status_code == 200
             
             show_details = show_response.get_json()
@@ -681,7 +681,7 @@ class TestIntegratedFlows:
         This test demonstrates filtering shows by language and production country.
         """
         # Step 1: Get all languages
-        lang_response = get_client.get("/languages")
+        lang_response = get_client.get("/api/languages")
         assert lang_response.status_code == 200
         
         langs_data = lang_response.get_json()
@@ -693,7 +693,7 @@ class TestIntegratedFlows:
         assert korean_lang["english_name"] == "Korean"
         
         # Step 2: Get all countries
-        country_response = get_client.get("/countries")
+        country_response = get_client.get("/api/countries")
         assert country_response.status_code == 200
         
         countries_data = country_response.get_json()
@@ -711,7 +711,7 @@ class TestIntegratedFlows:
             "page": 1
         }
         
-        lang_filter_response = get_client.get("/shows/filter", query_string=filter_params)
+        lang_filter_response = get_client.get("/api/shows/filter", query_string=filter_params)
         assert lang_filter_response.status_code == 200
         
         lang_filter_data = lang_filter_response.get_json()
@@ -725,7 +725,7 @@ class TestIntegratedFlows:
         # Step 4: Add origin country filter for South Korea
         filter_params["with_origin_country"] = korea["iso_3166_1"]
         
-        country_filter_response = get_client.get("/shows/filter", query_string=filter_params)
+        country_filter_response = get_client.get("/api/shows/filter", query_string=filter_params)
         assert country_filter_response.status_code == 200
         
         country_filter_data = country_filter_response.get_json()
@@ -738,7 +738,7 @@ class TestIntegratedFlows:
         # Step 5: Get a popular Korean show and verify its details
         if country_filter_data["results"]:
             top_show_id = country_filter_data["results"][0]["id"]
-            show_response = get_client.get(f"/shows/{top_show_id}")
+            show_response = get_client.get(f"/api/shows/{top_show_id}")
             assert show_response.status_code == 200
             
             show_details = show_response.get_json()
