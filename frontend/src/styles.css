@@ -58,6 +58,18 @@
   gap: 1rem;
   list-style: none;
 }
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
   
 .nav-search {
   margin-left: auto;
@@ -141,6 +153,12 @@
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
+}
+
+.teli-google-btn {
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 
 /* #Home */
@@ -1333,13 +1351,6 @@
   line-height: 1.4;
 } */
 
-.teli-google-btn {
-  margin-top: 1.25rem;
-  display: flex;
-  justify-content: center;
-  width: 100%;
-}
-
 /* !Components */
 
 /* #Loader */
@@ -1427,7 +1438,7 @@
   color: #ccc;
 }
 
-/* #Review Card */
+/* #ReviewCard */
 
 .rating-card {
   display: flex;
@@ -1438,6 +1449,7 @@
   background: #f9f9f9;
   align-items: center;
   cursor: pointer;
+  position: relative;
 }
 
 .rating-card.compact {
@@ -1481,7 +1493,6 @@
   font-weight: bold;
   color: #333;
   white-space: nowrap;
-  align-self: flex-start;
   margin-left: 1.25rem;
   padding-right: 2rem;
   align-items: center;
@@ -1498,6 +1509,14 @@
   border-radius: 50%;
   object-fit: cover;
   border: .25rem solid #333;
+}
+
+.review-date {
+  display: block;
+  margin-top: .25rem;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.55);
 }
 
 /* #UserList */

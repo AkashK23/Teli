@@ -5,6 +5,7 @@ import { useUser } from "../UserContext";
 
 import ReviewCard from "../components/ReviewCard";
 import ShowTooltip from "../components/ShowTooltip";
+import { formatRelativeTime } from "../components/formatRelativeTime";
 
 export default function Profile() {
   const url = process.env.REACT_APP_API_URL;
@@ -100,6 +101,7 @@ export default function Profile() {
                 overview: showData.overview,
                 first_air_date: showData.first_air_date,
                 average_rating: ratingRes.data.average_rating,
+                review_date: formatRelativeTime(rating.timestamp),
               };
             } catch {
               return { ...rating, image_url: null };
@@ -333,6 +335,7 @@ export default function Profile() {
                 overview={rating.overview}
                 averageRating={rating.average_rating}
                 firstAirDate={rating.first_air_date}
+                reviewDate={rating.review_date}
               />
             ))}
           </div>

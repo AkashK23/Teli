@@ -15,6 +15,7 @@ interface ReviewCardProps {
   averageRating?: number;
   firstAirDate?: string;
   compact?: boolean;
+  reviewDate?: string;
 }
 
 const ReviewCard: React.FC<ReviewCardProps> = ({
@@ -30,6 +31,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({
   averageRating,
   firstAirDate,
   compact,
+  reviewDate
 }) => {
   const navigate = useNavigate();
   const profilePic =
@@ -64,6 +66,8 @@ const goToShow = () => {
             <h4>{userName}</h4>
           </div>
           <p className="rating-comment">{comment}</p>
+
+          <span className="review-date">{reviewDate}</span>
         </div>
         <div className="rating-score">{rating}</div>
       </div>

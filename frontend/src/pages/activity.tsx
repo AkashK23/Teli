@@ -3,6 +3,7 @@ import axios from "axios";
 import { useUser } from "../UserContext";
 import ReviewCard from "../components/ReviewCard";
 import { useLocation } from "react-router-dom";
+import { formatRelativeTime } from "../components/formatRelativeTime";
 
 export default function Activity() {
   const [userInfo, setUserInfo] = useState<any>(null);
@@ -63,6 +64,7 @@ export default function Activity() {
                   overview: showData.overview,
                   first_air_date: showData.first_air_date,
                   average_rating: ratingRes.data.average_rating,
+                  review_date: formatRelativeTime(rating.timestamp),
                 };
               } catch (err) {
                 console.error("Failed to fetch image for:", rating.show_name);
@@ -107,6 +109,7 @@ export default function Activity() {
                 averageRating={rating.average_rating}
                 firstAirDate={rating.first_air_date}
                 compact={false}
+                reviewDate={rating.review_date}
               />
             ))}
           </div>

@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useUser } from "../UserContext";
 import ReviewCard from "../components/ReviewCard";
 import ShowTooltip from "../components/ShowTooltip";
+import { formatRelativeTime } from "../components/formatRelativeTime";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -131,6 +132,7 @@ export default function Home() {
                 overview: showData.overview,
                 first_air_date: showData.first_air_date,
                 average_rating: ratingRes.data.average_rating,
+                review_date: formatRelativeTime(rating.timestamp),
               };
             } catch {
               return { ...rating, image_url: null };
@@ -168,6 +170,7 @@ export default function Home() {
                 overview: showData.overview,
                 first_air_date: showData.first_air_date,
                 average_rating: ratingRes.data.average_rating,
+                review_date: formatRelativeTime(rating.timestamp),
               };
             } catch {
               return { ...rating, image_url: null };
@@ -522,6 +525,7 @@ export default function Home() {
                   averageRating={rating.average_rating}
                   firstAirDate={rating.first_air_date}
                   compact={true}
+                  reviewDate={rating.review_date}
                 />
               ))}
             </div>
@@ -556,6 +560,7 @@ export default function Home() {
                   averageRating={rating.average_rating}
                   firstAirDate={rating.first_air_date}
                   compact={true}
+                  reviewDate={rating.review_date}
                 />
               ))}
             </div>
@@ -595,7 +600,10 @@ export default function Home() {
           />
           <div className="feature-text">
             <h3>Reviews</h3>
-            <p>Rate and comment on your favorite shows, then see what your friends are saying</p>
+            <p>
+              Rate and comment on your favorite shows, then see what your
+              friends are saying
+            </p>
           </div>
         </Link>
 
@@ -619,7 +627,10 @@ export default function Home() {
           />
           <div className="feature-text">
             <h3>Search</h3>
-            <p>Quickly search for TV shows and users to find exactly what you’re looking for</p>
+            <p>
+              Quickly search for TV shows and users to find exactly what you’re
+              looking for
+            </p>
           </div>
         </Link>
 
@@ -643,7 +654,10 @@ export default function Home() {
           />
           <div className="feature-text">
             <h3>Watchlists</h3>
-            <p>Manage the shows you want to watch, are currently watching and have watched</p>
+            <p>
+              Manage the shows you want to watch, are currently watching and
+              have watched
+            </p>
           </div>
         </Link>
       </div>
