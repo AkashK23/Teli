@@ -21,7 +21,7 @@ function App() {
   return (
       <UserProvider>
           <Navbar />
-          <div className="container">
+          <div>
             <Routes>
               <Route path="/browse" element={<Browse />} />
               <Route path="/show/:id" element={<ShowDetails />} />

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import ShowTooltip from "../components/ShowTooltip";
 
 type ShowItem = {
   id?: string | number;
@@ -7,6 +8,9 @@ type ShowItem = {
   show_name?: string;
   poster_path?: string;
   image_url?: string;
+  first_air_date?: string;
+  rating?: number;
+  overview?: string;
 };
 
 type UserItem = {
@@ -81,11 +85,20 @@ export default function SearchResultsWithPagination({
                 className="search-result-link"
               >
                 <div className="search-result">
-                  <img
-                    src={imageUrl}
-                    alt={name ?? ""}
-                    className="search-result-img-show"
-                  />
+                  <ShowTooltip
+                    show={{
+                      name: show.name,
+                      first_air_date: show.first_air_date,
+                      overview: show.overview,
+                      rating: show.rating,
+                    }}
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={name ?? ""}
+                      className="search-result-img-show"
+                    />
+                  </ShowTooltip>
                   <p>{name}</p>
                 </div>
               </Link>

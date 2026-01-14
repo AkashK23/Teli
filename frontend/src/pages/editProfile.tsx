@@ -56,7 +56,6 @@ export default function EditProfile() {
     const confirmed = window.confirm(
       "Are you sure you want to delete your profile? This action cannot be undone."
     );
-
     if (!confirmed) return;
 
     try {
@@ -70,7 +69,7 @@ export default function EditProfile() {
   };
 
   return (
-    <div className="onboarding-container">
+    <div className="page-container">
       <h1 className="onboarding-title">Edit Profile</h1>
 
       <div className="onboarding-form">
@@ -101,17 +100,21 @@ export default function EditProfile() {
           <textarea value={bio} onChange={(e) => setBio(e.target.value)} />
         </div>
 
-        <button className="onboarding-submit" onClick={handleSubmit}>
-          Update
-        </button>
+        <div className="button-group">
+          <button className="onboarding-submit" onClick={handleSubmit}>
+            Update
+          </button>
 
-        <button className="onboarding-cancel" onClick={handleCancel}>
-          Cancel
-        </button>
+          <button className="onboarding-cancel" onClick={handleCancel}>
+            Cancel
+          </button>
+        </div>
 
-        <button className="onboarding-delete" onClick={handleDelete}>
-          Delete Profile
-        </button>
+        <div className="delete-container">
+          <button className="onboarding-delete subtle" onClick={handleDelete}>
+            Delete Profile
+          </button>
+        </div>
       </div>
     </div>
   );

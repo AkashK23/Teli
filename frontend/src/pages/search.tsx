@@ -9,12 +9,11 @@ export default function Search() {
   const [searchType, setSearchType] = useState<"shows" | "users">("shows");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [searchInput, setSearchInput] = useState(""); // <-- search bar state
-
-  const location = useLocation();
-  const navigate = useNavigate();
+  const [searchInput, setSearchInput] = useState("");
 
   const url = process.env.REACT_APP_API_URL;
+  const location = useLocation();
+  const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
   const query = queryParams.get("query") || "";
   const typeParam = (queryParams.get("type") as "shows" | "users") || "shows";
@@ -40,7 +39,25 @@ export default function Search() {
             }
           );
 
-          setSearchedShows(response.data?.results || []);
+          // Fetch average ratings for filtered shows
+          const updatedSearchShows = await Promise.all(
+            response.data?.results.map(async (show: any) => {
+              try {
+                const ratingRes = await axios.get(
+                  `${url}/shows/${show.id}/average-rating`
+                );
+                console.log(show, ratingRes);
+                return {
+                  ...show,
+                  rating: ratingRes.data.average_rating,
+                };
+              } catch {
+                return { ...show, image_url: null };
+              }
+            })
+          );
+
+          setSearchedShows(updatedSearchShows || []);
           setTotalPages(response.data?.total_pages || 1);
         } else {
           const response = await axios.get(
@@ -74,7 +91,7 @@ export default function Search() {
   };
 
   return (
-    <div className="content-wrapper">
+    <div className="page-container">
       {/* Search Bar */}
       <form className="search-bar-container" onSubmit={handleSearch}>
         <input

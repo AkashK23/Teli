@@ -21,6 +21,7 @@ export default function YourShows() {
     const fetchShows = async () => {
       try {
         const res = await axios.get(`${url}/users/${userId}/${watchStatus}`);
+        console.log(res);
         const watchStatusShows = res.data;
 
         const updated = await Promise.all(
@@ -34,7 +35,8 @@ export default function YourShows() {
                 : `https://image.tmdb.org/t/p/w500${imagePath}`;
               return {
                 ...show,
-                show_name: showData?.name,
+                name: showData?.name,
+                overview: showData?.overview,
                 image_url: imageUrl || null,
                 id: showData.id.toString(),
               };
@@ -44,7 +46,7 @@ export default function YourShows() {
             }
           })
         );
-
+        console.log(updated)
         setShows(updated || []);
         setTotalPages(Math.max(1, Math.ceil(updated.length / 20)));
       } catch (error) {
@@ -68,7 +70,7 @@ export default function YourShows() {
   }
 
   return (
-    <div className="content-wrapper">
+    <div className="page-container">
       {/* Toggle Tabs for watch status */}
       <div className="toggle-container-yourshows">
         <div

@@ -168,7 +168,25 @@ export default function Browse() {
         },
       });
 
-      setPopularShows(res.data.results || []);
+      // Fetch average ratings for filtered shows
+      const updatedFilteredShows = await Promise.all(
+        res.data.results.map(async (show: any) => {
+          try {
+            const ratingRes = await axios.get(
+              `${url}/shows/${show.id}/average-rating`
+            );
+            console.log(show, ratingRes);
+            return {
+              ...show,
+              rating: ratingRes.data.average_rating,
+            };
+          } catch {
+            return { ...show, image_url: null };
+          }
+        })
+      );
+
+      setPopularShows(updatedFilteredShows || []);
       console.log(res.data.results);
       setTotalPages(res.data.total_pages);
     } catch (error) {
@@ -193,11 +211,15 @@ export default function Browse() {
             const imageUrl = imagePath?.startsWith("http")
               ? imagePath
               : `https://image.tmdb.org/t/p/w500${imagePath}`;
+            const ratingRes = await axios.get(
+              `${url}/shows/${show.show_id}/average-rating`
+            );
             return {
               ...show,
               show_name: showData?.name,
               image_url:
                 showData?.image_url || showData?.thumbnail || imageUrl || null,
+              rating: ratingRes.data.average_rating,
             };
           } catch (err) {
             console.error("Failed to fetch image for:", show.show_name);
@@ -211,8 +233,6 @@ export default function Browse() {
       console.error("Error fetching want to watch shows:", error);
       setPopularShows([]);
     }
-
-    
   };
 
   /* Update filters for next page */
@@ -249,7 +269,7 @@ export default function Browse() {
   const updateWatchStatus = (newWatchStatus: string) => {
     setWatchStatus(newWatchStatus);
     fetchWatchStatusShows(newWatchStatus);
-    setCurrentPage(1)
+    setCurrentPage(1);
   };
 
   const clearAllFilters = () => {
@@ -272,7 +292,7 @@ export default function Browse() {
   }
 
   return (
-    <div className="browse-container" style={{ display: "flex" }}>
+    <div className="browse-container">
       {/* Sidebar */}
       <div
         className="filters-sidebar"
@@ -380,13 +400,15 @@ export default function Browse() {
       </div>
 
       {/* Show Grid */}
-      <ShowsGrid
-        items={popularShows}
-        searchType="shows"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-      />
+      <div className="shows-grid-wrapper">
+        <ShowsGrid
+          items={popularShows}
+          searchType="shows"
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      </div>
     </div>
   );
 }

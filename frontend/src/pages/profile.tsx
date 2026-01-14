@@ -4,6 +4,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useUser } from "../UserContext";
 
 import ReviewCard from "../components/ReviewCard";
+import ShowTooltip from "../components/ShowTooltip";
 
 export default function Profile() {
   const url = process.env.REACT_APP_API_URL;
@@ -79,11 +80,15 @@ export default function Profile() {
             try {
               const showRes = await axios.get(`${url}/shows/${rating.show_id}`);
               const showData = showRes.data;
+              console.log(showData)
               const imagePath = showData.poster_path;
               const imageUrl = imagePath?.startsWith("http")
                 ? imagePath
                 : `https://image.tmdb.org/t/p/w500${imagePath}`;
               const userReviewInfo = await axios.get(`${url}/user/${rating.user_id}`);
+               const ratingRes = await axios.get(
+                 `${url}/shows/${rating.show_id}/average-rating`
+               );
               return {
                 ...rating,
                 image_url:
@@ -91,6 +96,10 @@ export default function Profile() {
                 user_name: userReviewInfo.data.name,
                 user_id: userReviewInfo.data.id,
                 user_profile_pic: userReviewInfo.data.picture,
+                show_name: showData.name,
+                overview: showData.overview,
+                first_air_date: showData.first_air_date,
+                average_rating: ratingRes.data.average_rating,
               };
             } catch {
               return { ...rating, image_url: null };
@@ -109,11 +118,17 @@ export default function Profile() {
               const imageUrl = imagePath?.startsWith("http")
                 ? imagePath
                 : `https://image.tmdb.org/t/p/w500${imagePath}`;
+              const ratingRes = await axios.get(
+                `${url}/shows/${show.show_id}/average-rating`
+              );
               return {
                 ...show,
                 image_url:
                   showData?.image_url || showData?.thumbnail || imageUrl,
                 name: showData.name || show.show_name,
+                rating: ratingRes.data.average_rating,
+                overview: showData.overview,
+                first_air_date: showData.first_air_date,
               };
             } catch {
               return { ...show, image_url: null };
@@ -172,7 +187,7 @@ export default function Profile() {
   const isOwnProfile = user_id === loggedInUserId;
 
   return (
-    <div>
+    <div className="page-container">
       {/* Profile Header + Bio */}
       <div className="profile-header">
         <div className="profile-pic">
@@ -185,65 +200,73 @@ export default function Profile() {
             referrerPolicy="no-referrer"
             className="profile-avatar"
           />
-          <h4 className="username">
-            <b>{userInfo.name}</b>
-          </h4>
+          <div className="profile-main">
+            <h4 className="username">
+              <b>{userInfo.name}</b>
+            </h4>
+            {userInfo.bio && (
+              <div className="profile-bio">
+                <p className="bio-content">{userInfo.bio}</p>
+              </div>
+            )}
+          </div>
         </div>
         <div className="profile-stats">
           {/* Stats Row */}
-          
-          <div className="stats-row">
-            {showNumber > 0 ? (
-            <Link to={`/users/${user_id}/yourshows`} className="stat-link">
-              <div className="stat">
-                <div className="stat-number">
-                  <b>{showNumber}</b>
+          <div className="stats-top">
+            <div className="stats-row">
+              {showNumber > 0 ? (
+                <Link to={`/users/${user_id}/yourshows`} className="stat-link">
+                  <div className="stat">
+                    <div className="stat-number">
+                      <b>{showNumber}</b>
+                    </div>
+                    <div className="stat-label">Shows</div>
+                  </div>
+                </Link>
+              ) : (
+                <div className="stat">
+                  <div className="stat-number">
+                    <b>{showNumber}</b>
+                  </div>
+                  <div className="stat-label">Shows</div>
                 </div>
-                <div className="stat-label">Shows</div>
-              </div>
-            </Link>
-            ) : (
-              <div className="stat">
-                <div className="stat-number">
-                  <b>{showNumber}</b>
-                </div>
-                <div className="stat-label">Shows</div>
-              </div>
-            )}
-            {following > 0 ? (
-              <Link to={`/users/${user_id}/following`} className="stat-link">
+              )}
+              {following > 0 ? (
+                <Link to={`/users/${user_id}/following`} className="stat-link">
+                  <div className="stat">
+                    <div className="stat-number">
+                      <b>{following}</b>
+                    </div>
+                    <div className="stat-label">Following</div>
+                  </div>
+                </Link>
+              ) : (
                 <div className="stat">
                   <div className="stat-number">
                     <b>{following}</b>
                   </div>
                   <div className="stat-label">Following</div>
                 </div>
-              </Link>
-            ) : (
-              <div className="stat">
-                <div className="stat-number">
-                  <b>{following}</b>
-                </div>
-                <div className="stat-label">Following</div>
-              </div>
-            )}
-            {followers > 0 ? (
-              <Link to={`/users/${user_id}/followers`} className="stat-link">
+              )}
+              {followers > 0 ? (
+                <Link to={`/users/${user_id}/followers`} className="stat-link">
+                  <div className="stat">
+                    <div className="stat-number">
+                      <b>{followers}</b>
+                    </div>
+                    <div className="stat-label">Followers</div>
+                  </div>
+                </Link>
+              ) : (
                 <div className="stat">
                   <div className="stat-number">
                     <b>{followers}</b>
                   </div>
                   <div className="stat-label">Followers</div>
                 </div>
-              </Link>
-            ) : (
-              <div className="stat">
-                <div className="stat-number">
-                  <b>{followers}</b>
-                </div>
-                <div className="stat-label">Followers</div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Follow button */}
@@ -261,11 +284,6 @@ export default function Profile() {
           )}
         </div>
       </div>
-      {userInfo.bio && (
-        <div className="profile-bio">
-          <p className="bio-content">{userInfo.bio}</p>
-        </div>
-      )}
 
       {/* Currently Watching */}
       <div className="favorite-shows">
@@ -277,11 +295,20 @@ export default function Profile() {
               key={show.show_id}
               className="show-link"
             >
-              <img
-                src={show.image_url}
-                alt={show.name}
-                className="show-icon small-icon"
-              />
+              <ShowTooltip
+                show={{
+                  name: show.name,
+                  first_air_date: show.first_air_date,
+                  overview: show.overview,
+                  rating: show.rating,
+                }}
+              >
+                <img
+                  src={show.image_url}
+                  alt={show.name}
+                  className="show-icon small-icon"
+                />
+              </ShowTooltip>
             </Link>
           ))}
         </div>
@@ -291,10 +318,10 @@ export default function Profile() {
       <div className="favorite-shows">
         <h3 className="shows-label">Recent Reviews</h3>
         <div className="user-ratings">
-          <div className="rating-cards-container">
+          <div className="review-cards-container">
             {ratingsWithImages.map((rating: any) => (
               <ReviewCard
-                key={rating.show_id}
+                key={`${rating.user_id}-${rating.show_id}`}
                 showId={rating.show_id}
                 userId={rating.user_id}
                 userName={rating.user_name}
@@ -302,7 +329,10 @@ export default function Profile() {
                 comment={rating.comment}
                 rating={rating.rating}
                 showImageUrl={rating.image_url}
-                showName={rating.name}
+                showName={rating.show_name}
+                overview={rating.overview}
+                averageRating={rating.average_rating}
+                firstAirDate={rating.first_air_date}
               />
             ))}
           </div>
