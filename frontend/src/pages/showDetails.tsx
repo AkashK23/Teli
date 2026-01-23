@@ -151,6 +151,13 @@ export default function ShowDetails() {
     }
   }, [showData]);
 
+  useEffect(() => {
+    if (!user_id || !id || !selectedSeason) return;
+
+    fetchEpisodeReviews();
+  }, [user_id, id, selectedSeason]);
+
+
   /* Pull season data from backend */
   const fetchSeason = async (seasonNumber: number) => {
     if (seasonEpisodes[seasonNumber]) {
@@ -269,6 +276,7 @@ export default function ShowDetails() {
         ...prev,
         [episodeNumber]: {
           ...prev[episodeNumber],
+          open: false,
           text: "",
           rating: 0,
         },
@@ -287,17 +295,24 @@ export default function ShowDetails() {
 
   /* Toggle episode review visibility */
   const toggleEpisodeReview = (episodeNumber: number) => {
-    fetchEpisodeReviews();
-    setEpisodeReviewStates((prev) => ({
-      ...prev,
-      [episodeNumber]: {
-        ...prev[episodeNumber],
-        open: !prev[episodeNumber]?.open,
-        rating: prev[episodeNumber]?.rating || 0,
-        text: prev[episodeNumber]?.text || "",
-      },
-    }));
+    const existingReview = episodeReviews.find(
+      (review: any) => review.episode_number === episodeNumber
+    );
+
+    setEpisodeReviewStates((prev) => {
+      const isOpen = prev[episodeNumber]?.open;
+
+      return {
+        ...prev,
+        [episodeNumber]: {
+          open: !isOpen,
+          rating: existingReview?.rating ?? prev[episodeNumber]?.rating ?? 0,
+          text: existingReview?.comment ?? prev[episodeNumber]?.text ?? "",
+        },
+      };
+    });
   };
+
 
   /* Update review submit function */
   const updateEpisodeReview = (
@@ -367,36 +382,19 @@ export default function ShowDetails() {
   }
 
   return (
-    <div style={{ maxWidth: "1000px", margin: "2rem auto", padding: "0 1rem" }}>
+    <div className="show-details-container">
       {/* Show information */}
-      <div
-        className="show-details-container"
-        style={{
-          display: "flex",
-          gap: "2rem",
-          alignItems: "flex-start",
-        }}
-      >
+      <div className="show-details-upper">
         <img
           src={`https://image.tmdb.org/t/p/w500${showData.poster_path}`}
           alt={showData.name}
-          style={{ width: "300px", borderRadius: "10px" }}
+          className="show-poster"
         />
-        <div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: "2rem",
-              gap: "2rem",
-            }}
-          >
+        <div className="show-details-info">
+          <div className="show-data">
             {/* LEFT: Title + Metadata */}
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <h1 style={{ margin: 0, fontSize: "2.2rem", fontWeight: 700 }}>
-                {showData.name}
-              </h1>
+            <div className="show-data-text">
+              <h1>{showData.name}</h1>
               <p>
                 {showData.first_air_date?.slice(0, 4)}-
                 {showData.last_air_date?.slice(0, 4)}
@@ -410,37 +408,11 @@ export default function ShowDetails() {
 
             {/* RIGHT: Rating */}
             {avgRating !== null && (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: "#333",
-                  color: "white",
-                  borderRadius: "16px",
-                  width: "110px",
-                  height: "110px",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-                  flexShrink: 0,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "2.6rem",
-                    fontWeight: "bold",
-                    lineHeight: "1.1",
-                  }}
-                >
+              <div className="show-data-rating">
+                <div className="show-data-rating-score">
                   {avgRating.toFixed(1)}
                 </div>
-                <div
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "#ccc",
-                    marginTop: "4px",
-                  }}
-                >
+                <div className="show-data-rating-reviews">
                   ({ratingCount} ratings)
                 </div>
               </div>
@@ -453,25 +425,13 @@ export default function ShowDetails() {
 
           {/* --- Watch Status Dropdown --- */}
           {user_id && !loadingReview && (
-            <div style={{ marginTop: "1rem" }}>
-              <label htmlFor="watchStatus" style={{ fontWeight: "bold" }}>
-                Watch Status:
-              </label>
+            <div>
+              <strong>Watch Status:</strong>
               <select
                 id="watchStatus"
                 value={watchStatus}
                 onChange={handleWatchStatusChange}
-                style={{
-                  marginLeft: "0.5rem",
-                  marginTop: "2rem",
-                  padding: "0.5rem",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
-                  backgroundColor: "white",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease-in-out",
-                  fontSize: "1rem",
-                }}
+                className="watch-status-dropdown"
                 onMouseOver={(e) =>
                   (e.currentTarget.style.backgroundColor = "#f0f0f0")
                 }
@@ -492,14 +452,7 @@ export default function ShowDetails() {
       {/* Your Review */}
       {user_id && !loadingReview && (
         <>
-          {userHasRated && (
-            <h2
-              className="text-lg font-semibold mb-2"
-              style={{ marginBottom: "2rem" }}
-            >
-              Your Review
-            </h2>
-          )}
+          {userHasRated && <h3 className="headings">Your Review</h3>}
 
           {userHasRated && (
             <div className="rating-cards-container">
@@ -515,18 +468,7 @@ export default function ShowDetails() {
                     </div>
                     <button
                       onClick={() => setIsEditingReview((prev) => !prev)}
-                      style={{
-                        backgroundColor: "transparent",
-                        color: "#333",
-                        border: "1px solid #33",
-                        padding: "0.4rem 1rem",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        fontSize: "0.9rem",
-                        alignSelf: "center",
-                        marginLeft: "1rem",
-                        transition: "all 0.2s ease",
-                      }}
+                      className="edit-review-button"
                       onMouseEnter={(e) => (
                         (e.currentTarget.style.color = "white"),
                         (e.currentTarget.style.backgroundColor = "#333")
@@ -545,124 +487,47 @@ export default function ShowDetails() {
 
           {/* Write a Review Section */}
           {(!userHasRated || isEditingReview) && (
-            <div style={{ marginTop: "2rem" }}>
-              {!userHasRated && (
-                <h2
-                  className="text-lg font-semibold mb-2"
-                  style={{ marginTop: "2rem" }}
-                >
-                  Review
-                </h2>
-              )}
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1rem",
-                  alignItems: "center",
-                }}
-              >
-                <div>
-                  <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        width: "50rem",
-                        marginLeft: "1rem",
-                      }}
-                    >
-                      <input
-                        type="range"
-                        min="0"
-                        max="10"
-                        value={rating}
-                        onChange={(e) => setRating(Number(e.target.value))}
-                        style={{
-                          width: "90%",
-                          appearance: "none",
-                          height: "6px",
-                          background: "#ddd",
-                          borderRadius: "5px",
-                          outline: "none",
-                          padding: "0",
-                          margin: "0",
-                        }}
-                      />
-                      <span
-                        style={{
-                          fontWeight: "bold",
-                          fontSize: "3rem",
-                          color: "#333",
-                          marginLeft: "1rem",
-                          width: "40px",
-                          textAlign: "right",
-                          marginRight: "2rem",
-                        }}
-                      >
-                        {rating}
-                      </span>
-                    </div>
-                  </div>
+            <div>
+              {!userHasRated && <h3 className="headings">Review</h3>}
+              <div className="write-review-container">
+                <div className="slider-container">
+                  <input
+                    type="range"
+                    min="0"
+                    max="10"
+                    value={rating}
+                    onChange={(e) => setRating(Number(e.target.value))}
+                  />
+                  <span>{rating}</span>
                 </div>
 
-                <div>
+                <div className="review-input-group">
                   <textarea
                     id="reviewText"
                     value={reviewText}
                     onChange={(e) => setReviewText(e.target.value)}
                     rows={4}
                     placeholder="What did you think of this show?"
-                    style={{
-                      width: "50rem",
-                      padding: "1rem",
-                      fontSize: "1rem",
-                      borderRadius: "8px",
-                      border: "1px solid #ccc",
-                      resize: "vertical",
-                      justifyContent: "center",
-                    }}
+                    className="review-textbox"
                   />
-                </div>
 
-                {userHasRated ? (
-                  <button
-                    onClick={handleReviewSubmit}
-                    style={{
-                      backgroundColor: "#333",
-                      color: "white",
-                      border: "none",
-                      padding: "0.5rem 1rem",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      width: "fit-content",
-                      fontSize: "1rem",
-                      marginLeft: "40rem",
-                    }}
-                  >
-                    Update Review
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleReviewSubmit}
-                    style={{
-                      backgroundColor: "#333",
-                      color: "white",
-                      border: "none",
-                      padding: "0.5rem 1rem",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      width: "fit-content",
-                      fontSize: "1rem",
-                      marginLeft: "40rem",
-                    }}
-                  >
-                    Submit Review
-                  </button>
-                )}
-                {submitted && (
-                  <p style={{ color: "green" }}>Review submitted!</p>
-                )}
+                  {userHasRated ? (
+                    <button
+                      onClick={handleReviewSubmit}
+                      className="submit-review-button"
+                    >
+                      Update
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleReviewSubmit}
+                      className="submit-review-button"
+                    >
+                      Submit
+                    </button>
+                  )}
+                  {submitted && <p>Review submitted!</p>}
+                </div>
               </div>
             </div>
           )}
@@ -670,33 +535,16 @@ export default function ShowDetails() {
       )}
 
       {/* Season ticker */}
-      <div style={{ marginTop: "3rem", textAlign: "center" }}>
-        <h3>Seasons</h3>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: "10px",
-            flexWrap: "wrap",
-            marginTop: "1rem",
-          }}
-        >
+      <div className="season-ticker-container">
+        <h3 className="headings">Seasons</h3>
+        <div className="ticker-container">
           {seasons.map((season: any) => (
             <button
               key={season.season_number}
               onClick={() => fetchSeason(season.season_number)}
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "50%",
-                border: "2px solid #333",
-                background:
-                  selectedSeason === season.season_number ? "#333" : "white",
-                color:
-                  selectedSeason === season.season_number ? "white" : "#333",
-                fontWeight: "bold",
-                cursor: "pointer",
-              }}
+              className={`ticker-buttons ${
+                selectedSeason === season.season_number ? "active" : ""
+              }`}
             >
               S{season.season_number}
             </button>
@@ -706,19 +554,12 @@ export default function ShowDetails() {
 
       {/* Season overview and poster */}
       {selectedSeason && seasonEpisodes[selectedSeason] && (
-        <div
-          style={{
-            marginTop: "2rem",
-            display: "flex",
-            gap: "2rem",
-            alignItems: "flex-start",
-          }}
-        >
+        <div className="season-info-container">
           {seasonEpisodes[selectedSeason].poster_path && (
             <img
               src={`https://image.tmdb.org/t/p/w300${seasonEpisodes[selectedSeason].poster_path}`}
               alt={`Season ${selectedSeason} Poster`}
-              style={{ borderRadius: "8px", width: "200px" }}
+              className="season-poster"
             />
           )}
           <div>
@@ -733,11 +574,9 @@ export default function ShowDetails() {
 
       {/* Episodes list */}
       {selectedSeason && seasonEpisodes[selectedSeason] && (
-        <div style={{ marginTop: "2rem" }}>
-          <h3 style={{ marginBottom: "1rem" }}>Episodes</h3>
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
-          >
+        <div>
+          <h3 className="episodes-header">Episodes</h3>
+          <div className="episode-list-container">
             {seasonEpisodes[selectedSeason].episodes.map((episode: any) => {
               const stillUrl = episode.still_path
                 ? `https://image.tmdb.org/t/p/w300${episode.still_path}`
@@ -749,46 +588,22 @@ export default function ShowDetails() {
                 text: "",
               };
 
+              const hasEpisodeReview = episodeReviews.some(
+                (review: any) =>
+                  review.episode_number === episode.episode_number
+              );
+
               return (
-                <div
-                  key={episode.id}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.5rem",
-                    background: "#f4f4f4",
-                    borderRadius: "8px",
-                    padding: "1rem",
-                  }}
-                >
-                  <div style={{ display: "flex", gap: "1rem" }}>
+                <div key={episode.id} className="episode-container">
+                  <div className="episode-box">
                     {stillUrl ? (
                       <img
                         src={stillUrl}
                         alt={`Episode ${episode.episode_number}`}
-                        style={{
-                          width: "160px",
-                          height: "90px",
-                          objectFit: "cover",
-                          borderRadius: "6px",
-                        }}
+                        className="episode-poster"
                       />
                     ) : (
-                      <div
-                        style={{
-                          width: "160px",
-                          height: "90px",
-                          background: "#ccc",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderRadius: "6px",
-                          color: "#666",
-                          fontSize: "0.9rem",
-                        }}
-                      >
-                        No Image
-                      </div>
+                      <div className="no-img-poster">No Image</div>
                     )}
                     <div style={{ flex: 1 }}>
                       <strong>
@@ -806,18 +621,15 @@ export default function ShowDetails() {
                           onClick={() =>
                             toggleEpisodeReview(episode.episode_number)
                           }
-                          style={{
-                            backgroundColor: "#333",
-                            color: "white",
-                            border: "none",
-                            padding: "0.5rem 1rem",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            height: "fit-content",
-                            alignSelf: "center",
-                          }}
+                          className={`episode-review-button ${
+                            hasEpisodeReview ? "has-review" : "no-review"
+                          }`}
                         >
-                          {epState.open ? "Hide Review" : "Review"}
+                          {epState.open
+                            ? "Hide"
+                            : hasEpisodeReview
+                            ? "Update"
+                            : "Review"}
                         </button>
                       </>
                     )}
@@ -825,129 +637,78 @@ export default function ShowDetails() {
 
                   {/* Review form dropdown */}
                   {epState.open && (
-                    <div
-                      style={{
-                        marginLeft: "170px",
-                        marginTop: "0.5rem",
-                      }}
-                    >
-                      <div
-                        className="rating-cards-container"
-                        style={{
-                          marginBottom: "1rem",
-                        }}
-                      >
-                        {episodeReviews
-                          .filter(
-                            (review: any) =>
-                              review.episode_number === episode.episode_number
-                          )
-                          .map((review: any) => (
-                            <div
-                              className="rating-card"
-                              key={review.episode_number}
-                            >
-                              <div className="rating-details">
-                                <div className="rating-score">
-                                  {review.rating}
-                                </div>
-                                <div className="rating-text">
-                                  <p>{review.comment}</p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <input
-                          type="range"
-                          min="0"
-                          max="10"
-                          value={epState.rating}
-                          onChange={(e) =>
-                            updateEpisodeReview(
-                              episode.episode_number,
-                              "rating",
-                              Number(e.target.value)
-                            )
-                          }
-                          style={{
-                            width: "90%",
-                            appearance: "none",
-                            height: "6px",
-                            background: "#ddd",
-                            borderRadius: "5px",
-                            outline: "none",
-                            padding: "0",
-                            margin: "0",
-                          }}
-                        />
-                        <span
-                          style={{
-                            fontWeight: "bold",
-                            fontSize: "2rem",
-                            color: "#333",
-                            marginLeft: "1rem",
-                            width: "30px",
-                            textAlign: "right",
-                          }}
-                        >
-                          {epState.rating}
-                        </span>
-                      </div>
-
-                      <textarea
-                        value={epState.text}
-                        onChange={(e) =>
-                          updateEpisodeReview(
-                            episode.episode_number,
-                            "text",
-                            e.target.value
-                          )
-                        }
-                        rows={3}
-                        placeholder="What did you think of this episode?"
-                        style={{
-                          width: "100%",
-                          padding: "0.75rem",
-                          fontSize: "1rem",
-                          borderRadius: "8px",
-                          border: "1px solid #ccc",
-                          marginTop: "1rem",
-                          resize: "vertical",
-                        }}
-                      />
-
-                      <button
-                        style={{
-                          marginTop: "0.5rem",
-                          backgroundColor: "#333",
-                          color: "white",
-                          border: "none",
-                          padding: "0.4rem 0.8rem",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                        }}
-                        onClick={() =>
-                          submitEpisodeReview(
-                            episode.episode_number,
-                            selectedSeason!
-                          )
-                        }
-                      >
-                        {episodeReviews.some(
+                    <div className="episode-review-container">
+                      {episodeReviews
+                        .filter(
                           (review: any) =>
                             review.episode_number === episode.episode_number
                         )
-                          ? "Update Review"
-                          : "Submit Review"}
-                      </button>
+                        .map((review: any) => (
+                          <div
+                            className="rating-card"
+                            key={review.episode_number}
+                          >
+                            <div className="rating-details">
+                              <div className="rating-score">
+                                {review.rating}
+                              </div>
+                              <div className="rating-text">
+                                <p>{review.comment}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      <div className="write-review-container">
+                        <div className="slider-container">
+                          <input
+                            type="range"
+                            min="0"
+                            max="10"
+                            value={epState.rating}
+                            onChange={(e) =>
+                              updateEpisodeReview(
+                                episode.episode_number,
+                                "rating",
+                                Number(e.target.value)
+                              )
+                            }
+                          />
+                          <span>{epState.rating}</span>
+                        </div>
+
+                        <div className="review-input-group">
+                          <textarea
+                            value={epState.text}
+                            onChange={(e) =>
+                              updateEpisodeReview(
+                                episode.episode_number,
+                                "text",
+                                e.target.value
+                              )
+                            }
+                            rows={3}
+                            placeholder="What did you think of this episode?"
+                            className="review-textbox"
+                          />
+
+                          <button
+                            className="submit-review-button"
+                            onClick={() =>
+                              submitEpisodeReview(
+                                episode.episode_number,
+                                selectedSeason!
+                              )
+                            }
+                          >
+                            {episodeReviews.some(
+                              (review: any) =>
+                                review.episode_number === episode.episode_number
+                            )
+                              ? "Update"
+                              : "Submit"}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

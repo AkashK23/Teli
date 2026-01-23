@@ -17,6 +17,12 @@ export default function Navbar() {
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const hasRecentSearches = recentSearches.length > 0;
+  const shouldShowDropdown =
+    isDropdownVisible && (searchInput.trim() !== "" || hasRecentSearches);
+
 
   const location = useLocation();
 
@@ -64,19 +70,30 @@ export default function Navbar() {
       setSelectedIndex((prev) => Math.max(prev - 1, -1));
     } else if (e.key === "Enter") {
       if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+        saveRecentSearch(suggestions[selectedIndex].name);
         navigate(`/show/${encodeURIComponent(suggestions[selectedIndex].id)}`);
       } else if (searchInput.trim()) {
-        navigate(`/search?query=${encodeURIComponent(searchInput.trim())}&type=${searchType}`);
+        saveRecentSearch(searchInput.trim());
+        navigate(
+          `/search?query=${encodeURIComponent(
+            searchInput.trim()
+          )}&type=${searchType}`
+        );
       }
+
+      searchInputRef.current?.blur();
 
       setSearchInput("");
       setSuggestions([]);
       setSelectedIndex(-1);
+      setIsDropdownVisible(false);
     }
+
   };
 
   /* If search suggestion is selected go to show */
   const handleSelect = (name: string, id: string) => {
+    saveRecentSearch(name);
     setSearchInput("");
     setSuggestions([]);
     setSelectedIndex(-1);
@@ -151,12 +168,33 @@ export default function Navbar() {
     navigate("/login");
   };
 
+  const RECENT_SEARCHES_KEY = "recentSearches";
+
+  const getRecentSearches = (): string[] => {
+    try {
+      return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  };
+
+  const saveRecentSearch = (query: string) => {
+    if (!query.trim()) return;
+
+    const existing = getRecentSearches();
+    const updated = [query, ...existing.filter((q) => q !== query)].slice(0, 5); // keep last 5
+
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+  };
+  
+
+
   // if (loading) {
   //   return null; // Or a spinner
   // }
 
   return (
-    <nav className="nav" style={{ position: "relative" }}>
+    <nav className="nav">
       <div className="nav-left">
         {/* Links */}
         <Link to="/" className="site-title">
@@ -175,91 +213,96 @@ export default function Navbar() {
 
       {/* Search Bar */}
       <div className="nav-right">
-        <div
-          ref={dropdownRef}
-          className="nav-search"
-          style={{ position: "relative", width: "250px" }}
-        >
+        <div ref={dropdownRef} className="nav-search">
           <input
             type="text"
             className="search-input"
             placeholder="Search shows, users..."
             value={searchInput}
+            ref={searchInputRef}
             onChange={(e) => {
               setSearchInput(e.target.value);
               setSelectedIndex(-1);
               setIsDropdownVisible(true);
             }}
             onKeyDown={handleKeyDown}
-            onFocus={() => setIsDropdownVisible(true)}
+            onFocus={() => {
+              setRecentSearches(getRecentSearches());
+              setIsDropdownVisible(true);
+            }}
           />
 
-          {isDropdownVisible && (
+          {shouldShowDropdown && (
             <div className="search-dropdown visible">
               {/* Toggle Slider */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  marginBottom: 6,
-                  background: "#f5f5f5",
-                  padding: "6px",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    background: "#e0e0e0",
-                    borderRadius: "20px",
-                    overflow: "hidden",
-                  }}
-                >
-                  <button
-                    onClick={() => setSearchType("shows")}
-                    style={{
-                      padding: "6px 14px",
-                      border: "none",
-                      backgroundColor:
-                        searchType === "shows" ? "#007bff" : "transparent",
-                      color: searchType === "shows" ? "#fff" : "#000",
-                      fontWeight: searchType === "shows" ? "bold" : "normal",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                    }}
-                  >
-                    Shows
-                  </button>
-                  <button
-                    onClick={() => setSearchType("users")}
-                    style={{
-                      padding: "6px 14px",
-                      border: "none",
-                      backgroundColor:
-                        searchType === "users" ? "#007bff" : "transparent",
-                      color: searchType === "users" ? "#fff" : "#000",
-                      fontWeight: searchType === "users" ? "bold" : "normal",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                    }}
-                  >
-                    Users
-                  </button>
+              {searchInput.trim() === "" ? (
+                <div className="search-dropdown-toggle-container">
+                  {recentSearches.length > 0 && (
+                    <button
+                      className="search-clear-btn"
+                      onMouseDown={() => {
+                        localStorage.removeItem(RECENT_SEARCHES_KEY);
+                        setRecentSearches([]);
+                        setIsDropdownVisible(false);
+                      }}
+                    >
+                      Clear Recent Searches
+                    </button>
+                  )}
                 </div>
-              </div>
-
+              ) : (
+                <div className="search-dropdown-toggle-container">
+                  <div className="search-dropdown-toggle">
+                    <button
+                      onClick={() => setSearchType("shows")}
+                      className="search-dropdown-toggle-button"
+                      style={{
+                        backgroundColor:
+                          searchType === "shows" ? "#007bff" : "transparent",
+                        color: searchType === "shows" ? "#fff" : "#000",
+                        fontWeight: searchType === "shows" ? "bold" : "normal",
+                      }}
+                    >
+                      Shows
+                    </button>
+                    <button
+                      onClick={() => setSearchType("users")}
+                      className="search-dropdown-toggle-button"
+                      style={{
+                        backgroundColor:
+                          searchType === "users" ? "#007bff" : "transparent",
+                        color: searchType === "users" ? "#fff" : "#000",
+                        fontWeight: searchType === "users" ? "bold" : "normal",
+                      }}
+                    >
+                      Users
+                    </button>
+                  </div>
+                </div>
+              )}
               {/* Suggestions */}
-              <ul
-                style={{
-                  listStyle: "none",
-                  margin: 0,
-                  padding: 0,
-                  maxHeight: "240px",
-                  overflowY: "auto",
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
-                {suggestions.length > 0
+              <ul className="search-dropdown-list-container">
+                {searchInput.trim() === "" && recentSearches.length > 0
+                  ? recentSearches.map((query, index) => (
+                      <li
+                        key={query}
+                        className="search-option"
+                        onMouseDown={() => {
+                          setSearchInput(query);
+                          saveRecentSearch(query);
+                          navigate(
+                            `/search?query=${encodeURIComponent(
+                              query
+                            )}&type=${searchType}`
+                          );
+                        }}
+                      >
+                        <span className="search-option-show-name">
+                          🔍 {query}
+                        </span>
+                      </li>
+                    ))
+                  : suggestions.length > 0
                   ? suggestions.map((s, index) => {
                       const isSelected = index === selectedIndex;
                       const img =
@@ -275,13 +318,9 @@ export default function Navbar() {
                         <li
                           key={s.id}
                           onMouseDown={() => handleSelect(s.name, s.id)}
+                          className="search-option"
                           style={{
-                            display: "flex",
-                            alignItems: "center",
-                            padding: "10px",
-                            cursor: "pointer",
                             backgroundColor: isSelected ? "#f0f0f0" : "#fff",
-                            borderBottom: "1px solid #eee",
                           }}
                           onMouseEnter={() => setSelectedIndex(index)}
                         >
@@ -294,30 +333,14 @@ export default function Navbar() {
                                 : "search-suggestions-user"
                             }
                           />
-                          <span
-                            style={{
-                              fontSize: "15px",
-                              lineHeight: "1.2",
-                              color: "#000",
-                              marginLeft: "10px",
-                            }}
-                          >
+                          <span className="search-option-show-name">
                             {s.name}
                           </span>
                         </li>
                       );
                     })
                   : searchInput.trim() && (
-                      <li
-                        style={{
-                          padding: "10px",
-                          textAlign: "center",
-                          color: "#777",
-                          fontSize: "14px",
-                        }}
-                      >
-                        No results found.
-                      </li>
+                      <li className="search-no-results">No results found.</li>
                     )}
               </ul>
             </div>

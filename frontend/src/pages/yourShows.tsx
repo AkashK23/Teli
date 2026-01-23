@@ -79,7 +79,7 @@ export default function YourShows() {
           }`}
           onClick={() => setWatchStatus("want_to_watch")}
         >
-          Watchlist
+          Want To Watch
         </div>
         <div
           className={`toggle-option-yourshows ${
