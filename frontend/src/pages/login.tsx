@@ -179,7 +179,7 @@ export default function Login() {
                 <h2 className="teli-subtitle">Channel What You Love</h2>
               </div>
 
-              <div className="teli-google-btn">
+              {/* <div className="teli-google-btn">
                 <GoogleLogin
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleError}
@@ -189,7 +189,7 @@ export default function Login() {
                   shape="rectangular"
                   width="260"
                 />
-              </div>
+              </div> */}
             </div>
 
             {/* Slides 1+: Popular Shows */}

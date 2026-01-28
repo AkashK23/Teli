@@ -1,4 +1,4 @@
-import  {useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useUser } from "../UserContext";
 import MultiSelectDropdown from "../components/MultiSelectDropdown";
@@ -32,6 +32,7 @@ export default function Browse() {
   const [filtersReady, setFiltersReady] = useState(false);
   const [watchStatus, setWatchStatus] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showsLoading, setShowsLoading] = useState(false); 
 
   const isFirstLoad = useRef(true);
 
@@ -51,12 +52,16 @@ export default function Browse() {
             code: item.iso_3166_1,
             label: item.english_name,
           }))
+          .filter(
+            (country: { code: string; label: string }) => country.code !== "CG"
+          )
           .sort(
             (
               a: { code: string; label: string },
               b: { code: string; label: string }
             ) => a.label.localeCompare(b.label)
           );
+          ;
 
         const languages = langRes.data.data
           .map((item: any): { code: string; label: string } => ({
@@ -88,9 +93,9 @@ export default function Browse() {
         setGenreOptions(genres);
 
         setFiltersReady(true);
+        // Don't set loading to false here - wait for shows to load
       } catch (err) {
         console.error("Failed to fetch user:", err);
-      } finally {
         setLoading(false);
       }
     };
@@ -143,6 +148,7 @@ export default function Browse() {
     updatedSortBy = sortBy,
     updatedPage = currentPage
   ) => {
+    setShowsLoading(true); 
     try {
       const countryCodes = updatedCountry
         .map((label) => countryOptions.find((c) => c.label === label)?.code)
@@ -192,10 +198,14 @@ export default function Browse() {
     } catch (error) {
       console.error("Error fetching filtered shows:", error);
       setPopularShows([]);
+    } finally {
+      setShowsLoading(false); 
+      setLoading(false); 
     }
   };
 
   const fetchWatchStatusShows = async (newWatchStatus: string) => {
+    setShowsLoading(true); 
     try {
       const res = await axios.get(`${url}/users/${user_id}/${newWatchStatus}`);
       const watchStatusShows = res.data;
@@ -232,6 +242,8 @@ export default function Browse() {
     } catch (error) {
       console.error("Error fetching want to watch shows:", error);
       setPopularShows([]);
+    } finally {
+      setShowsLoading(false);
     }
   };
 
@@ -294,19 +306,9 @@ export default function Browse() {
   return (
     <div className="browse-container">
       {/* Sidebar */}
-      <div
-        className="filters-sidebar"
-        style={{
-          width: "250px",
-          padding: "1rem",
-          borderRight: "1px solid #ccc",
-        }}
-      >
+      <div className="filters-sidebar">
         <h3 style={{ marginBottom: "1rem" }}>Filters</h3>
-        <div
-          className="filters-column"
-          style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
-        >
+        <div className="filters-column">
           {/* <div className="filter-group">
             <label className="filter-label">Sort By</label>
             <SingleSelectDropdown

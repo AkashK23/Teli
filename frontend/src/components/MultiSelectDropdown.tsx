@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 
 /* Types */
 interface MultiSelectProps {
@@ -28,49 +28,41 @@ const MultiSelectDropdown: React.FC<MultiSelectProps> = ({
     setIsOpen(false);
   }, [selected]);
 
+  /** 🔹 Sort selected options to the top */
+  const sortedOptions = useMemo(() => {
+    const selectedOptions: typeof options = [];
+    const unselectedOptions: typeof options = [];
+
+    options.forEach((option) => {
+      if (typeof option === "string" && selected.includes(option)) {
+        selectedOptions.push(option);
+      } else {
+        unselectedOptions.push(option);
+      }
+    });
+
+    return [...selectedOptions, ...unselectedOptions];
+  }, [options, selected]);
+
   return (
     <div className="multi-select-container">
-      <div className="dropdown-header" onClick={() => setIsOpen(!isOpen)}>
-        <span className="dropdown-label">
-          {selected.length === 0 ? label : selected.join(", ")}
-        </span>
-        <span className="arrow">{isOpen ? "▲" : "▼"}</span>
+      <div className="dropdown-list">
+        {sortedOptions.map((option) => {
+          if (typeof option === "string") {
+            return (
+              <label key={option} className="dropdown-item">
+                <input
+                  type="checkbox"
+                  checked={selected.includes(option)}
+                  onChange={() => toggleOption(option)}
+                />
+                {option}
+              </label>
+            );
+          }
+          return null;
+        })}
       </div>
-
-      {isOpen && (
-        <div className="dropdown-list">
-          {options.map((option, index) => {
-            if (typeof option === "string") {
-              return (
-                <label key={option} className="dropdown-item">
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(option)}
-                    onChange={() => toggleOption(option)}
-                  />
-                  {option}
-                </label>
-              );
-            } else {
-              return (
-                <div key={index}>
-                  <div className="decade-header">{option.label}</div>
-                  {option.years.map((year) => (
-                    <label key={year} className="dropdown-item">
-                      <input
-                        type="checkbox"
-                        checked={selected.includes(year)}
-                        onChange={() => toggleOption(year)}
-                      />
-                      {year}
-                    </label>
-                  ))}
-                </div>
-              );
-            }
-          })}
-        </div>
-      )}
     </div>
   );
 };

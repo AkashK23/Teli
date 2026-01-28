@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useUser } from "../UserContext";
 import ReviewCard from "../components/ReviewCard";
 import ShowTooltip from "../components/ShowTooltip";
+import { formatRelativeTime } from "../components/formatRelativeTime";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -117,6 +118,7 @@ export default function Home() {
               const ratingRes = await axios.get(
                 `${url}/shows/${rating.show_id}/average-rating`
               );
+              console.log(ratingRes.data.average_rating);
               return {
                 ...rating,
                 show_name: showData?.name,
@@ -131,6 +133,7 @@ export default function Home() {
                 overview: showData.overview,
                 first_air_date: showData.first_air_date,
                 average_rating: ratingRes.data.average_rating,
+                review_date: formatRelativeTime(rating.timestamp),
               };
             } catch {
               return { ...rating, image_url: null };
@@ -168,6 +171,7 @@ export default function Home() {
                 overview: showData.overview,
                 first_air_date: showData.first_air_date,
                 average_rating: ratingRes.data.average_rating,
+                review_date: formatRelativeTime(rating.timestamp),
               };
             } catch {
               return { ...rating, image_url: null };
@@ -186,6 +190,10 @@ export default function Home() {
               const imageUrl = imagePath?.startsWith("http")
                 ? imagePath
                 : `https://image.tmdb.org/t/p/w500${imagePath}`;
+              const ratingRes = await axios.get(
+                `${url}/shows/${rating.show_id}/average-rating`
+              );
+              console.log(ratingRes.data.average_rating);
               return {
                 ...showData,
                 image_url:
@@ -194,6 +202,7 @@ export default function Home() {
                   imageUrl ||
                   null,
                 show_id: rating.show_id,
+                rating: ratingRes.data.average_rating,
               };
             } catch {
               return null;
@@ -238,7 +247,7 @@ export default function Home() {
         setRatingsWithImages(updatedRatings.slice(0,3));
         setUserRatingsWithImages(updatedUserRatings.slice(0,3));
         setNewFromFriends(newShows.filter(Boolean));
-        console.log(newShows);
+        console.log(newFromFriends);
         setLoading(false);
       } catch (err) {
         console.error("Failed to fetch home data:", err);
@@ -319,7 +328,6 @@ export default function Home() {
             className="hero-banner-slider"
             style={{
               transform: `translateX(-${bannerIndex * 100}%)`,
-              transition: "transform 0.8s ease-in-out",
             }}
           >
             {/* Slide 0: Teli Title Card */}
@@ -470,7 +478,7 @@ export default function Home() {
       )} */}
 
         {/* New From Friends */}
-        {newFromFriends.length > 0 && (
+        {newFromFriends.length > 0 ? (
           <div className="home-section">
             <h1 className="headings">New From Friends</h1>
             <div className="scroll-container">
@@ -498,14 +506,26 @@ export default function Home() {
               ))}
             </div>
           </div>
+        ) : (
+          <div className="home-section">
+            <h1 className="headings">New From Friends</h1>
+            <div className="scroll-container">
+              <p>
+                Add friends to see <br />
+                what they're watching!
+              </p>
+            </div>
+          </div>
         )}
       </div>
 
       <div className="home-sections-row">
-        {/* Recent Reviews */}
-        {userRatingsWithImages.length > 0 && (
+        {/* Your Reviews */}
+        {userRatingsWithImages.length > 0 ? (
           <div className="review-container">
-            <h3 className="headings">Your Reviews</h3>
+            <Link to="/activity?tab=user" className="heading-link">
+              <h3 className="headings">Your Reviews</h3>
+            </Link>
             <div className="review-cards-container">
               {userRatingsWithImages.map((rating: any) => (
                 <ReviewCard
@@ -522,24 +542,37 @@ export default function Home() {
                   averageRating={rating.average_rating}
                   firstAirDate={rating.first_air_date}
                   compact={true}
+                  reviewDate={rating.review_date}
                 />
               ))}
             </div>
-            <div className="see-more-container">
+            {/* <div className="see-more-container">
               <button
                 className="see-more-button"
                 onClick={() => navigate("/activity?tab=user")}
               >
                 See More
               </button>
+            </div> */}
+          </div>
+        ) : (
+          <div className="home-section">
+            <h1 className="headings">Your Reviews</h1>
+            <div className="scroll-container">
+              <p>
+                No shows reviewed
+              </p>
             </div>
           </div>
         )}
 
-        {/* Recent Reviews */}
-        {ratingsWithImages.length > 0 && (
+        {/* Following Reviews */}
+        {ratingsWithImages.length > 0 ? 
+        (
           <div className="review-container">
-            <h3 className="headings">Following Reviews</h3>
+            <Link to="/activity?tab=following" className="heading-link">
+              <h3 className="headings">Following Reviews</h3>
+            </Link>
             <div className="review-cards-container">
               {ratingsWithImages.map((rating: any) => (
                 <ReviewCard
@@ -556,18 +589,29 @@ export default function Home() {
                   averageRating={rating.average_rating}
                   firstAirDate={rating.first_air_date}
                   compact={true}
+                  reviewDate={rating.review_date}
                 />
               ))}
             </div>
-            <div className="see-more-container">
+            
+            {/* <div className="see-more-container">
               <button
                 className="see-more-button"
                 onClick={() => navigate("/activity?tab=following")}
               >
                 See More
               </button>
-            </div>
+            </div> */}
           </div>
+          ) : (
+              <div className="home-section">
+                <h1 className="headings">Your Reviews</h1>
+                <div className="scroll-container">
+                  <p>
+                    No reviews in your feed
+                  </p>
+                </div>
+              </div>
         )}
       </div>
 
@@ -595,7 +639,10 @@ export default function Home() {
           />
           <div className="feature-text">
             <h3>Reviews</h3>
-            <p>Rate and comment on your favorite shows, then see what your friends are saying</p>
+            <p>
+              Rate and comment on your favorite shows, then see what your
+              friends are saying
+            </p>
           </div>
         </Link>
 
@@ -619,7 +666,10 @@ export default function Home() {
           />
           <div className="feature-text">
             <h3>Search</h3>
-            <p>Quickly search for TV shows and users to find exactly what you’re looking for</p>
+            <p>
+              Quickly search for TV shows and users to find exactly what you’re
+              looking for
+            </p>
           </div>
         </Link>
 
@@ -643,7 +693,10 @@ export default function Home() {
           />
           <div className="feature-text">
             <h3>Watchlists</h3>
-            <p>Manage the shows you want to watch, are currently watching and have watched</p>
+            <p>
+              Manage the shows you want to watch, are currently watching and
+              have watched
+            </p>
           </div>
         </Link>
       </div>

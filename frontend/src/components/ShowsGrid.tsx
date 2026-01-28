@@ -132,54 +132,24 @@ export default function SearchResultsWithPagination({
       </div>
 
       {/* Pagination */}
-      <div style={{ width: "320px", margin: "40px auto", userSelect: "none" }}>
-        <nav
-          aria-label="Pagination"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+      <div className="grid-container">
+        <nav aria-label="Pagination" className="grid-nav">
           <button
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
             aria-label="Previous page"
+            className="arrow-button-left"
             style={{
               cursor: currentPage === 1 ? "not-allowed" : "pointer",
-              fontSize: "24px",
-              border: "none",
-              background: "none",
-              marginRight: 12,
-              userSelect: "none",
             }}
           >
             ◀
           </button>
 
-          <ul
-            style={{
-              display: "flex",
-              gap: 24,
-              listStyle: "none",
-              padding: 0,
-              margin: 0,
-              justifyContent: "center",
-            }}
-          >
+          <ul className="dots-container">
             {pageDots.map((page, idx) =>
               page === "..." ? (
-                <li
-                  key={`ellipsis-${idx}`}
-                  style={{
-                    width: 24,
-                    textAlign: "center",
-                    userSelect: "none",
-                    fontSize: 18,
-                    lineHeight: 1,
-                    pointerEvents: "none",
-                  }}
-                >
+                <li key={`ellipsis-${idx}`} className="page-ellipses">
                   &hellip;
                 </li>
               ) : (
@@ -189,19 +159,14 @@ export default function SearchResultsWithPagination({
                 >
                   <div
                     onClick={() => onPageChange(Number(page))}
+                    className="page-dots"
                     style={{
-                      width: 16,
-                      height: 16,
-                      margin: "0 auto",
-                      borderRadius: "50%",
                       backgroundColor: page === currentPage ? "blue" : "#ccc",
-                      transition: "background-color 0.2s",
                     }}
                   />
                   <div
+                    className="current-page"
                     style={{
-                      marginTop: 6,
-                      fontSize: 14,
                       color: page === currentPage ? "blue" : "#333",
                       fontWeight: page === currentPage ? "bold" : "normal",
                     }}
@@ -217,13 +182,9 @@ export default function SearchResultsWithPagination({
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
             aria-label="Next page"
+            className="arrow-button-right"
             style={{
               cursor: currentPage === totalPages ? "not-allowed" : "pointer",
-              fontSize: "24px",
-              border: "none",
-              background: "none",
-              marginLeft: 12,
-              userSelect: "none",
             }}
           >
             ▶
