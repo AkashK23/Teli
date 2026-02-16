@@ -32,7 +32,7 @@ export default function Browse() {
   const [filtersReady, setFiltersReady] = useState(false);
   const [watchStatus, setWatchStatus] = useState("");
   const [loading, setLoading] = useState(true);
-  const [showsLoading, setShowsLoading] = useState(false); 
+  const [showsLoading, setShowsLoading] = useState(false);
 
   const isFirstLoad = useRef(true);
 
@@ -53,16 +53,14 @@ export default function Browse() {
             label: item.english_name,
           }))
           .filter(
-            (country: { code: string; label: string }) => country.code !== "CG"
+            (country: { code: string; label: string }) => country.code !== "CG",
           )
           .sort(
             (
               a: { code: string; label: string },
-              b: { code: string; label: string }
-            ) => a.label.localeCompare(b.label)
+              b: { code: string; label: string },
+            ) => a.label.localeCompare(b.label),
           );
-          ;
-
         const languages = langRes.data.data
           .map((item: any): { code: string; label: string } => ({
             code: item.iso_639_1,
@@ -71,8 +69,8 @@ export default function Browse() {
           .sort(
             (
               a: { code: string; label: string },
-              b: { code: string; label: string }
-            ) => a.label.localeCompare(b.label)
+              b: { code: string; label: string },
+            ) => a.label.localeCompare(b.label),
           );
 
         const genres = genreRes.data.data
@@ -83,8 +81,8 @@ export default function Browse() {
           .sort(
             (
               a: { code: string; label: string },
-              b: { code: string; label: string }
-            ) => a.label.localeCompare(b.label)
+              b: { code: string; label: string },
+            ) => a.label.localeCompare(b.label),
           );
 
         // console.log(languages)
@@ -110,7 +108,7 @@ export default function Browse() {
       isFirstLoad.current
     ) {
       const defaultCountry = countryOptions.find(
-        (c) => c.label === "United States of America"
+        (c) => c.label === "United States of America",
       );
       if (defaultCountry) {
         setCountry([defaultCountry.label]);
@@ -125,7 +123,7 @@ export default function Browse() {
       isFirstLoad.current
     ) {
       const defaultLang = languageOptions.find((l) =>
-        l.label.startsWith("English")
+        l.label.startsWith("English"),
       );
       if (defaultLang) {
         setLanguage([defaultLang.label]);
@@ -146,9 +144,9 @@ export default function Browse() {
     updatedCountry = country,
     updatedLanguage = language,
     updatedSortBy = sortBy,
-    updatedPage = currentPage
+    updatedPage = currentPage,
   ) => {
-    setShowsLoading(true); 
+    setShowsLoading(true);
     try {
       const countryCodes = updatedCountry
         .map((label) => countryOptions.find((c) => c.label === label)?.code)
@@ -179,7 +177,7 @@ export default function Browse() {
         res.data.results.map(async (show: any) => {
           try {
             const ratingRes = await axios.get(
-              `${url}/shows/${show.id}/average-rating`
+              `${url}/shows/${show.id}/average-rating`,
             );
             console.log(show, ratingRes);
             return {
@@ -189,7 +187,7 @@ export default function Browse() {
           } catch {
             return { ...show, image_url: null };
           }
-        })
+        }),
       );
 
       setPopularShows(updatedFilteredShows || []);
@@ -199,13 +197,13 @@ export default function Browse() {
       console.error("Error fetching filtered shows:", error);
       setPopularShows([]);
     } finally {
-      setShowsLoading(false); 
-      setLoading(false); 
+      setShowsLoading(false);
+      setLoading(false);
     }
   };
 
   const fetchWatchStatusShows = async (newWatchStatus: string) => {
-    setShowsLoading(true); 
+    setShowsLoading(true);
     try {
       const res = await axios.get(`${url}/users/${user_id}/${newWatchStatus}`);
       const watchStatusShows = res.data;
@@ -222,7 +220,7 @@ export default function Browse() {
               ? imagePath
               : `https://image.tmdb.org/t/p/w500${imagePath}`;
             const ratingRes = await axios.get(
-              `${url}/shows/${show.show_id}/average-rating`
+              `${url}/shows/${show.show_id}/average-rating`,
             );
             return {
               ...show,
@@ -235,7 +233,7 @@ export default function Browse() {
             console.error("Failed to fetch image for:", show.show_name);
             return { ...show, image_url: null };
           }
-        })
+        }),
       );
       setPopularShows(updatedWatchStatusShows || []);
       setTotalPages(Math.floor(updatedWatchStatusShows.length / 20 + 1));
