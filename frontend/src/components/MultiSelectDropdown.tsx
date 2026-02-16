@@ -20,13 +20,13 @@ const MultiSelectDropdown: React.FC<MultiSelectProps> = ({
     setSelected(
       selected.includes(value)
         ? selected.filter((item) => item !== value)
-        : [...selected, value]
+        : [...selected, value],
     );
   };
 
-  useEffect(() => {
-    setIsOpen(false);
-  }, [selected]);
+  const toggleDropdown = () => {
+    setIsOpen(!isOpen);
+  };
 
   /** 🔹 Sort selected options to the top */
   const sortedOptions = useMemo(() => {
@@ -44,25 +44,35 @@ const MultiSelectDropdown: React.FC<MultiSelectProps> = ({
     return [...selectedOptions, ...unselectedOptions];
   }, [options, selected]);
 
+  const displayText =
+    selected.length > 0 ? `${selected.length} selected` : `Select ${label}`;
+
   return (
     <div className="multi-select-container">
-      <div className="dropdown-list">
-        {sortedOptions.map((option) => {
-          if (typeof option === "string") {
-            return (
-              <label key={option} className="dropdown-item">
-                <input
-                  type="checkbox"
-                  checked={selected.includes(option)}
-                  onChange={() => toggleOption(option)}
-                />
-                {option}
-              </label>
-            );
-          }
-          return null;
-        })}
+      <div className="dropdown-header" onClick={toggleDropdown}>
+        <span className="dropdown-label">{displayText}</span>
+        <span className="arrow">{isOpen ? "▲" : "▼"}</span>
       </div>
+
+      {isOpen && (
+        <div className="dropdown-list">
+          {sortedOptions.map((option) => {
+            if (typeof option === "string") {
+              return (
+                <label key={option} className="dropdown-item">
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(option)}
+                    onChange={() => toggleOption(option)}
+                  />
+                  {option}
+                </label>
+              );
+            }
+            return null;
+          })}
+        </div>
+      )}
     </div>
   );
 };

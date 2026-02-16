@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import ShowTooltip from "../components/ShowTooltip";
+import ReactDOM from "react-dom";
 
 interface ReviewCardProps {
   showId: string;
@@ -47,31 +48,44 @@ const goToShow = () => {
     navigate(`/show/${encodeURIComponent(showId)}`);
 };
 
-  return (
+const [expanded, setExpanded] = React.useState(false);
+const commentRef = React.useRef<HTMLParagraphElement>(null);
+const [isOverflowing, setIsOverflowing] = React.useState(false);
+const cardRef = React.useRef<HTMLDivElement>(null);
+const [cardPosition, setCardPosition] = React.useState<{
+  top: number;
+  left: number;
+} | null>(null);
+
+
+React.useEffect(() => {
+  if (commentRef.current) {
+    const el = commentRef.current;
+    setIsOverflowing(el.scrollHeight > el.clientHeight);
+  }
+}, [comment, expanded]);
+
+
+const handleCardClick = (e: React.MouseEvent) => {
+  if (cardRef.current) {
+    const rect = cardRef.current.getBoundingClientRect();
+    setCardPosition({
+      top: rect.top + window.scrollY, // account for scroll
+      left: rect.left + window.scrollX,
+    });
+  }
+  setExpanded(true);
+};
+
+
+return (
+  <>
+    {/* COLLAPSED CARD */}
     <div
+      ref={cardRef}
       className={`rating-card ${compact ? "compact" : ""}`}
-      key={showId}
-      onClick={goToShow}
+      onClick={handleCardClick}
     >
-      <img
-        src={profilePic}
-        className="profile-avatar-home"
-        alt={`${userName}'s profile`}
-        onClick={goToProfile}
-      />
-
-      <div className="rating-details">
-        <div className="rating-text">
-          <div onClick={goToProfile}>
-            <h4>{userName}</h4>
-          </div>
-          <p className="rating-comment">{comment}</p>
-
-          <span className="review-date">{reviewDate}</span>
-        </div>
-        <div className="rating-score">{rating}</div>
-      </div>
-
       {showImageUrl && (
         <ShowTooltip
           show={{
@@ -85,11 +99,104 @@ const goToShow = () => {
             src={showImageUrl}
             alt={showName || "Show poster"}
             className="rating-show-img"
+            onClick={(e) => {
+              e.stopPropagation();
+              goToShow();
+            }}
           />
         </ShowTooltip>
       )}
+
+      <div className="rating-details">
+        <div className="rating-text">
+          <p
+            className="rating-show-name"
+            onClick={(e) => {
+              e.stopPropagation();
+              goToShow();
+            }}
+          >
+            {showName}
+          </p>
+
+          <p
+            ref={commentRef}
+            className={`rating-comment ${
+              !expanded && isOverflowing ? "fade" : ""
+            }`}
+          >
+            {comment}
+          </p>
+
+          <div className="rating-user" onClick={goToProfile}>
+            <img
+              src={profilePic}
+              className="review-avatar"
+              alt={`${userName}'s profile`}
+            />
+            <p className="rating-user-name">{userName}</p>
+            <span className="review-date">{reviewDate}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="rating-score">{rating}</div>
     </div>
-  );
+
+    {/* EXPANDED OVERLAY */}
+    {expanded &&
+      ReactDOM.createPortal(
+        <div className="review-overlay" onClick={() => setExpanded(false)}>
+          <div
+            className="rating-card expanded"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {showImageUrl && (
+              <img
+                src={showImageUrl}
+                alt={showName || "Show poster"}
+                className="rating-show-img"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToShow();
+                }}
+              />
+            )}
+
+            <div className="rating-details">
+              <div className="rating-text">
+                <p
+                  className="rating-show-name"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToShow();
+                  }}
+                >
+                  {showName}
+                </p>
+
+                <p className="rating-comment full">{comment}</p>
+
+                <div className="rating-user" onClick={goToProfile}>
+                  <img
+                    src={profilePic}
+                    className="review-avatar"
+                    alt={`${userName}'s profile`}
+                  />
+                  <p className="rating-user-name">{userName}</p>
+                  <span className="review-date">{reviewDate}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="rating-score">{rating}</div>
+          </div>
+        </div>,
+      document.body
+  )}
+  </>
+);
 };
+
 
 export default ReviewCard;
