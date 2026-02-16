@@ -20,7 +20,7 @@ export default function Home() {
   const [displayCount, setDisplayCount] = useState(0);
   const [watchedTicker, setWatchedTicker] = useState(0);
   
-  const [staffPickIds] = useState([66732, 125935, 136311, 103540]);
+  const [staffPickIds] = useState([66732, 125935, 136311]);
   const [staffPicks, setStaffPicks] = useState<any[]>([]);
 
   const url = process.env.REACT_APP_API_URL;

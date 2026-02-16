@@ -293,30 +293,44 @@ export default function Profile() {
         {/* Currently Watching */}
         <div className="favorite-shows">
           <h3 className="shows-label">Currently Watching</h3>
-          <div className="favorite-shows-images">
-            {currentlyWatchingWithImages.map((show) => (
-              <Link
-                to={`/show/${show.show_id}`}
-                key={show.show_id}
-                className="show-link"
-              >
-                <ShowTooltip
-                  show={{
-                    name: show.name,
-                    first_air_date: show.first_air_date,
-                    overview: show.overview,
-                    rating: show.rating,
-                  }}
+          {currentlyWatchingWithImages.length > 0 ? (
+            <div className="favorite-shows-images">
+              {currentlyWatchingWithImages.map((show) => (
+                <Link
+                  to={`/show/${show.show_id}`}
+                  key={show.show_id}
+                  className="show-link"
                 >
-                  <img
-                    src={show.image_url}
-                    alt={show.name}
-                    className="show-icon small-icon"
-                  />
-                </ShowTooltip>
-              </Link>
-            ))}
-          </div>
+                  <ShowTooltip
+                    show={{
+                      name: show.name,
+                      first_air_date: show.first_air_date,
+                      overview: show.overview,
+                      rating: show.rating,
+                    }}
+                  >
+                    <img
+                      src={show.image_url}
+                      alt={show.name}
+                      className="show-icon small-icon"
+                      onError={(e) => {
+                        e.currentTarget.src = "https://via.placeholder.com/300x450?text=No+Image";
+                      }}
+                    />
+                  </ShowTooltip>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="favorite-shows-images">
+              <div className="empty-state-message">
+                <p>No shows currently being watched</p>
+                <Link to="/browse" className="secondary-button">
+                  Discover Shows
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Recent Reviews */}
