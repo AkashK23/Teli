@@ -345,3 +345,166 @@ def test_get_episode_ratings_empty_result(client, user_fixture):
     data = json.loads(response.data)
     assert isinstance(data, list)
     assert len(data) == 0
+
+def test_get_episode_ratings_sorted_by_timestamp(client, user_fixture, get_db):
+    """Test that episode ratings are returned sorted by most recent timestamp first."""
+    # Arrange
+    user_id = user_fixture["id"]
+    db = get_db
+    
+    # Add multiple episode ratings with controlled timestamps
+    import time
+    from datetime import timedelta
+    
+    base_time = datetime.now(timezone.utc)
+    episode_ratings = [
+        {
+            "user_id": user_id,
+            "show_id": "sorting_test_show",
+            "season_number": 1,
+            "episode_number": 1,
+            "rating": 8,
+            "comment": "First episode - oldest rating"
+        },
+        {
+            "user_id": user_id,
+            "show_id": "sorting_test_show", 
+            "season_number": 1,
+            "episode_number": 2,
+            "rating": 9,
+            "comment": "Second episode - middle rating"
+        },
+        {
+            "user_id": user_id,
+            "show_id": "sorting_test_show",
+            "season_number": 1,
+            "episode_number": 3,
+            "rating": 7,
+            "comment": "Third episode - newest rating"
+        }
+    ]
+    
+    rating_ids = []
+    
+    try:
+        # Add ratings with delays to ensure different timestamps
+        for i, rating_data in enumerate(episode_ratings):
+            if i > 0:
+                time.sleep(1)  # Ensure different timestamps
+            
+            response = client.post(
+                "/api/episode_ratings",
+                data=json.dumps(rating_data),
+                content_type="application/json"
+            )
+            
+            assert response.status_code == 200
+            data = json.loads(response.data)
+            rating_ids.append(data["id"])
+        
+        # Act - Get all episode ratings for the season
+        response = client.get(f"/api/users/{user_id}/shows/sorting_test_show/season/1/ratings")
+        
+        # Assert
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Should have 3 episode ratings
+        assert len(data) == 3
+        
+        # Verify sorting - most recent first
+        timestamps = [rating["timestamp"] for rating in data]
+        
+        # Check that timestamps are in descending order (most recent first)
+        for i in range(len(timestamps) - 1):
+            current_time = datetime.fromisoformat(timestamps[i].replace('Z', '+00:00'))
+            next_time = datetime.fromisoformat(timestamps[i + 1].replace('Z', '+00:00'))
+            assert current_time >= next_time
+        
+        # The last added rating (episode 3) should be first due to most recent timestamp
+        assert data[0]["episode_number"] == 3
+        assert data[0]["comment"] == "Third episode - newest rating"
+        
+        # The first added rating (episode 1) should be last due to oldest timestamp
+        assert data[2]["episode_number"] == 1
+        assert data[2]["comment"] == "First episode - oldest rating"
+    
+    finally:
+        # Clean up test data
+        for rating_id in rating_ids:
+            try:
+                db.collection("episode_ratings").document(rating_id).delete()
+            except Exception:
+                pass
+
+def test_episode_ratings_sorting_with_identical_timestamps(client, user_fixture, get_db):
+    """Test episode ratings sorting when timestamps are identical."""
+    # Arrange
+    user_id = user_fixture["id"]
+    db = get_db
+    
+    # Create episode ratings with identical timestamps by adding them to database directly
+    same_timestamp = datetime.now(timezone.utc).isoformat()
+    episode_ratings = [
+        {
+            'user_id': user_id,
+            'show_id': 'identical_timestamp_show',
+            'season_number': 1,
+            'episode_number': 1,
+            'rating': 8,
+            'comment': 'Episode 1',
+            'timestamp': same_timestamp
+        },
+        {
+            'user_id': user_id,
+            'show_id': 'identical_timestamp_show',
+            'season_number': 1,
+            'episode_number': 2,
+            'rating': 9,
+            'comment': 'Episode 2',
+            'timestamp': same_timestamp
+        },
+        {
+            'user_id': user_id,
+            'show_id': 'identical_timestamp_show',
+            'season_number': 1,
+            'episode_number': 3,
+            'rating': 7,
+            'comment': 'Episode 3',
+            'timestamp': same_timestamp
+        }
+    ]
+    
+    rating_ids = []
+    
+    try:
+        # Add ratings directly to database with identical timestamps
+        for rating_data in episode_ratings:
+            _, rating_ref = db.collection("episode_ratings").add(rating_data)
+            rating_ids.append(rating_ref.id)
+        
+        # Act
+        response = client.get(f"/api/users/{user_id}/shows/identical_timestamp_show/season/1/ratings")
+        
+        # Assert
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Should have 3 episode ratings
+        assert len(data) == 3
+        
+        # All timestamps should be identical
+        timestamps = [rating["timestamp"] for rating in data]
+        assert all(ts == timestamps[0] for ts in timestamps)
+        
+        # All episodes should be present
+        episode_numbers = [rating["episode_number"] for rating in data]
+        assert sorted(episode_numbers) == [1, 2, 3]
+    
+    finally:
+        # Clean up test data
+        for rating_id in rating_ids:
+            try:
+                db.collection("episode_ratings").document(rating_id).delete()
+            except Exception:
+                pass

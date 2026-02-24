@@ -1679,7 +1679,7 @@ curl -X GET "http://localhost:5001/users/user123/feed?start_after=2024-04-10T15:
 
 ## Rating Endpoints
 
-These endpoints manage user ratings for TV shows.
+These endpoints manage user ratings for TV shows. **All rating endpoints return results sorted by most recent rating date first.**
 
 ### Add Rating
 
@@ -1751,7 +1751,7 @@ curl -X POST "http://localhost:5001/ratings" \
 
 ### Get User Ratings
 
-Get all ratings submitted by a specific user.
+Get all ratings submitted by a specific user, sorted by most recent rating date first.
 
 **URL**: `/users/:user_id/ratings`
 
@@ -1792,6 +1792,10 @@ curl -X GET "http://localhost:5001/users/user123/ratings"
   // Additional ratings...
 ]
 ```
+
+**Sorting Behavior**:
+- Results are sorted by timestamp in descending order (most recent rating first)
+- This ensures users see their latest rating activity at the top
 
 **Error Responses**:
 
@@ -1875,10 +1879,11 @@ curl -X GET "http://localhost:5001/users/user123/rated-shows/search?query=breaki
 
 **Search Behavior**:
 - Case-insensitive matching on stored show names
-- Results are sorted by relevance:
+- Results are sorted by relevance first, then by timestamp (most recent first):
   1. Exact show name matches first
   2. Show name prefix matches
   3. Show name contains matches
+  4. Within each relevance group, sorted by most recent rating date
 - Only searches within shows that the user has actually rated
 - Supports pagination for large result sets
 
@@ -1917,7 +1922,7 @@ curl -X GET "http://localhost:5001/users/user123/rated-shows/search?query=breaki
 
 ### Get Show Ratings
 
-Get all ratings for a specific TV show.
+Get all ratings for a specific TV show, sorted by most recent rating date first.
 
 **URL**: `/shows/:show_id/ratings`
 
@@ -1958,6 +1963,10 @@ curl -X GET "http://localhost:5001/shows/breaking_bad/ratings"
   // Additional ratings...
 ]
 ```
+
+**Sorting Behavior**:
+- Results are sorted by timestamp in descending order (most recent rating first)
+- This shows the latest community feedback for a show at the top
 
 **Error Responses**:
 
@@ -2104,7 +2113,7 @@ curl -X GET "http://localhost:5001/shows/popular?num_most_popular=5"
 
 ## Episode Rating Endpoints
 
-These endpoints manage user ratings for specific TV show episodes.
+These endpoints manage user ratings for specific TV show episodes. **Episode rating endpoints return results sorted by most recent rating date first.**
 
 ### Add Episode Rating
 
@@ -2178,7 +2187,7 @@ curl -X POST "http://localhost:5001/episode_ratings" \
 
 ### Get Episode Ratings
 
-Get ratings for episodes in a specific season of a TV show.
+Get ratings for episodes in a specific season of a TV show, sorted by most recent rating date first.
 
 **URL**: `/users/:user_id/shows/:show_id/season/:season_number/ratings`
 
@@ -2215,16 +2224,6 @@ curl -X GET "http://localhost:5001/users/user123/shows/1396/season/1/ratings?epi
 ```json
 [
   {
-    "id": "episode_rating123",
-    "user_id": "user123",
-    "show_id": "1396",
-    "season_number": 1,
-    "episode_number": 1,
-    "rating": 9,
-    "comment": "Amazing pilot episode!",
-    "timestamp": "2024-05-30T14:22:10Z"
-  },
-  {
     "id": "episode_rating456",
     "user_id": "user123",
     "show_id": "1396",
@@ -2233,6 +2232,16 @@ curl -X GET "http://localhost:5001/users/user123/shows/1396/season/1/ratings?epi
     "rating": 8,
     "comment": "Great follow-up to the pilot",
     "timestamp": "2024-05-31T09:15:30Z"
+  },
+  {
+    "id": "episode_rating123",
+    "user_id": "user123",
+    "show_id": "1396",
+    "season_number": 1,
+    "episode_number": 1,
+    "rating": 9,
+    "comment": "Amazing pilot episode!",
+    "timestamp": "2024-05-30T14:22:10Z"
   }
 ]
 ```
@@ -2251,6 +2260,11 @@ curl -X GET "http://localhost:5001/users/user123/shows/1396/season/1/ratings?epi
   "timestamp": "2024-05-30T14:22:10Z"
 }
 ```
+
+**Sorting Behavior**:
+- When retrieving all episodes in a season, results are sorted by timestamp in descending order (most recent rating first)
+- This shows the user's latest episode rating activity at the top
+- Single episode requests return the specific episode rating without sorting
 
 **Error Responses**:
 
