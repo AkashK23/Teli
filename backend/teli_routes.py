@@ -1249,6 +1249,103 @@ def delete_user_and_related_data(user_id):
         logger.error(f"Error in delete_user_and_related_data: {e}")
         return {"success": False, "error": str(e)}
 
+@teli.route("/users/popular", methods=["GET"])
+def get_popular_users():
+    """
+    Get the most popular users by followers count.
+    Users are sorted by follower count (descending), then by username (ascending) for ties.
+    """
+    try:
+        # Get and validate pagination parameters
+        try:
+            page = int(request.args.get('page', 1))
+            if page < 1:
+                page = 1
+        except (ValueError, TypeError):
+            return jsonify({"error": "Page parameter must be a positive integer"}), 400
+        
+        try:
+            limit = int(request.args.get('limit', 10))
+            if limit < 1:
+                limit = 10
+            elif limit > 50:
+                limit = 50
+        except (ValueError, TypeError):
+            return jsonify({"error": "Limit parameter must be a positive integer"}), 400
+        
+        # Get all follow relationships
+        follows_query = db.collection("follows").stream()
+        
+        # Count followers per user
+        follower_counts = {}
+        for follow_doc in follows_query:
+            follow_data = follow_doc.to_dict()
+            followee_id = follow_data.get("followee_id")
+            
+            if followee_id:
+                if followee_id in follower_counts:
+                    follower_counts[followee_id] += 1
+                else:
+                    follower_counts[followee_id] = 1
+        
+        # Get user details for users who have followers
+        users_with_followers = []
+        for user_id, follower_count in follower_counts.items():
+            try:
+                user_doc = db.collection("users").document(user_id).get()
+                if user_doc.exists:
+                    user_data = user_doc.to_dict()
+                    
+                    # Remove sensitive fields
+                    if "password" in user_data:
+                        del user_data["password"]
+                    if "email" in user_data:
+                        del user_data["email"]
+                    if "name_lowercase" in user_data:
+                        del user_data["name_lowercase"]
+                    if "username_lowercase" in user_data:
+                        del user_data["username_lowercase"]
+                    
+                    # Add user ID and follower count
+                    user_data["id"] = user_id
+                    user_data["follower_count"] = follower_count
+                    users_with_followers.append(user_data)
+            except Exception as e:
+                logger.error(f"Error fetching user {user_id}: {e}")
+                # Continue with other users if one fails
+                continue
+        
+        # Sort by follower count (descending), then by username (ascending)
+        def sort_key(user):
+            follower_count = user.get('follower_count', 0)
+            username = user.get('username', '')
+            return (-follower_count, username)  # Negative for descending order
+        
+        users_with_followers.sort(key=sort_key)
+        
+        # Calculate pagination
+        total_users = len(users_with_followers)
+        total_pages = (total_users + limit - 1) // limit if total_users > 0 else 1
+        start_index = (page - 1) * limit
+        end_index = start_index + limit
+        
+        # Get the page of results
+        page_results = users_with_followers[start_index:end_index]
+        
+        result = {
+            "popular_users": page_results,
+            "total_users": total_users,
+            "total_pages": total_pages,
+            "current_page": page,
+            "limit": limit
+        }
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting popular users: {e}")
+        return jsonify({"error": "Database error occurred"}), 500
+
 @teli.route("/users/<user_id>/rated-shows/search", methods=["GET"])
 def search_user_rated_shows(user_id):
     """
@@ -1306,14 +1403,14 @@ def search_user_rated_shows(user_id):
         # Sort by relevance (exact matches first, then prefix matches)
         def sort_key(rating):
             show_name = rating.get('show_name_lowercase', '')
-            
+
             if show_name == query_lower:
                 return (0, show_name)  # Exact match first
             elif show_name.startswith(query_lower):
                 return (1, show_name)  # Prefix match
             else:
                 return (2, show_name)  # Contains match
-        
+
         matching_shows.sort(key=sort_key)
         
         # Calculate pagination

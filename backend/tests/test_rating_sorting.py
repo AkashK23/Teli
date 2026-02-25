@@ -1,5 +1,6 @@
 import pytest
 import json
+import uuid
 from datetime import datetime, timezone, timedelta
 
 
@@ -13,7 +14,13 @@ class TestRatingSorting:
         self.test_user_ids = []
         self.test_rating_ids = []
         self.test_episode_rating_ids = []
-        
+
+        # Use unique show IDs to avoid colliding with real database data
+        uid = uuid.uuid4().hex[:8]
+        self.show_id_1 = f"test_show_1_{uid}"
+        self.show_id_2 = f"test_show_2_{uid}"
+        self.show_id_3 = f"test_show_3_{uid}"
+
         # Create test users
         base_time = datetime.now(timezone.utc)
         test_users = [
@@ -44,7 +51,7 @@ class TestRatingSorting:
         test_ratings = [
             {
                 'user_id': self.test_user_ids[0],
-                'show_id': 'show_1',
+                'show_id': self.show_id_1,
                 'show_name_lowercase': 'breaking bad',
                 'rating': 9,
                 'comment': 'Amazing show!',
@@ -52,7 +59,7 @@ class TestRatingSorting:
             },
             {
                 'user_id': self.test_user_ids[0],
-                'show_id': 'show_2',
+                'show_id': self.show_id_2,
                 'show_name_lowercase': 'stranger things',
                 'rating': 8,
                 'comment': 'Great series!',
@@ -60,7 +67,7 @@ class TestRatingSorting:
             },
             {
                 'user_id': self.test_user_ids[0],
-                'show_id': 'show_3',
+                'show_id': self.show_id_3,
                 'show_name_lowercase': 'the wire',
                 'rating': 10,
                 'comment': 'Masterpiece!',
@@ -68,7 +75,7 @@ class TestRatingSorting:
             },
             {
                 'user_id': self.test_user_ids[1],
-                'show_id': 'show_1',
+                'show_id': self.show_id_1,
                 'show_name_lowercase': 'breaking bad',
                 'rating': 8,
                 'comment': 'Really good!',
@@ -85,7 +92,7 @@ class TestRatingSorting:
         test_episode_ratings = [
             {
                 'user_id': self.test_user_ids[0],
-                'show_id': 'show_1',
+                'show_id': self.show_id_1,
                 'season_number': 1,
                 'episode_number': 1,
                 'rating': 8,
@@ -94,7 +101,7 @@ class TestRatingSorting:
             },
             {
                 'user_id': self.test_user_ids[0],
-                'show_id': 'show_1',
+                'show_id': self.show_id_1,
                 'season_number': 1,
                 'episode_number': 2,
                 'rating': 9,
@@ -103,7 +110,7 @@ class TestRatingSorting:
             },
             {
                 'user_id': self.test_user_ids[0],
-                'show_id': 'show_1',
+                'show_id': self.show_id_1,
                 'season_number': 1,
                 'episode_number': 3,
                 'rating': 7,
@@ -196,7 +203,7 @@ class TestRatingSorting:
     
     def test_get_show_ratings_sorted_by_most_recent(self, get_client):
         """Test that show ratings are returned sorted by most recent timestamp first"""
-        response = get_client.get("/api/shows/show_1/ratings")
+        response = get_client.get(f"/api/shows/{self.show_id_1}/ratings")
         
         assert response.status_code == 200
         data = json.loads(response.data)
@@ -229,11 +236,11 @@ class TestRatingSorting:
         """Test that episode ratings are returned sorted by most recent timestamp first"""
         user_id = self.test_user_ids[0]
         
-        response = get_client.get(f"/api/users/{user_id}/shows/show_1/season/1/ratings")
-        
+        response = get_client.get(f"/api/users/{user_id}/shows/{self.show_id_1}/season/1/ratings")
+
         assert response.status_code == 200
         data = json.loads(response.data)
-        
+
         # Should have 3 episode ratings for this season
         assert len(data) == 3
         
@@ -255,7 +262,7 @@ class TestRatingSorting:
         """Test getting a specific episode rating (no sorting needed for single result)"""
         user_id = self.test_user_ids[0]
         
-        response = get_client.get(f"/api/users/{user_id}/shows/show_1/season/1/ratings?episode_number=2")
+        response = get_client.get(f"/api/users/{user_id}/shows/{self.show_id_1}/season/1/ratings?episode_number=2")
         
         assert response.status_code == 200
         data = json.loads(response.data)
@@ -277,7 +284,7 @@ class TestRatingSorting:
         """Test episode ratings endpoint with invalid season number"""
         user_id = self.test_user_ids[0]
         
-        response = get_client.get(f"/api/users/{user_id}/shows/show_1/season/invalid/ratings")
+        response = get_client.get(f"/api/users/{user_id}/shows/{self.show_id_1}/season/invalid/ratings")
         
         assert response.status_code == 400
         data = json.loads(response.data)
