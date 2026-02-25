@@ -494,7 +494,10 @@ def get_user_ratings(user_id):
         if not user_ref.exists:
             return jsonify({"error": "User not found"}), 404
             
-        ratings_ref = db.collection("ratings").where("user_id", "==", user_id)
+        # Use Firebase query ordering by timestamp (most recent first)
+        ratings_ref = db.collection("ratings").where(
+            filter=FieldFilter("user_id", "==", user_id)).order_by(
+                "timestamp", direction=firestore.Query.DESCENDING)
         docs = ratings_ref.stream()
 
         ratings_list = []
@@ -554,7 +557,7 @@ def get_episode_ratings(user_id, show_id, season_number):
             query = db.collection("episode_ratings").where(
                 filter=FieldFilter("user_id", "==", user_id)).where(
                     filter=FieldFilter("show_id", "==", show_id)).where(
-                        filter=FieldFilter("season_number", "==", season_num))
+                        filter=FieldFilter("season_number", "==", season_num)).order_by("timestamp", direction=firestore.Query.DESCENDING)
                         
             docs = query.stream()
             
@@ -573,7 +576,7 @@ def get_episode_ratings(user_id, show_id, season_number):
 @teli.route("/shows/<show_id>/ratings", methods=["GET"])
 def get_show_ratings(show_id):
     try:
-        ratings_ref = db.collection("ratings").where("show_id", "==", show_id)
+        ratings_ref = db.collection("ratings").where("show_id", "==", show_id).order_by("timestamp", direction=firestore.Query.DESCENDING)
         docs = ratings_ref.stream()
 
         ratings_list = []

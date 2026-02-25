@@ -558,3 +558,244 @@ class TestAddRatingWithShowName:
             assert result["show_name_lowercase"] in ["breaking bad", "breaking point"]
             # Should NOT include "breaking dawn" from other user
             assert result["show_name_lowercase"] != "breaking dawn"
+
+
+class TestSearchRatedShowsTimestampSorting:
+    """Test timestamp sorting functionality for search user rated shows endpoint"""
+    
+    @pytest.fixture(autouse=True)
+    def setup_timestamp_test_data(self, get_db, get_client):
+        """Set up test data with controlled timestamps for sorting tests"""
+        self.db = get_db
+        self.client = get_client
+        self.test_user_ids = []
+        self.test_rating_ids = []
+        
+        # Create test user
+        user_data = {
+            'name': 'Timestamp Sort User',
+            'username': 'timestamp_sort_user',
+            'email': 'timestamp_sort@example.com',
+            'bio': 'Test user for timestamp sorting'
+        }
+        
+        response = self.client.post('/api/add_user', 
+                                   data=json.dumps(user_data),
+                                   content_type='application/json')
+        
+        assert response.status_code == 200
+        user_response = json.loads(response.data)
+        self.test_user_id = user_response['id']
+        self.test_user_ids.append(self.test_user_id)
+        
+        yield
+        
+        # Clean up test data
+        for rating_id in self.test_rating_ids:
+            try:
+                self.db.collection("ratings").document(rating_id).delete()
+            except Exception:
+                pass
+        
+        for user_id in self.test_user_ids:
+            try:
+                self.db.collection("users").document(user_id).delete()
+            except Exception:
+                pass
+    
+        """Test that within same relevance groups, results are sorted by timestamp (most recent first)"""
+        import time
+        from datetime import timedelta
+        
+        # Add ratings with same relevance but different timestamps
+        base_time = datetime.now(timezone.utc)
+        
+        # Create ratings with controlled timestamps by adding them directly to database
+        timestamp_ratings = [
+            {
+                'user_id': self.test_user_id,
+                'show_id': 'show_1',
+                'show_name_lowercase': 'breaking bad',  # Prefix match
+                'rating': 9,
+                'comment': 'Older breaking bad rating',
+                'timestamp': (base_time - timedelta(hours=3)).isoformat()  # 3 hours ago
+            },
+            {
+                'user_id': self.test_user_id,
+                'show_id': 'show_2',
+                'show_name_lowercase': 'breaking point',  # Prefix match
+                'rating': 7,
+                'comment': 'Newer breaking point rating',
+                'timestamp': (base_time - timedelta(hours=1)).isoformat()  # 1 hour ago
+            },
+            {
+                'user_id': self.test_user_id,
+                'show_id': 'show_3',
+                'show_name_lowercase': 'breaking dawn',  # Prefix match
+                'rating': 6,
+                'comment': 'Most recent breaking dawn rating',
+                'timestamp': base_time.isoformat()  # Most recent
+            }
+        ]
+        
+        # Add ratings directly to database to control timestamps
+        for rating_data in timestamp_ratings:
+            _, rating_ref = self.db.collection("ratings").add(rating_data)
+            self.test_rating_ids.append(rating_ref.id)
+        
+        # Search for "breaking" shows
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=breaking')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Should find 3 shows with "breaking" prefix
+        assert len(data["results"]) == 3
+        
+        # All should be prefix matches with "breaking"
+        for result in data["results"]:
+            assert result["show_name_lowercase"].startswith("breaking")
+        
+        # Within the same relevance group (all prefix matches), should be sorted by timestamp (most recent first)
+        timestamps = [result["timestamp"] for result in data["results"]]
+        
+        # Convert to datetime objects for comparison
+        datetime_objects = []
+        for timestamp in timestamps:
+            dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            datetime_objects.append(dt)
+        
+        # Verify descending order (most recent first)
+        for i in range(len(datetime_objects) - 1):
+            assert datetime_objects[i] >= datetime_objects[i + 1]
+        
+        # Verify specific order based on our test data
+        assert data["results"][0]["show_name_lowercase"] == "breaking dawn"  # Most recent
+        assert data["results"][1]["show_name_lowercase"] == "breaking point"  # 1 hour ago
+        assert data["results"][2]["show_name_lowercase"] == "breaking bad"  # 3 hours ago
+    
+    def test_search_rated_shows_relevance_priority_over_timestamp(self, get_client):
+        """Test that relevance takes priority over timestamp in sorting"""
+        import time
+        from datetime import timedelta
+        
+        base_time = datetime.now(timezone.utc)
+        
+        # Create ratings where a less relevant match has a more recent timestamp
+        mixed_relevance_ratings = [
+            {
+                'user_id': self.test_user_id,
+                'show_id': 'show_exact',
+                'show_name_lowercase': 'test',  # Exact match
+                'rating': 8,
+                'comment': 'Exact match - older',
+                'timestamp': (base_time - timedelta(hours=5)).isoformat()  # 5 hours ago (older)
+            },
+            {
+                'user_id': self.test_user_id,
+                'show_id': 'show_prefix',
+                'show_name_lowercase': 'test show',  # Prefix match
+                'rating': 7,
+                'comment': 'Prefix match - newer',
+                'timestamp': base_time.isoformat()  # Most recent
+            },
+            {
+                'user_id': self.test_user_id,
+                'show_id': 'show_contains',
+                'show_name_lowercase': 'my test series',  # Contains match
+                'rating': 6,
+                'comment': 'Contains match - middle',
+                'timestamp': (base_time - timedelta(hours=2)).isoformat()  # 2 hours ago
+            }
+        ]
+        
+        # Add ratings directly to database
+        for rating_data in mixed_relevance_ratings:
+            _, rating_ref = self.db.collection("ratings").add(rating_data)
+            self.test_rating_ids.append(rating_ref.id)
+        
+        # Search for "test"
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=test')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Should find 3 shows
+        assert len(data["results"]) == 3
+        
+        # Verify relevance-based sorting takes priority over timestamp
+        # Exact match should come first despite being older
+        assert data["results"][0]["show_name_lowercase"] == "test"  # Exact match (oldest timestamp)
+        
+        # Prefix and contains matches should be sorted by timestamp within their relevance groups
+        remaining_shows = data["results"][1:]
+        remaining_timestamps = [result["timestamp"] for result in remaining_shows]
+        
+        # Convert to datetime objects for comparison
+        remaining_datetime_objects = []
+        for timestamp in remaining_timestamps:
+            dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            remaining_datetime_objects.append(dt)
+        
+        # Within same relevance group, should be sorted by timestamp (most recent first)
+        for i in range(len(remaining_datetime_objects) - 1):
+            assert remaining_datetime_objects[i] >= remaining_datetime_objects[i + 1]
+    
+    def test_search_rated_shows_identical_timestamps_same_relevance(self, get_client):
+        """Test sorting when shows have identical timestamps and same relevance"""
+        # Create ratings with identical timestamps and same relevance
+        same_timestamp = datetime.now(timezone.utc).isoformat()
+        identical_ratings = [
+            {
+                'user_id': self.test_user_id,
+                'show_id': 'show_a',
+                'show_name_lowercase': 'alpha show',  # Prefix match
+                'rating': 8,
+                'comment': 'Alpha show rating',
+                'timestamp': same_timestamp
+            },
+            {
+                'user_id': self.test_user_id,
+                'show_id': 'show_b',
+                'show_name_lowercase': 'alpha series',  # Prefix match
+                'rating': 7,
+                'comment': 'Alpha series rating',
+                'timestamp': same_timestamp
+            },
+            {
+                'user_id': self.test_user_id,
+                'show_id': 'show_c',
+                'show_name_lowercase': 'alpha drama',  # Prefix match
+                'rating': 9,
+                'comment': 'Alpha drama rating',
+                'timestamp': same_timestamp
+            }
+        ]
+        
+        # Add ratings directly to database
+        for rating_data in identical_ratings:
+            _, rating_ref = self.db.collection("ratings").add(rating_data)
+            self.test_rating_ids.append(rating_ref.id)
+        
+        # Search for "alpha"
+        response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=alpha')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Should find 3 shows
+        assert len(data["results"]) == 3
+        
+        # All timestamps should be identical
+        timestamps = [result["timestamp"] for result in data["results"]]
+        assert all(ts == timestamps[0] for ts in timestamps)
+        
+        # All shows should be present
+        show_names = [result["show_name_lowercase"] for result in data["results"]]
+        assert "alpha show" in show_names
+        assert "alpha series" in show_names
+        assert "alpha drama" in show_names
+        
+        # All should have same relevance (prefix matches)
+        for result in data["results"]:
+            assert result["show_name_lowercase"].startswith("alpha")
