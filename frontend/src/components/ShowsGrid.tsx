@@ -118,7 +118,7 @@ export default function SearchResultsWithPagination({
               key={id || name}
               className="search-result-link"
             >
-              <div className="search-result">
+              <div className="search-result user-result">
                 <img
                   src={picture}
                   alt={name ?? ""}

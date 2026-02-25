@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useUser } from "./UserContext";
 import { GoogleLogin } from "@react-oauth/google";
+import { FiSearch } from "react-icons/fi";
 
 /* Navigation Bar */
 export default function Navbar() {
@@ -22,6 +23,10 @@ export default function Navbar() {
   const hasRecentSearches = recentSearches.length > 0;
   const shouldShowDropdown =
     isDropdownVisible && (searchInput.trim() !== "" || hasRecentSearches);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+
+
 
 
   const location = useLocation();
@@ -120,6 +125,12 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setIsMobileSearchOpen(false);
+  }, [location.pathname]);
+
+
   const handleGoogleSuccess = async (credentialResponse: any) => {
     if (!credentialResponse.credential) {
       setError("No credential received from Google");
@@ -195,175 +206,371 @@ export default function Navbar() {
 
   return (
     <nav className="nav">
-      <div className="nav-left">
-        {/* Links */}
+      {/* ================= MOBILE TOP BAR ================= */}
+      <div className="nav-mobile-top">
         <Link to="/" className="site-title">
           Teli
         </Link>
-        <ul className="nav-links">
+
+        <div className="nav-mobile-icons">
+          <button
+            className="icon-btn"
+            onClick={() => {
+              setIsMobileSearchOpen((prev) => !prev);
+              setIsMobileMenuOpen(false);
+            }}
+          >
+            <img
+              src="/features-search.png"
+              alt="Search"
+              className="icon-btn-img"
+            />
+          </button>
+
+          <button
+            className="icon-btn"
+            onClick={() => {
+              setIsMobileMenuOpen((prev) => !prev);
+              setIsMobileSearchOpen(false);
+            }}
+          >
+            <img
+              src="/hamburger-menu.png"
+              alt="Hamburger"
+              className="icon-btn-img"
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* ================= MOBILE SEARCH ================= */}
+      {isMobileSearchOpen && (
+        <div className="nav-mobile-search">
+          <div ref={dropdownRef} className="nav-search mobile-search">
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search shows, users..."
+              value={searchInput}
+              ref={searchInputRef}
+              onChange={(e) => {
+                setSearchInput(e.target.value);
+                setSelectedIndex(-1);
+                setIsDropdownVisible(true);
+              }}
+              onKeyDown={handleKeyDown}
+              onFocus={() => {
+                setRecentSearches(getRecentSearches());
+                setIsDropdownVisible(true);
+              }}
+            />
+
+            {shouldShowDropdown && (
+              <div className="search-dropdown visible">
+                {/* ---------- YOUR EXISTING DROPDOWN CODE (UNCHANGED) ---------- */}
+
+                {searchInput.trim() === "" ? (
+                  <div className="search-dropdown-toggle-container">
+                    {recentSearches.length > 0 && (
+                      <button
+                        className="search-clear-btn"
+                        onMouseDown={() => {
+                          localStorage.removeItem(RECENT_SEARCHES_KEY);
+                          setRecentSearches([]);
+                          setIsDropdownVisible(false);
+                        }}
+                      >
+                        Clear Recent Searches
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="search-dropdown-toggle-container">
+                    <div className="search-dropdown-toggle">
+                      <button
+                        onClick={() => setSearchType("shows")}
+                        className="search-dropdown-toggle-button"
+                      >
+                        Shows
+                      </button>
+                      <button
+                        onClick={() => setSearchType("users")}
+                        className="search-dropdown-toggle-button"
+                      >
+                        Users
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <ul className="search-dropdown-list-container">
+                  {searchInput.trim() === "" && recentSearches.length > 0
+                    ? recentSearches.map((query) => (
+                        <li
+                          key={query}
+                          className="search-option"
+                          onMouseDown={() => {
+                            setSearchInput(query);
+                            saveRecentSearch(query);
+                            navigate(
+                              `/search?query=${encodeURIComponent(
+                                query,
+                              )}&type=${searchType}`,
+                            );
+                          }}
+                        >
+                          <span className="search-option-show-name">
+                            🔍 {query}
+                          </span>
+                        </li>
+                      ))
+                    : suggestions.length > 0
+                      ? suggestions.map((s, index) => {
+                          const isSelected = index === selectedIndex;
+                          const img =
+                            searchType === "shows"
+                              ? s.poster_path?.startsWith("http")
+                                ? s.poster_path
+                                : `https://image.tmdb.org/t/p/w92${s.poster_path}`
+                              : s.picture
+                                ? s.picture.slice(0, -4) + "1080"
+                                : "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg";
+
+                          return (
+                            <li
+                              key={s.id}
+                              onMouseDown={() => handleSelect(s.name, s.id)}
+                              className="search-option"
+                              style={{
+                                backgroundColor: isSelected
+                                  ? "#f0f0f0"
+                                  : "#fff",
+                              }}
+                              onMouseEnter={() => setSelectedIndex(index)}
+                            >
+                              <img
+                                src={img}
+                                alt={s.name}
+                                className={
+                                  searchType === "shows"
+                                    ? "search-suggestions-show"
+                                    : "search-suggestions-user"
+                                }
+                              />
+                              <span className="search-option-show-name">
+                                {s.name}
+                              </span>
+                            </li>
+                          );
+                        })
+                      : searchInput.trim() && (
+                          <li className="search-no-results">
+                            No results found.
+                          </li>
+                        )}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ================= MOBILE MENU ================= */}
+      {isMobileMenuOpen && (
+        <ul className="mobile-menu">
           <CustomLink to="/browse">Browse</CustomLink>
+
           {userId && (
             <>
               <CustomLink to="/activity">Activity</CustomLink>
               <CustomLink to="/profile">Profile</CustomLink>
+
+              <li>
+                <button onClick={handleLogout} className="logout-btn">
+                  Logout
+                </button>
+              </li>
             </>
           )}
+
+          {!userId && (
+            <li className="mobile-google">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                theme="outline"
+                size="large"
+                text="signin_with"
+                shape="rectangular"
+                width="100%"
+              />
+            </li>
+          )}
         </ul>
-      </div>
+      )}
 
-      {/* Search Bar */}
-      <div className="nav-right">
-        <div ref={dropdownRef} className="nav-search">
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search shows, users..."
-            value={searchInput}
-            ref={searchInputRef}
-            onChange={(e) => {
-              setSearchInput(e.target.value);
-              setSelectedIndex(-1);
-              setIsDropdownVisible(true);
-            }}
-            onKeyDown={handleKeyDown}
-            onFocus={() => {
-              setRecentSearches(getRecentSearches());
-              setIsDropdownVisible(true);
-            }}
-          />
+      {/* ================= DESKTOP (UNCHANGED) ================= */}
+      <div className="nav-desktop">
+        <div className="nav-left">
+          <Link to="/" className="site-title">
+            Teli
+          </Link>
 
-          {shouldShowDropdown && (
-            <div className="search-dropdown visible">
-              {/* Toggle Slider */}
-              {searchInput.trim() === "" ? (
-                <div className="search-dropdown-toggle-container">
-                  {recentSearches.length > 0 && (
-                    <button
-                      className="search-clear-btn"
-                      onMouseDown={() => {
-                        localStorage.removeItem(RECENT_SEARCHES_KEY);
-                        setRecentSearches([]);
-                        setIsDropdownVisible(false);
-                      }}
-                    >
-                      Clear Recent Searches
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="search-dropdown-toggle-container">
-                  <div className="search-dropdown-toggle">
-                    <button
-                      onClick={() => setSearchType("shows")}
-                      className="search-dropdown-toggle-button"
-                      style={{
-                        backgroundColor:
-                          searchType === "shows" ? "#007bff" : "transparent",
-                        color: searchType === "shows" ? "#fff" : "#000",
-                        fontWeight: searchType === "shows" ? "bold" : "normal",
-                      }}
-                    >
-                      Shows
-                    </button>
-                    <button
-                      onClick={() => setSearchType("users")}
-                      className="search-dropdown-toggle-button"
-                      style={{
-                        backgroundColor:
-                          searchType === "users" ? "#007bff" : "transparent",
-                        color: searchType === "users" ? "#fff" : "#000",
-                        fontWeight: searchType === "users" ? "bold" : "normal",
-                      }}
-                    >
-                      Users
-                    </button>
-                  </div>
-                </div>
-              )}
-              {/* Suggestions */}
-              <ul className="search-dropdown-list-container">
-                {searchInput.trim() === "" && recentSearches.length > 0
-                  ? recentSearches.map((query, index) => (
-                      <li
-                        key={query}
-                        className="search-option"
+          <ul className="nav-links">
+            <CustomLink to="/browse">Browse</CustomLink>
+            {userId && (
+              <>
+                <CustomLink to="/activity">Activity</CustomLink>
+                <CustomLink to="/profile">Profile</CustomLink>
+              </>
+            )}
+          </ul>
+        </div>
+
+        <div className="nav-right">
+          {/* ===== EXISTING DESKTOP SEARCH ===== */}
+          <div ref={dropdownRef} className="nav-search">
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search shows, users..."
+              value={searchInput}
+              ref={searchInputRef}
+              onChange={(e) => {
+                setSearchInput(e.target.value);
+                setSelectedIndex(-1);
+                setIsDropdownVisible(true);
+              }}
+              onKeyDown={handleKeyDown}
+              onFocus={() => {
+                setRecentSearches(getRecentSearches());
+                setIsDropdownVisible(true);
+              }}
+            />
+            {shouldShowDropdown && (
+              <div className="search-dropdown visible">
+                {searchInput.trim() === "" ? (
+                  <div className="search-dropdown-toggle-container">
+                    {recentSearches.length > 0 && (
+                      <button
+                        className="search-clear-btn"
                         onMouseDown={() => {
-                          setSearchInput(query);
-                          saveRecentSearch(query);
-                          navigate(
-                            `/search?query=${encodeURIComponent(
-                              query
-                            )}&type=${searchType}`
-                          );
+                          localStorage.removeItem(RECENT_SEARCHES_KEY);
+                          setRecentSearches([]);
+                          setIsDropdownVisible(false);
                         }}
                       >
-                        <span className="search-option-show-name">
-                          🔍 {query}
-                        </span>
-                      </li>
-                    ))
-                  : suggestions.length > 0
-                  ? suggestions.map((s, index) => {
-                      const isSelected = index === selectedIndex;
-                      const img =
-                        searchType === "shows"
-                          ? s.poster_path?.startsWith("http")
-                            ? s.poster_path
-                            : `https://image.tmdb.org/t/p/w92${s.poster_path}`
-                          : s.picture
-                          ? s.picture.slice(0, -4) + "1080"
-                          : "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg";
+                        Clear Recent Searches
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="search-dropdown-toggle-container">
+                    <div className="search-dropdown-toggle">
+                      <button
+                        onClick={() => setSearchType("shows")}
+                        className="search-dropdown-toggle-button"
+                      >
+                        Shows
+                      </button>
+                      <button
+                        onClick={() => setSearchType("users")}
+                        className="search-dropdown-toggle-button"
+                      >
+                        Users
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-                      return (
+                <ul className="search-dropdown-list-container">
+                  {searchInput.trim() === "" && recentSearches.length > 0
+                    ? recentSearches.map((query) => (
                         <li
-                          key={s.id}
-                          onMouseDown={() => handleSelect(s.name, s.id)}
+                          key={query}
                           className="search-option"
-                          style={{
-                            backgroundColor: isSelected ? "#f0f0f0" : "#fff",
+                          onMouseDown={() => {
+                            setSearchInput(query);
+                            saveRecentSearch(query);
+                            navigate(
+                              `/search?query=${encodeURIComponent(
+                                query,
+                              )}&type=${searchType}`,
+                            );
                           }}
-                          onMouseEnter={() => setSelectedIndex(index)}
                         >
-                          <img
-                            src={img}
-                            alt={s.name}
-                            className={
-                              searchType === "shows"
-                                ? "search-suggestions-show"
-                                : "search-suggestions-user"
-                            }
-                          />
                           <span className="search-option-show-name">
-                            {s.name}
+                            🔍 {query}
                           </span>
                         </li>
-                      );
-                    })
-                  : searchInput.trim() && (
-                      <li className="search-no-results">No results found.</li>
-                    )}
-              </ul>
+                      ))
+                    : suggestions.length > 0
+                      ? suggestions.map((s, index) => {
+                          const isSelected = index === selectedIndex;
+                          const img =
+                            searchType === "shows"
+                              ? s.poster_path?.startsWith("http")
+                                ? s.poster_path
+                                : `https://image.tmdb.org/t/p/w92${s.poster_path}`
+                              : s.picture
+                                ? s.picture.slice(0, -4) + "1080"
+                                : "https://static.vecteezy.com/system/resources/previews/005/544/718/non_2x/profile-icon-design-free-vector.jpg";
+
+                          return (
+                            <li
+                              key={s.id}
+                              onMouseDown={() => handleSelect(s.name, s.id)}
+                              className="search-option"
+                              style={{
+                                backgroundColor: isSelected
+                                  ? "#f0f0f0"
+                                  : "#fff",
+                              }}
+                              onMouseEnter={() => setSelectedIndex(index)}
+                            >
+                              <img
+                                src={img}
+                                alt={s.name}
+                                className={
+                                  searchType === "shows"
+                                    ? "search-suggestions-show"
+                                    : "search-suggestions-user"
+                                }
+                              />
+                              <span className="search-option-show-name">
+                                {s.name}
+                              </span>
+                            </li>
+                          );
+                        })
+                      : searchInput.trim() && (
+                          <li className="search-no-results">
+                            No results found.
+                          </li>
+                        )}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {!userId ? (
+            <div className="teli-google-btn">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                theme="outline"
+                size="large"
+                text="signin_with"
+                shape="rectangular"
+                width="200"
+              />
             </div>
+          ) : (
+            <button onClick={handleLogout} className="logout-btn">
+              Logout
+            </button>
           )}
         </div>
-        {/* Auth Button */}
-        {!userId ? (
-          <div className="teli-google-btn">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              theme="outline"
-              size="large"
-              text="signin_with"
-              shape="rectangular"
-              width="200"
-            />
-          </div>
-        ) : (
-          <button onClick={handleLogout} className="logout-btn">
-            Logout
-          </button>
-        )}
       </div>
     </nav>
   );

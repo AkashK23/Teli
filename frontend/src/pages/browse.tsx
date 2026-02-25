@@ -33,6 +33,7 @@ export default function Browse() {
   const [watchStatus, setWatchStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [showsLoading, setShowsLoading] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const isFirstLoad = useRef(true);
 
@@ -303,8 +304,20 @@ export default function Browse() {
 
   return (
     <div className="browse-container">
+      {showMobileFilters && (
+        <div
+          className="filters-overlay"
+          onClick={() => setShowMobileFilters(false)}
+        />
+      )}
       {/* Sidebar */}
-      <div className="filters-sidebar">
+      <div className={`filters-sidebar ${showMobileFilters ? "open" : ""}`}>
+        <button
+          className="close-filters"
+          onClick={() => setShowMobileFilters(false)}
+        >
+          ✕
+        </button>
         <h3 style={{ marginBottom: "1rem" }}>Filters</h3>
         <div className="filters-column">
           {/* <div className="filter-group">
@@ -398,6 +411,13 @@ export default function Browse() {
           </div>
         </div>
       </div>
+
+      <button
+        className="mobile-filter-btn"
+        onClick={() => setShowMobileFilters(true)}
+      >
+        Filters
+      </button>
 
       {/* Show Grid */}
       <div className="shows-grid-wrapper">
