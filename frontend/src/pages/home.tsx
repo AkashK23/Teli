@@ -333,8 +333,8 @@ export default function Home() {
             {/* Slide 0: Teli Title Card */}
             <div className="hero-banner-slide hero-banner-teli">
               <img
-                src="/TV Static Background.jpg" // Replace with your image path or URL
-                alt="TV Static Background"
+                src="/Teli Slide.jpg" // Replace with your image path or URL
+                alt="Teli Slide"
                 className="hero-background-img"
               />
               <div className="hero-text">
@@ -380,7 +380,7 @@ export default function Home() {
         </div>
 
         {/* Staff Picks Section */}
-        <div className="staff-picks-container">
+        <div className="staff-picks-container desktop-only">
           <h2 className="staff-picks-title">Staff Picks</h2>
 
           <ul className="staff-list">
@@ -417,6 +417,34 @@ export default function Home() {
         </div>
         <p className="watch-ticker-label">Shows</p>
       </div> */}
+
+      {/* Mobile Staff Picks */}
+      <div className="home-sections-row">
+        <div className="staff-mobile home-section">
+          <h1 className="headings">Staff Picks</h1>
+
+          <div className="scroll-container">
+            {staffPicks.map((show) => (
+              <Link key={show.id} to={`/show/${show.id}`} className="show-link">
+                <ShowTooltip
+                  show={{
+                    name: show.name,
+                    first_air_date: show.first_air_date,
+                    overview: show.overview,
+                    rating: show.rating,
+                  }}
+                >
+                  <img
+                    src={show.image_url}
+                    alt={show.name}
+                    className="show-icon home-icon"
+                  />
+                </ShowTooltip>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
 
       <div className="home-sections-row">
         {/* You're Watching */}
@@ -524,7 +552,7 @@ export default function Home() {
         {userRatingsWithImages.length > 0 ? (
           <div className="review-container">
             <Link to="/activity?tab=user" className="heading-link">
-              <h3 className="headings">Your Reviews</h3>
+              <h1 className="headings">Your Reviews</h1>
             </Link>
             <div className="review-cards-container">
               {userRatingsWithImages.map((rating: any) => (
@@ -559,19 +587,16 @@ export default function Home() {
           <div className="home-section">
             <h1 className="headings">Your Reviews</h1>
             <div className="scroll-container">
-              <p>
-                No shows reviewed
-              </p>
+              <p>No shows reviewed</p>
             </div>
           </div>
         )}
 
         {/* Following Reviews */}
-        {ratingsWithImages.length > 0 ? 
-        (
+        {ratingsWithImages.length > 0 ? (
           <div className="review-container">
             <Link to="/activity?tab=following" className="heading-link">
-              <h3 className="headings">Following Reviews</h3>
+              <h1 className="headings">Following Reviews</h1>
             </Link>
             <div className="review-cards-container">
               {ratingsWithImages.map((rating: any) => (
@@ -593,7 +618,7 @@ export default function Home() {
                 />
               ))}
             </div>
-            
+
             {/* <div className="see-more-container">
               <button
                 className="see-more-button"
@@ -603,15 +628,13 @@ export default function Home() {
               </button>
             </div> */}
           </div>
-          ) : (
-              <div className="home-section">
-                <h1 className="headings">Your Reviews</h1>
-                <div className="scroll-container">
-                  <p>
-                    No reviews in your feed
-                  </p>
-                </div>
-              </div>
+        ) : (
+          <div className="home-section">
+            <h1 className="headings">Your Reviews</h1>
+            <div className="scroll-container">
+              <p>No reviews in your feed</p>
+            </div>
+          </div>
         )}
       </div>
 
