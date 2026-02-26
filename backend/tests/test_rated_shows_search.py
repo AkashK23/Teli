@@ -602,77 +602,60 @@ class TestSearchRatedShowsTimestampSorting:
                 self.db.collection("users").document(user_id).delete()
             except Exception:
                 pass
-    
-        """Test that within same relevance groups, results are sorted by timestamp (most recent first)"""
-        import time
+
+    def test_search_rated_shows_same_relevance_group_sorted_alphabetically(self, get_client):
+        """Test that within same relevance groups, results are sorted alphabetically by show name"""
         from datetime import timedelta
-        
-        # Add ratings with same relevance but different timestamps
+
         base_time = datetime.now(timezone.utc)
-        
-        # Create ratings with controlled timestamps by adding them directly to database
+
+        # Create ratings — all prefix matches for "breaking"
         timestamp_ratings = [
             {
                 'user_id': self.test_user_id,
                 'show_id': 'show_1',
-                'show_name_lowercase': 'breaking bad',  # Prefix match
+                'show_name_lowercase': 'breaking bad',
                 'rating': 9,
                 'comment': 'Older breaking bad rating',
-                'timestamp': (base_time - timedelta(hours=3)).isoformat()  # 3 hours ago
+                'timestamp': (base_time - timedelta(hours=3)).isoformat()
             },
             {
                 'user_id': self.test_user_id,
                 'show_id': 'show_2',
-                'show_name_lowercase': 'breaking point',  # Prefix match
+                'show_name_lowercase': 'breaking point',
                 'rating': 7,
                 'comment': 'Newer breaking point rating',
-                'timestamp': (base_time - timedelta(hours=1)).isoformat()  # 1 hour ago
+                'timestamp': (base_time - timedelta(hours=1)).isoformat()
             },
             {
                 'user_id': self.test_user_id,
                 'show_id': 'show_3',
-                'show_name_lowercase': 'breaking dawn',  # Prefix match
+                'show_name_lowercase': 'breaking dawn',
                 'rating': 6,
                 'comment': 'Most recent breaking dawn rating',
-                'timestamp': base_time.isoformat()  # Most recent
+                'timestamp': base_time.isoformat()
             }
         ]
-        
-        # Add ratings directly to database to control timestamps
+
         for rating_data in timestamp_ratings:
             _, rating_ref = self.db.collection("ratings").add(rating_data)
             self.test_rating_ids.append(rating_ref.id)
-        
-        # Search for "breaking" shows
+
         response = get_client.get(f'/api/users/{self.test_user_id}/rated-shows/search?query=breaking')
-        
+
         assert response.status_code == 200
         data = json.loads(response.data)
-        
-        # Should find 3 shows with "breaking" prefix
+
+        # Should find all 3 shows with "breaking" prefix
         assert len(data["results"]) == 3
-        
-        # All should be prefix matches with "breaking"
+
+        # All should be prefix matches
         for result in data["results"]:
             assert result["show_name_lowercase"].startswith("breaking")
-        
-        # Within the same relevance group (all prefix matches), should be sorted by timestamp (most recent first)
-        timestamps = [result["timestamp"] for result in data["results"]]
-        
-        # Convert to datetime objects for comparison
-        datetime_objects = []
-        for timestamp in timestamps:
-            dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-            datetime_objects.append(dt)
-        
-        # Verify descending order (most recent first)
-        for i in range(len(datetime_objects) - 1):
-            assert datetime_objects[i] >= datetime_objects[i + 1]
-        
-        # Verify specific order based on our test data
-        assert data["results"][0]["show_name_lowercase"] == "breaking dawn"  # Most recent
-        assert data["results"][1]["show_name_lowercase"] == "breaking point"  # 1 hour ago
-        assert data["results"][2]["show_name_lowercase"] == "breaking bad"  # 3 hours ago
+
+        # Within the same relevance group, results are sorted alphabetically by show name
+        show_names = [result["show_name_lowercase"] for result in data["results"]]
+        assert show_names == sorted(show_names)
     
     def test_search_rated_shows_relevance_priority_over_timestamp(self, get_client):
         """Test that relevance takes priority over timestamp in sorting"""

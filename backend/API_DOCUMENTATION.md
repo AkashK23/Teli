@@ -33,6 +33,7 @@ http://localhost:5001/api
   - [Get User](#get-user)
   - [Get All Users](#get-all-users)
   - [Search Users](#search-users)
+  - [Get Popular Users](#get-popular-users)
 - [Social Endpoints](#social-endpoints)
   - [Follow User](#follow-user)
   - [Unfollow User](#unfollow-user)
@@ -1355,6 +1356,100 @@ curl -X GET "http://localhost:5001/users/search?query=john&page=2&limit=10"
     "error": "Missing 'query' parameter"
   }
   ```
+- `400 Bad Request`: Invalid page parameter
+  ```json
+  {
+    "error": "Page parameter must be a positive integer"
+  }
+  ```
+- `400 Bad Request`: Invalid limit parameter
+  ```json
+  {
+    "error": "Limit parameter must be a positive integer"
+  }
+  ```
+- `500 Internal Server Error`: Database error
+  ```json
+  {
+    "error": "Database error occurred"
+  }
+  ```
+
+### Get Popular Users
+
+Get the most popular users by followers count. Users are sorted by follower count (descending), then by username (ascending) for ties.
+
+**URL**: `/users/popular`
+
+**Method**: `GET`
+
+**Query Parameters**:
+
+| Parameter | Type   | Required | Description                                |
+|-----------|--------|----------|--------------------------------------------|
+| page      | number | No       | Page number for pagination (default: 1)    |
+| limit     | number | No       | Results per page (default: 10, max: 50)    |
+
+**Example Request**:
+
+```bash
+curl -X GET "http://localhost:5001/users/popular"
+```
+
+**Example Request with Pagination**:
+
+```bash
+curl -X GET "http://localhost:5001/users/popular?page=2&limit=5"
+```
+
+**Example Response**:
+
+```json
+{
+  "popular_users": [
+    {
+      "id": "user123",
+      "name": "Alice Johnson",
+      "username": "alice",
+      "bio": "TV enthusiast and critic",
+      "picture": "https://example.com/avatar1.jpg",
+      "follower_count": 1250,
+      "created_at": "2023-01-15T10:30:00Z"
+    },
+    {
+      "id": "user456",
+      "name": "Bob Smith",
+      "username": "bob",
+      "bio": "Movie and TV show reviewer",
+      "picture": "https://example.com/avatar2.jpg",
+      "follower_count": 980,
+      "created_at": "2023-02-20T14:15:30Z"
+    },
+    {
+      "id": "user789",
+      "name": "Charlie Brown",
+      "username": "charlie",
+      "bio": "Binge watcher extraordinaire",
+      "picture": "https://example.com/avatar3.jpg",
+      "follower_count": 750,
+      "created_at": "2023-03-10T09:45:15Z"
+    }
+  ],
+  "total_users": 25,
+  "total_pages": 3,
+  "current_page": 1,
+  "limit": 10
+}
+```
+
+**Sorting Behavior**:
+- Users are sorted by follower count in descending order (most followers first)
+- For users with the same follower count, they are sorted by username in ascending order (alphabetical)
+- Only users who have at least 1 follower are included in the results
+- Sensitive fields (email, password, lowercase fields) are automatically removed from results
+
+**Error Responses**:
+
 - `400 Bad Request`: Invalid page parameter
   ```json
   {
