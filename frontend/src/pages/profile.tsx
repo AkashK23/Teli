@@ -291,59 +291,83 @@ export default function Profile() {
 
       <div className="profile-content">
         {/* Currently Watching */}
-        <div className="favorite-shows">
-          <h3 className="shows-label">Currently Watching</h3>
-          <div className="favorite-shows-images">
-            {currentlyWatchingWithImages.map((show) => (
-              <Link
-                to={`/show/${show.show_id}`}
-                key={show.show_id}
-                className="show-link"
-              >
-                <ShowTooltip
-                  show={{
-                    name: show.name,
-                    first_air_date: show.first_air_date,
-                    overview: show.overview,
-                    rating: show.rating,
-                  }}
+        {currentlyWatchingWithImages.length > 0 ? (
+          <div className="favorite-shows">
+            <h3 className="shows-label">Currently Watching</h3>
+            <div className="favorite-shows-images">
+              {currentlyWatchingWithImages.map((show) => (
+                <Link
+                  to={`/show/${show.show_id}`}
+                  key={show.show_id}
+                  className="show-link"
                 >
-                  <img
-                    src={show.image_url}
-                    alt={show.name}
-                    className="show-icon small-icon"
-                  />
-                </ShowTooltip>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent Reviews */}
-        <div className="favorite-shows">
-          <h3 className="shows-label">Recent Reviews</h3>
-          <div className="user-ratings">
-            <div className="review-cards-container">
-              {ratingsWithImages.map((rating: any) => (
-                <ReviewCard
-                  key={`${rating.user_id}-${rating.show_id}`}
-                  showId={rating.show_id}
-                  userId={rating.user_id}
-                  userName={rating.user_name}
-                  userProfilePic={rating.user_profile_pic}
-                  comment={rating.comment}
-                  rating={rating.rating}
-                  showImageUrl={rating.image_url}
-                  showName={rating.show_name}
-                  overview={rating.overview}
-                  averageRating={rating.average_rating}
-                  firstAirDate={rating.first_air_date}
-                  reviewDate={rating.review_date}
-                />
+                  <ShowTooltip
+                    show={{
+                      name: show.name,
+                      first_air_date: show.first_air_date,
+                      overview: show.overview,
+                      rating: show.rating,
+                    }}
+                  >
+                    <img
+                      src={show.image_url}
+                      alt={show.name}
+                      className="show-icon small-icon"
+                    />
+                  </ShowTooltip>
+                </Link>
               ))}
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="home-section">
+            <h1 className="headings">You're Watching</h1>
+            <div className="scroll-container">
+              <p>
+                Start watching shows <br />
+                to see them here!
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Recent Reviews */}
+        {ratingsWithImages.length > 0 ? (
+          <div className="favorite-shows">
+            <h3 className="shows-label">Recent Reviews</h3>
+            <div className="user-ratings">
+              <div className="review-cards-container">
+                {ratingsWithImages.map((rating: any) => (
+                  <ReviewCard
+                    key={`${rating.user_id}-${rating.show_id}`}
+                    showId={rating.show_id}
+                    userId={rating.user_id}
+                    userName={rating.user_name}
+                    userProfilePic={rating.user_profile_pic}
+                    comment={rating.comment}
+                    rating={rating.rating}
+                    showImageUrl={rating.image_url}
+                    showName={rating.show_name}
+                    overview={rating.overview}
+                    averageRating={rating.average_rating}
+                    firstAirDate={rating.first_air_date}
+                    reviewDate={rating.review_date}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="home-section">
+            <h1 className="headings">Recent Reviews</h1>
+            <div className="scroll-container">
+              <p>
+                Start watching shows <br />
+                to see them here!
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

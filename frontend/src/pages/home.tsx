@@ -446,9 +446,10 @@ export default function Home() {
         </div>
       </div>
 
+      
       <div className="home-sections-row">
         {/* You're Watching */}
-        {currentlyWatchingWithImages.length > 0 && (
+        {currentlyWatchingWithImages.length > 0 ? (
           <div className="home-section">
             <h1 className="headings">You're Watching</h1>
             <div className="scroll-container">
@@ -476,7 +477,17 @@ export default function Home() {
               ))}
             </div>
           </div>
-        )}
+        ) : (
+          <div className="home-section">
+            <h1 className="headings">You're Watching</h1>
+            <div className="scroll-container">
+              <p>
+                Start watching shows <br />
+                to see them here!
+              </p>
+            </div>
+          </div>
+        )} 
 
         {/* Popular This Week */}
         {/* {popularShows.length > 0 && (
@@ -630,7 +641,7 @@ export default function Home() {
           </div>
         ) : (
           <div className="home-section">
-            <h1 className="headings">Your Reviews</h1>
+            <h1 className="headings">Following Reviews</h1>
             <div className="scroll-container">
               <p>No reviews in your feed</p>
             </div>
