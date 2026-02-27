@@ -16,9 +16,22 @@ import YourShows from "./pages/yourShows";
 import { Routes, Route } from "react-router-dom";
 import { UserProvider } from "./UserContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,  // 5 minutes default
+      gcTime: 30 * 60 * 1000,    // 30 minutes in memory
+      retry: 1,
+    },
+  },
+});
 
 function App() {
   return (
+    <QueryClientProvider client={queryClient}>
       <UserProvider>
           <Navbar />
           <div>
@@ -37,11 +50,13 @@ function App() {
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/editprofile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
-              
-              
+
+
             </Routes>
           </div>
       </UserProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   );
 }
 

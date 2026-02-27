@@ -1,180 +1,68 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useNavigate, Link, useParams } from "react-router-dom";
 import { useUser } from "../UserContext";
-
 import ReviewCard from "../components/ReviewCard";
-import ShowTooltip from "../components/ShowTooltip";
+import ShowPosterCard from "../components/ShowPosterCard";
 import { formatRelativeTime } from "../components/formatRelativeTime";
+import {
+  useUserProfile,
+  useUserRatings,
+  useUserWatchList,
+  useUserFollowers,
+  useUserFollowing,
+} from "../hooks/useUser";
+import { useFollowUser, useUnfollowUser } from "../hooks/useMutations";
 
 export default function Profile() {
-  const url = process.env.REACT_APP_API_URL;
   const { id } = useParams<{ id?: string }>();
   const loggedInUserId = useUser().userId;
   const navigate = useNavigate();
 
   const user_id = id || loggedInUserId;
 
-  const [userInfo, setUserInfo] = useState<any>(null);
-  const [showNumber, setShowNumber] = useState(0);
-  const [following, setFollowing] = useState(0);
-  const [followers, setFollowers] = useState(0);
-  const [ratings, setRatings] = useState<any[]>([]);
-  const [ratingsWithImages, setRatingsWithImages] = useState<any[]>([]);
-  const [currentlyWatching, setCurrentlyWatching] = useState<any[]>([]);
-  const [currentlyWatchingWithImages, setCurrentlyWatchingWithImages] =
-    useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const { data: userInfo, isLoading: userLoading } = useUserProfile(user_id);
+  const { data: w2wList = [] } = useUserWatchList(user_id, "want_to_watch");
+  const { data: cwList = [] } = useUserWatchList(user_id, "currently_watching");
+  const { data: watchedList = [] } = useUserWatchList(user_id, "watched");
+  const { data: followingList = [], isLoading: followingLoading } =
+    useUserFollowing(user_id);
+  const { data: followersList = [], isLoading: followersLoading } =
+    useUserFollowers(user_id);
+  const { data: loggedInFollowing = [] } = useUserFollowing(loggedInUserId);
+  const { data: ratings = [], isLoading: ratingsLoading } =
+    useUserRatings(user_id);
 
-  useEffect(() => {
-    const fetchProfileData = async () => {
-      try {
-        // Fetch user info
-        const userRes = await axios.get(`${url}/user/${user_id}`);
-        console.log(userRes.data)
-        setUserInfo(userRes.data);
+  const followUserMutation = useFollowUser();
+  const unfollowUserMutation = useUnfollowUser();
 
-        console.log(user_id)
-        console.log(loggedInUserId)
-        console.log(id)
+  const loading =
+    userLoading || followingLoading || followersLoading || ratingsLoading;
 
-        // Fetch show number
-        const W2Wres = await axios.get(`${url}/users/${user_id}/want_to_watch`);
-        const CWres = await axios.get(`${url}/users/${user_id}/currently_watching`);
-        const Wres = await axios.get(`${url}/users/${user_id}/watched`);
-        setShowNumber(W2Wres.data.length + CWres.data.length + Wres.data.length)
+  const showNumber =
+    (w2wList as any[]).length +
+    (cwList as any[]).length +
+    (watchedList as any[]).length;
 
-        // Fetch followers/following counts
-        const followingRes = await axios.get(
-          `${url}/users/${user_id}/following`
-        );
-        setFollowing(followingRes.data.following.length);
+  const following = (followingList as any[]).length;
+  const followers = (followersList as any[]).length;
 
-        const followersRes = await axios.get(
-          `${url}/users/${user_id}/followers`
-        );
-        setFollowers(followersRes.data.followers.length);
+  const isFollowing =
+    loggedInUserId && loggedInUserId !== user_id
+      ? (loggedInFollowing as string[]).some((uid) => uid === user_id)
+      : false;
 
-        // Check if logged-in user follows this profile
-        if (loggedInUserId && loggedInUserId !== user_id) {
-          const loggedInFollowingRes = await axios.get(
-            `${url}/users/${loggedInUserId}/following`
-          );
-          const followingList = loggedInFollowingRes.data.following;
-          setIsFollowing(followingList.some((u: any) => u === user_id));
-        }
-
-        // Fetch ratings
-        const ratingsRes = await axios.get(`${url}/users/${user_id}/ratings`);
-        setRatings(ratingsRes.data);
-
-        // Fetch currently watching
-        const currentlyWatchingRes = await axios.get(
-          `${url}/users/${user_id}/currently_watching`
-        );
-        setCurrentlyWatching(currentlyWatchingRes.data);
-
-        // Ratings with images
-        const ratingsWithImagesRes = await Promise.all(
-          ratingsRes.data.map(async (rating: any) => {
-            try {
-              const showRes = await axios.get(`${url}/shows/${rating.show_id}`);
-              const showData = showRes.data;
-              console.log(showData)
-              const imagePath = showData.poster_path;
-              const imageUrl = imagePath?.startsWith("http")
-                ? imagePath
-                : `https://image.tmdb.org/t/p/w500${imagePath}`;
-              const userReviewInfo = await axios.get(`${url}/user/${rating.user_id}`);
-               const ratingRes = await axios.get(
-                 `${url}/shows/${rating.show_id}/average-rating`
-               );
-              return {
-                ...rating,
-                image_url:
-                  showData?.image_url || showData?.thumbnail || imageUrl,
-                user_name: userReviewInfo.data.name,
-                user_id: userReviewInfo.data.id,
-                user_profile_pic: userReviewInfo.data.picture,
-                show_name: showData.name,
-                overview: showData.overview,
-                first_air_date: showData.first_air_date,
-                average_rating: ratingRes.data.average_rating,
-                review_date: formatRelativeTime(rating.timestamp),
-              };
-            } catch {
-              return { ...rating, image_url: null };
-            }
-          })
-        );
-        setRatingsWithImages(ratingsWithImagesRes.slice(0,3));
-
-        // Currently watching with images
-        const currentlyWatchingWithImagesRes = await Promise.all(
-          currentlyWatchingRes.data.map(async (show: any) => {
-            try {
-              const showRes = await axios.get(`${url}/shows/${show.show_id}`);
-              const showData = showRes.data;
-              const imagePath = showData.poster_path;
-              const imageUrl = imagePath?.startsWith("http")
-                ? imagePath
-                : `https://image.tmdb.org/t/p/w500${imagePath}`;
-              const ratingRes = await axios.get(
-                `${url}/shows/${show.show_id}/average-rating`
-              );
-              return {
-                ...show,
-                image_url:
-                  showData?.image_url || showData?.thumbnail || imageUrl,
-                name: showData.name || show.show_name,
-                rating: ratingRes.data.average_rating,
-                overview: showData.overview,
-                first_air_date: showData.first_air_date,
-              };
-            } catch {
-              return { ...show, image_url: null };
-            }
-          })
-        );
-        setCurrentlyWatchingWithImages(currentlyWatchingWithImagesRes);
-      } catch (err) {
-        console.error("Failed to fetch profile data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfileData();
-  }, [user_id, loggedInUserId]);
-
-  const handleFollowToggle = async () => {
-   
-    const payload = {
-      follower_id: loggedInUserId,
-      followee_id: user_id,
-    };
-
-    try {
-       
-      if (isFollowing) {
-        const res = await axios.post(`${url}/unfollow`, payload);
-        console.log(res.data)
-        setIsFollowing(false);
-        setFollowers((prev) => prev - 1);
-      } else {
-        const res = await axios.post(`${url}/follow`, payload);
-        console.log(res.data);
-        setIsFollowing(true);
-        setFollowers((prev) => prev + 1);
-      }
-    } catch (err) {
-      console.error("Failed to toggle follow:", err);
+  const handleFollowToggle = () => {
+    if (!loggedInUserId || !user_id) return;
+    if (isFollowing) {
+      unfollowUserMutation.mutate({
+        followerId: loggedInUserId,
+        followeeId: user_id,
+      });
+    } else {
+      followUserMutation.mutate({
+        followerId: loggedInUserId,
+        followeeId: user_id,
+      });
     }
-  };
-
-  const handleEditProfile = async () => {
-    navigate(`/editprofile`);
   };
 
   if (loading) {
@@ -186,7 +74,7 @@ export default function Profile() {
     );
   }
 
-  const isOwnProfile = user_id === loggedInUserId;
+  const recentRatings = (ratings as any[]).slice(0, 3);
 
   return (
     <div className="page-container">
@@ -199,12 +87,13 @@ export default function Profile() {
                 ? userInfo.picture.slice(0, -4) + "1080"
                 : "/avatar.jpg"
             }
+            alt={userInfo?.name || "Profile"}
             referrerPolicy="no-referrer"
             className="profile-avatar"
           />
           <div className="profile-main">
             <h4 className="username">
-              <b>{userInfo.name}</b>
+              <b>{userInfo?.name}</b>
             </h4>
           </div>
         </div>
@@ -266,7 +155,7 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Follow button */}
+          {/* Follow / Edit button */}
           {user_id !== loggedInUserId ? (
             <button
               className={`follow-btn ${!isFollowing ? "followed" : ""}`}
@@ -275,13 +164,16 @@ export default function Profile() {
               {isFollowing ? "Following" : "Follow"}
             </button>
           ) : (
-            <button className="follow-btn followed" onClick={handleEditProfile}>
-              {"Edit Profile"}
+            <button
+              className="follow-btn followed"
+              onClick={() => navigate("/editprofile")}
+            >
+              Edit Profile
             </button>
           )}
         </div>
 
-        {userInfo.bio && (
+        {userInfo?.bio && (
           <div className="profile-bio">
             <p className="bio-header">Bio</p>
             <p className="bio-content">{userInfo.bio}</p>
@@ -291,31 +183,16 @@ export default function Profile() {
 
       <div className="profile-content">
         {/* Currently Watching */}
-        {currentlyWatchingWithImages.length > 0 ? (
+        {(cwList as any[]).length > 0 ? (
           <div className="favorite-shows">
             <h3 className="shows-label">Currently Watching</h3>
             <div className="favorite-shows-images">
-              {currentlyWatchingWithImages.map((show) => (
-                <Link
-                  to={`/show/${show.show_id}`}
+              {(cwList as any[]).map((show: any) => (
+                <ShowPosterCard
                   key={show.show_id}
-                  className="show-link"
-                >
-                  <ShowTooltip
-                    show={{
-                      name: show.name,
-                      first_air_date: show.first_air_date,
-                      overview: show.overview,
-                      rating: show.rating,
-                    }}
-                  >
-                    <img
-                      src={show.image_url}
-                      alt={show.name}
-                      className="show-icon small-icon"
-                    />
-                  </ShowTooltip>
-                </Link>
+                  showId={show.show_id}
+                  className="show-icon small-icon"
+                />
               ))}
             </div>
           </div>
@@ -332,26 +209,19 @@ export default function Profile() {
         )}
 
         {/* Recent Reviews */}
-        {ratingsWithImages.length > 0 ? (
+        {recentRatings.length > 0 ? (
           <div className="favorite-shows">
             <h3 className="shows-label">Recent Reviews</h3>
             <div className="user-ratings">
               <div className="review-cards-container">
-                {ratingsWithImages.map((rating: any) => (
+                {recentRatings.map((rating: any) => (
                   <ReviewCard
                     key={`${rating.user_id}-${rating.show_id}`}
                     showId={rating.show_id}
                     userId={rating.user_id}
-                    userName={rating.user_name}
-                    userProfilePic={rating.user_profile_pic}
                     comment={rating.comment}
                     rating={rating.rating}
-                    showImageUrl={rating.image_url}
-                    showName={rating.show_name}
-                    overview={rating.overview}
-                    averageRating={rating.average_rating}
-                    firstAirDate={rating.first_air_date}
-                    reviewDate={rating.review_date}
+                    reviewDate={formatRelativeTime(rating.timestamp)}
                   />
                 ))}
               </div>

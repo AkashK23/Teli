@@ -1,40 +1,12 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
-import axios from "axios";
 import UserList from "../components/UserList";
+import { useFollowerProfiles } from "../hooks/useUser";
 
 export default function Followers() {
   const { userId } = useParams<{ userId: string }>();
-  const [followers, setFollowers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const url = process.env.REACT_APP_API_URL;
+  const { data: followers, isLoading } = useFollowerProfiles(userId);
 
-  useEffect(() => {
-    const fetchFollowers = async () => {
-      try {
-        const res = await axios.get(`${url}/users/${userId}/followers`);
-        const followerIds = res.data.followers;
-
-        const followerData = await Promise.all(
-          followerIds.map(async (followersId: string) => {
-            const userRes = await axios.get(`${url}/user/${followersId}`);
-            console.log(userRes);
-            return userRes.data;
-          })
-        );
-
-        setFollowers(followerData);
-      } catch (err) {
-        console.error("Failed to fetch following:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFollowers();
-  }, [userId]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="loading-container">
         <div className="spinner"></div>
@@ -42,7 +14,6 @@ export default function Followers() {
       </div>
     );
   }
-
 
   return (
     <div className="following-page">

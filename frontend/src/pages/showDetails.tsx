@@ -1,177 +1,94 @@
-import { useParams } from 'react-router-dom';
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useParams } from "react-router-dom";
+import React, { useState } from "react";
 import { useUser } from "../UserContext";
+import { useShowDetails, useShowAverageRating } from "../hooks/useShow";
+import {
+  useUserRatings,
+  useUserWatchStatus,
+  useEpisodeReviews,
+} from "../hooks/useUser";
+import {
+  useUpdateWatchStatus,
+  useDeleteWatchStatus,
+  useSubmitRating,
+  useSubmitEpisodeRating,
+} from "../hooks/useMutations";
+import { getShowSeason } from "../api/shows";
 
 type WatchStatus = "want_to_watch" | "currently_watching" | "watched" | "";
 
- /* Show details page */
 export default function ShowDetails() {
-  const url = process.env.REACT_APP_API_URL;
   const user_id = useUser().userId;
+  const { id } = useParams<{ id: string }>();
 
-  const { id } = useParams();
-  const [showData, setShowData] = useState<any>(null);
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
-  const [seasonEpisodes, setSeasonEpisodes] = useState<any[]>([]);
+  const [seasonEpisodes, setSeasonEpisodes] = useState<any>({});
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState(0);
   const [submitted, setSubmitted] = useState(false);
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [userHasRated, setUserHasRated] = useState(false);
-  const [loadingReview, setLoadingReview] = useState(true);
-  const [episodeReviews, setEpisodeReviews] = useState<any[]>([]);
   const [episodeReviewStates, setEpisodeReviewStates] = useState<
     Record<number, { open: boolean; rating: number; text: string }>
   >({});
   const [watchStatus, setWatchStatus] = useState<WatchStatus>("");
-  const [avgRating, setAvgRating] = useState<number | null>(null);
-  const [ratingCount, setRatingCount] = useState<number>(0);
   const [isEditingReview, setIsEditingReview] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [watchStatusSynced, setWatchStatusSynced] = useState(false);
 
+  const { data: showData, isLoading: showLoading } = useShowDetails(id);
+  const { data: avgRatingData } = useShowAverageRating(id);
+  const { data: userRatings = [], isLoading: ratingsLoading } =
+    useUserRatings(user_id);
+  const { data: watchStatusData, isLoading: watchStatusLoading } =
+    useUserWatchStatus(user_id, id);
+  const { data: episodeReviews = [] } = useEpisodeReviews(
+    user_id,
+    id,
+    selectedSeason
+  );
 
+  const updateWatchStatusMutation = useUpdateWatchStatus();
+  const deleteWatchStatusMutation = useDeleteWatchStatus();
+  const submitRatingMutation = useSubmitRating();
+  const submitEpisodeRatingMutation = useSubmitEpisodeRating();
 
-  /* Pull show data from backend */
-  useEffect(() => {
-    let isMounted = true; // prevent race conditions
+  const avgRating = avgRatingData?.average_rating ?? null;
+  const ratingCount = avgRatingData?.total_ratings ?? 0;
 
-    const fetchData = async () => {
-      try {
-        // 🔹 Reset all show-specific states right away
-        setSelectedSeason(null);
-        setSeasonEpisodes([]);
-        setShowData(null);
-        setWatchStatus(""); // reset watch status
-        setReviews([]);
-        setUserHasRated(false);
-        setRating(0);
-        setReviewText("");
-        setEpisodeReviews([]);
-        setEpisodeReviewStates({});
-
-        const res = await axios.get(`${url}/shows/${id}`);
-        if (isMounted) setShowData(res.data);
-      } catch (err) {
-        console.error("Failed to fetch show details:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-
-    return () => {
-      isMounted = false; // ✅ prevents stale updates if you navigate quickly
-    };
-  }, [id]);
-
-  /* Get average rating of show */
-  useEffect(() => {
-    if (!id) return;
-
-    const fetchAverageRating = async () => {
-      try {
-        const res = await axios.get(`${url}/shows/${id}/average-rating`);
-        if (res.data) {
-          setAvgRating(res.data.average_rating);
-          setRatingCount(res.data.total_ratings);
-        }
-      } catch (err) {
-        console.error("Failed to fetch average rating:", err);
-      }
-    };
-
-    fetchAverageRating();
-  }, [id]);
-
-
-  // Fetch user review if userId exists
-  useEffect(() => {
-    if (!user_id) {
-      setReviews([]);
-      setUserHasRated(false);
-      setLoadingReview(false);
-      return;
+  // Sync watch status from query into local state once on load
+  React.useEffect(() => {
+    if (!watchStatusLoading && !watchStatusSynced && watchStatusData?.status) {
+      setWatchStatus(watchStatusData.status as WatchStatus);
+      setWatchStatusSynced(true);
     }
+  }, [watchStatusLoading, watchStatusSynced, watchStatusData]);
 
-    const fetchUserReview = async () => {
-      try {
-        setLoadingReview(true);
-        const res = await axios.get(`${url}/users/${user_id}/ratings`);
-        const userReview = res.data.find(
-          (r: any) => String(r.show_id) === String(id)
-        );
-        if (userReview) {
-          setReviews([userReview]);
-          setUserHasRated(true);
-          setRating(userReview.rating);
-          setReviewText(userReview.comment);
-        } else {
-          setReviews([]);
-          setUserHasRated(false);
-          setRating(0);
-          setReviewText("");
-        }
-      } catch (err) {
-        console.error("Failed to fetch user review:", err);
-      } 
-    };
+  // Reset local state when show ID changes
+  React.useEffect(() => {
+    setSelectedSeason(null);
+    setSeasonEpisodes({});
+    setWatchStatus("");
+    setWatchStatusSynced(false);
+    setReviewText("");
+    setRating(0);
+    setEpisodeReviewStates({});
+    setIsEditingReview(false);
+  }, [id]);
 
-    fetchUserReview();
-  }, [user_id, id]);
-
-  // Fetch existing status from backend
-  useEffect(() => {
-    if (!user_id) return;
-
-    const fetchWatchStatus = async () => {
-      try {
-        const res = await axios.get(
-          `${url}/users/${user_id}/watch_status/${id}`
-        );
-        console.log(res.data.status);
-        if (res.data?.status) {
-          setWatchStatus(res.data.status as WatchStatus);
-        }
-      } catch (err) {
-        console.error("Error fetching watch status:", err);
-      } finally {
-        setLoadingReview(false);
-      }
-    };
-
-    fetchWatchStatus();
-  }, [user_id, id]);
-
-  // After showData is updated, load Season 1 if available
-  useEffect(() => {
+  // Load Season 1 automatically once show data arrives
+  React.useEffect(() => {
     if (showData?.seasons?.some((s: any) => s.season_number === 1)) {
       fetchSeason(1);
     }
-  }, [showData]);
+  }, [showData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (!user_id || !id || !selectedSeason) return;
-
-    fetchEpisodeReviews();
-  }, [user_id, id, selectedSeason]);
-
-
-  /* Pull season data from backend */
   const fetchSeason = async (seasonNumber: number) => {
     if (seasonEpisodes[seasonNumber]) {
       setSelectedSeason(seasonNumber);
       setEpisodeReviewStates({});
       return;
     }
-
     try {
-      const res = await axios.get(`${url}/shows/${id}/season/${seasonNumber}`);
-      const data = res.data;
-      // console.log(data);
-
-      setSeasonEpisodes((prev) => ({
+      const data = await getShowSeason(id!, seasonNumber);
+      setSeasonEpisodes((prev: any) => ({
         ...prev,
         [seasonNumber]: {
           episodes: data.episodes,
@@ -179,7 +96,6 @@ export default function ShowDetails() {
           poster_path: data.poster_path,
         },
       }));
-
       setSelectedSeason(seasonNumber);
       setEpisodeReviewStates({});
     } catch (err) {
@@ -187,121 +103,92 @@ export default function ShowDetails() {
     }
   };
 
-  /* Pull user reviews of the show from backend */
-  const fetchReviews = async () => {
-    const reviews_backend = await axios.get(`${url}/users/${user_id}/ratings`);
-    setReviews(reviews_backend.data);
-    setUserHasRated(
-      reviews_backend.data.some((r: any) => String(r.show_id) === String(id))
-    );
-  };
+  const userReview = (userRatings as any[]).find(
+    (r: any) => String(r.show_id) === String(id)
+  );
+  const userHasRated = !!userReview;
 
-  /* Pull user reviews of episodes from backend */
-  const fetchEpisodeReviews = async () => {
-    const episode_reviews_backend = await axios.get(
-      `${url}/users/${user_id}/shows/${id}/season/${selectedSeason}/ratings`
-    );
-    // console.log("episode reviews:", episode_reviews_backend.data);
+  // Populate review form when existing review is found
+  React.useEffect(() => {
+    if (userReview && !isEditingReview) {
+      setRating(userReview.rating);
+      setReviewText(userReview.comment || "");
+    }
+  }, [userReview?.show_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    setEpisodeReviews(episode_reviews_backend.data);
-  };
-
-  /* Show review submit function */
   const handleReviewSubmit = async () => {
     if (!user_id) return;
-
     const payload = {
-      user_id: user_id, // Replace with actual user ID
-      show_id: id, // ID from URL params
+      user_id,
+      show_id: id,
       show_name_lowercase: showData.name.toLowerCase(),
-      rating: rating,
+      rating,
       comment: reviewText,
     };
-
-    try {
-      const res = await axios.post(`${url}/ratings`, payload);
-      console.log("Review submitted:", res.data);
-
-      await fetchReviews();
-
-      setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 3000);
-      setReviewText("");
-      setRating(0);
-
-      setWatchStatus("watched");
-      const payloadWatchStatus = {
-        user_id: user_id,
-        show_id: id,
-        status: "watched",
-        // current_season:1,
-        // current_episode:1,
-      };
-
-      try {
-        const res = await axios.post(
-          `${url}/update_watch_status`,
-          payloadWatchStatus
-        );
-      } catch (err) {
-        console.error("Error changing watch status:", err);
-      }
-    } catch (err) {
-      console.error("Error submitting review:", err);
-    }
+    submitRatingMutation.mutate(payload, {
+      onSuccess: () => {
+        setSubmitted(true);
+        setTimeout(() => setSubmitted(false), 3000);
+        setReviewText("");
+        setRating(0);
+        setIsEditingReview(false);
+        // Also update watch status to watched
+        if (user_id && id) {
+          updateWatchStatusMutation.mutate({
+            user_id,
+            show_id: id,
+            status: "watched",
+          });
+          setWatchStatus("watched");
+        }
+      },
+    });
   };
 
-  /* Episode review submit function */
-  const submitEpisodeReview = async (
+  const submitEpisodeReview = (
     episodeNumber: number,
     seasonNumber: number
   ) => {
     const state = episodeReviewStates[episodeNumber];
     if (!state || state.text.trim() === "") return;
-
     const payload = {
-      user_id: user_id,
+      user_id,
       show_id: id,
       season_number: seasonNumber,
       episode_number: episodeNumber,
       rating: state.rating,
       comment: state.text,
     };
+    submitEpisodeRatingMutation.mutate(payload, {
+      onSuccess: () => {
+        setEpisodeReviewStates((prev) => ({
+          ...prev,
+          [episodeNumber]: { ...prev[episodeNumber], open: false, text: "", rating: 0 },
+        }));
+      },
+    });
+  };
 
-    try {
-      const res = await axios.post(`${url}/episode_ratings`, payload);
-      console.log("Episode review submitted:", res.data);
+  const handleWatchStatusChange = (
+    event: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const newStatus = event.target.value as WatchStatus;
+    setWatchStatus(newStatus);
+    if (!user_id || !id) return;
 
-      setEpisodeReviewStates((prev) => ({
-        ...prev,
-        [episodeNumber]: {
-          ...prev[episodeNumber],
-          open: false,
-          text: "",
-          rating: 0,
-        },
-      }));
-
-      await fetchEpisodeReviews();
-    } catch (err) {
-      console.error("Error submitting episode review:", err);
+    if (newStatus === "") {
+      deleteWatchStatusMutation.mutate({ user_id, show_id: id });
+    } else {
+      updateWatchStatusMutation.mutate({ user_id, show_id: id, status: newStatus });
     }
   };
 
-  if (!showData) return <div>Loading...</div>;
-
-  const seasons =
-    showData.seasons?.filter((s: any) => s.season_number > 0) || [];
-
-  /* Toggle episode review visibility */
   const toggleEpisodeReview = (episodeNumber: number) => {
-    const existingReview = episodeReviews.find(
-      (review: any) => review.episode_number === episodeNumber
+    const existingReview = (episodeReviews as any[]).find(
+      (r: any) => r.episode_number === episodeNumber
     );
-
     setEpisodeReviewStates((prev) => {
       const isOpen = prev[episodeNumber]?.open;
-
       return {
         ...prev,
         [episodeNumber]: {
@@ -313,8 +200,6 @@ export default function ShowDetails() {
     });
   };
 
-
-  /* Update review submit function */
   const updateEpisodeReview = (
     episodeId: number,
     field: "rating" | "text",
@@ -322,57 +207,13 @@ export default function ShowDetails() {
   ) => {
     setEpisodeReviewStates((prev) => ({
       ...prev,
-      [episodeId]: {
-        ...prev[episodeId],
-        [field]: value,
-      },
+      [episodeId]: { ...prev[episodeId], [field]: value },
     }));
   };
 
-  /* Change watch status */
-  const handleWatchStatusChange = async (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    const newStatus = event.target.value as WatchStatus;
-    setWatchStatus(newStatus);
+  const loadingReview = ratingsLoading || watchStatusLoading;
 
-    if (newStatus == "") {
-      const payload = {
-        user_id: user_id,
-        show_id: id,
-      };
-
-      try {
-        const res = await axios.post(`${url}/delete_watch_status`, payload);
-        console.log("Watch Status deleted:", res.data);
-      } catch (err) {
-        console.error("Error changing watch status:", err);
-      }
-    } else {
-      const payload = {
-        user_id: user_id,
-        show_id: id,
-        status: newStatus,
-        // current_season:1,
-        // current_episode:1,
-      };
-
-      try {
-        const res = await axios.post(`${url}/update_watch_status`, payload);
-        console.log("Watch Status updated:", res.data);
-      } catch (err) {
-        console.error("Error changing watch status:", err);
-      }
-    }
-
-    // if (newStatus == "want_to_watch") {
-
-    // } else if (newStatus == "currently_watching") {
-    // } else if (newStatus == "watched") {
-    // }
-  };
-
-  if (loading) {
+  if (showLoading || !showData) {
     return (
       <div className="loading-container">
         <div className="spinner"></div>
@@ -380,6 +221,9 @@ export default function ShowDetails() {
       </div>
     );
   }
+
+  const seasons =
+    showData.seasons?.filter((s: any) => s.season_number > 0) || [];
 
   return (
     <div className="show-details-container">
@@ -392,7 +236,6 @@ export default function ShowDetails() {
         />
         <div className="show-details-info">
           <div className="show-data">
-            {/* LEFT: Title + Metadata */}
             <div className="show-data-text">
               <h1>{showData.name}</h1>
               <p>
@@ -405,8 +248,6 @@ export default function ShowDetails() {
                 </p>
               )}
             </div>
-
-            {/* RIGHT: Rating */}
             {avgRating !== null && (
               <div className="show-data-rating">
                 <div className="show-data-rating-score">
@@ -423,7 +264,6 @@ export default function ShowDetails() {
             {showData.overview || "No description available."}
           </p>
 
-          {/* --- Watch Status Dropdown --- */}
           {user_id && !loadingReview && (
             <div>
               <strong>Watch Status:</strong>
@@ -456,8 +296,8 @@ export default function ShowDetails() {
 
           {userHasRated && (
             <div className="rating-cards-container">
-              {reviews
-                .filter((review: any) => review.show_id === id)
+              {[userReview]
+                .filter((review: any) => String(review.show_id) === String(id))
                 .map((review: any) => (
                   <div className="rating-card" key={review.show_id}>
                     <div className="rating-details">
@@ -469,14 +309,14 @@ export default function ShowDetails() {
                     <button
                       onClick={() => setIsEditingReview((prev) => !prev)}
                       className="edit-review-button"
-                      onMouseEnter={(e) => (
-                        (e.currentTarget.style.color = "white"),
-                        (e.currentTarget.style.backgroundColor = "#333")
-                      )}
-                      onMouseLeave={(e) => (
-                        (e.currentTarget.style.color = "#333"),
-                        (e.currentTarget.style.backgroundColor = "transparent")
-                      )}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget.style.color = "white");
+                        (e.currentTarget.style.backgroundColor = "#333");
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget.style.color = "#333");
+                        (e.currentTarget.style.backgroundColor = "transparent");
+                      }}
                     >
                       {isEditingReview ? "Cancel" : "Update"}
                     </button>
@@ -485,7 +325,6 @@ export default function ShowDetails() {
             </div>
           )}
 
-          {/* Write a Review Section */}
           {(!userHasRated || isEditingReview) && (
             <div>
               {!userHasRated && <h3 className="headings">Review</h3>}
@@ -500,7 +339,6 @@ export default function ShowDetails() {
                   />
                   <span>{rating}</span>
                 </div>
-
                 <div className="review-input-group">
                   <textarea
                     id="reviewText"
@@ -510,22 +348,12 @@ export default function ShowDetails() {
                     placeholder="What did you think of this show?"
                     className="review-textbox"
                   />
-
-                  {userHasRated ? (
-                    <button
-                      onClick={handleReviewSubmit}
-                      className="submit-review-button"
-                    >
-                      Update
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleReviewSubmit}
-                      className="submit-review-button"
-                    >
-                      Submit
-                    </button>
-                  )}
+                  <button
+                    onClick={handleReviewSubmit}
+                    className="submit-review-button"
+                  >
+                    {userHasRated ? "Update" : "Submit"}
+                  </button>
                   {submitted && <p>Review submitted!</p>}
                 </div>
               </div>
@@ -588,7 +416,7 @@ export default function ShowDetails() {
                 text: "",
               };
 
-              const hasEpisodeReview = episodeReviews.some(
+              const hasEpisodeReview = (episodeReviews as any[]).some(
                 (review: any) =>
                   review.episode_number === episode.episode_number
               );
@@ -615,30 +443,26 @@ export default function ShowDetails() {
                     </div>
 
                     {user_id && !loadingReview && (
-                      <>
-                        {/* Review toggle button */}
-                        <button
-                          onClick={() =>
-                            toggleEpisodeReview(episode.episode_number)
-                          }
-                          className={`episode-review-button ${
-                            hasEpisodeReview ? "has-review" : "no-review"
-                          }`}
-                        >
-                          {epState.open
-                            ? "Hide"
-                            : hasEpisodeReview
-                            ? "Update"
-                            : "Review"}
-                        </button>
-                      </>
+                      <button
+                        onClick={() =>
+                          toggleEpisodeReview(episode.episode_number)
+                        }
+                        className={`episode-review-button ${
+                          hasEpisodeReview ? "has-review" : "no-review"
+                        }`}
+                      >
+                        {epState.open
+                          ? "Hide"
+                          : hasEpisodeReview
+                          ? "Update"
+                          : "Review"}
+                      </button>
                     )}
                   </div>
 
-                  {/* Review form dropdown */}
                   {epState.open && (
                     <div className="episode-review-container">
-                      {episodeReviews
+                      {(episodeReviews as any[])
                         .filter(
                           (review: any) =>
                             review.episode_number === episode.episode_number
@@ -675,7 +499,6 @@ export default function ShowDetails() {
                           />
                           <span>{epState.rating}</span>
                         </div>
-
                         <div className="review-input-group">
                           <textarea
                             value={epState.text}
@@ -690,7 +513,6 @@ export default function ShowDetails() {
                             placeholder="What did you think of this episode?"
                             className="review-textbox"
                           />
-
                           <button
                             className="submit-review-button"
                             onClick={() =>
@@ -700,7 +522,7 @@ export default function ShowDetails() {
                               )
                             }
                           >
-                            {episodeReviews.some(
+                            {(episodeReviews as any[]).some(
                               (review: any) =>
                                 review.episode_number === episode.episode_number
                             )
