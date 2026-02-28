@@ -2749,4 +2749,97 @@ body {
       font-size: 1.25rem;
     }
 
+    /* Show Details */
+    .show-details-container {
+      margin: 1rem auto;
+      padding: 0 1rem;
+    }
+
+    /* KEEP side-by-side but tighten spacing */
+    .show-details-upper {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    /* Smaller poster */
+    .show-poster {
+      width: 8rem;
+      flex-shrink: 0;
+    }
+
+    /* Let info take remaining space */
+    .show-details-info {
+      flex: 1;
+    }
+
+    /* Smaller title */
+    .show-data-text h1 {
+      font-size: 1.4rem;
+      line-height: 1.2;
+    }
+
+    .show-data-text p {
+      font-size: 0.85rem;
+    }
+
+    /* Smaller rating box */
+    .show-data-rating {
+      width: 4.5rem;
+      height: 4.5rem;
+    }
+
+    .show-data-rating-score {
+      font-size: 1.4rem;
+    }
+
+    .show-data-rating-reviews {
+      font-size: 0.7rem;
+    }
+
+    /* Tighten spacing */
+    .show-data {
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Overview smaller */
+    .show-details-info>p {
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+
+    /* Watch dropdown full width but compact */
+    .watch-status-dropdown {
+      width: 100%;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      padding: 0.4rem;
+    }
+
+    /* Review section full width */
+    .write-review-container {
+      width: 100%;
+    }
+
+    /* Episode adjustments */
+    .episode-box {
+      gap: 0.75rem;
+    }
+
+    .episode-poster,
+    .no-img-poster {
+      width: 6rem;
+      height: 3.5rem;
+    }
+
+    .episode-review-button {
+      padding: 0.4rem 0.6rem;
+      font-size: 0.85rem;
+    }
+
+    .slider-container span {
+      font-size: 1.8rem;
+    }
+
 }

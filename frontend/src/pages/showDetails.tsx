@@ -29,8 +29,16 @@ export default function ShowDetails() {
   const [ratingCount, setRatingCount] = useState<number>(0);
   const [isEditingReview, setIsEditingReview] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
 
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   /* Pull show data from backend */
   useEffect(() => {
