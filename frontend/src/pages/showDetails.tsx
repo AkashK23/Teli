@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import React, { useState } from "react";
 import { useUser } from "../UserContext";
+import { useToast } from "../ToastContext";
 import { useShowDetails, useShowAverageRating } from "../hooks/useShow";
 import {
   useUserRatings,
@@ -20,18 +21,19 @@ type WatchStatus = "want_to_watch" | "currently_watching" | "watched" | "";
 export default function ShowDetails() {
   const user_id = useUser().userId;
   const { id } = useParams<{ id: string }>();
+  const { showToast } = useToast();
 
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
   const [seasonEpisodes, setSeasonEpisodes] = useState<any>({});
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState(0);
-  const [submitted, setSubmitted] = useState(false);
   const [episodeReviewStates, setEpisodeReviewStates] = useState<
     Record<number, { open: boolean; rating: number; text: string }>
   >({});
   const [watchStatus, setWatchStatus] = useState<WatchStatus>("");
   const [isEditingReview, setIsEditingReview] = useState(false);
   const [watchStatusSynced, setWatchStatusSynced] = useState(false);
+  const [showAllEpisodes, setShowAllEpisodes] = useState(false);
 
   const { data: showData, isLoading: showLoading } = useShowDetails(id);
   const { data: avgRatingData } = useShowAverageRating(id);
@@ -39,11 +41,8 @@ export default function ShowDetails() {
     useUserRatings(user_id);
   const { data: watchStatusData, isLoading: watchStatusLoading } =
     useUserWatchStatus(user_id, id);
-  const { data: episodeReviews = [] } = useEpisodeReviews(
-    user_id,
-    id,
-    selectedSeason
-  );
+  const { data: episodeReviews = [], isLoading: episodeReviewsLoading } =
+    useEpisodeReviews(user_id, id, selectedSeason);
 
   const updateWatchStatusMutation = useUpdateWatchStatus();
   const deleteWatchStatusMutation = useDeleteWatchStatus();
@@ -71,6 +70,7 @@ export default function ShowDetails() {
     setRating(0);
     setEpisodeReviewStates({});
     setIsEditingReview(false);
+    setShowAllEpisodes(false);
   }, [id]);
 
   // Load Season 1 automatically once show data arrives
@@ -84,6 +84,7 @@ export default function ShowDetails() {
     if (seasonEpisodes[seasonNumber]) {
       setSelectedSeason(seasonNumber);
       setEpisodeReviewStates({});
+      setShowAllEpisodes(false);
       return;
     }
     try {
@@ -98,6 +99,7 @@ export default function ShowDetails() {
       }));
       setSelectedSeason(seasonNumber);
       setEpisodeReviewStates({});
+      setShowAllEpisodes(false);
     } catch (err) {
       console.error(`Failed to fetch season ${seasonNumber} episodes:`, err);
     }
@@ -127,12 +129,10 @@ export default function ShowDetails() {
     };
     submitRatingMutation.mutate(payload, {
       onSuccess: () => {
-        setSubmitted(true);
-        setTimeout(() => setSubmitted(false), 3000);
+        showToast(userHasRated ? "Review updated!" : "Review submitted!");
         setReviewText("");
         setRating(0);
         setIsEditingReview(false);
-        // Also update watch status to watched
         if (user_id && id) {
           updateWatchStatusMutation.mutate({
             user_id,
@@ -145,12 +145,12 @@ export default function ShowDetails() {
     });
   };
 
-  const submitEpisodeReview = (
-    episodeNumber: number,
-    seasonNumber: number
-  ) => {
+  const submitEpisodeReview = (episodeNumber: number, seasonNumber: number) => {
     const state = episodeReviewStates[episodeNumber];
     if (!state || state.text.trim() === "") return;
+    const hasExisting = (episodeReviews as any[]).some(
+      (r: any) => r.episode_number === episodeNumber
+    );
     const payload = {
       user_id,
       show_id: id,
@@ -161,6 +161,7 @@ export default function ShowDetails() {
     };
     submitEpisodeRatingMutation.mutate(payload, {
       onSuccess: () => {
+        showToast(hasExisting ? "Episode review updated!" : "Episode review submitted!");
         setEpisodeReviewStates((prev) => ({
           ...prev,
           [episodeNumber]: { ...prev[episodeNumber], open: false, text: "", rating: 0 },
@@ -210,8 +211,6 @@ export default function ShowDetails() {
       [episodeId]: { ...prev[episodeId], [field]: value },
     }));
   };
-
-  const loadingReview = ratingsLoading || watchStatusLoading;
 
   if (showLoading || !showData) {
     return (
@@ -264,100 +263,114 @@ export default function ShowDetails() {
             {showData.overview || "No description available."}
           </p>
 
-          {user_id && !loadingReview && (
+          {user_id && (
             <div>
               <strong>Watch Status:</strong>
-              <select
-                id="watchStatus"
-                value={watchStatus}
-                onChange={handleWatchStatusChange}
-                className="watch-status-dropdown"
-                onMouseOver={(e) =>
-                  (e.currentTarget.style.backgroundColor = "#f0f0f0")
-                }
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.backgroundColor = "#f9f9f9")
-                }
-              >
-                <option value="">Select...</option>
-                <option value="want_to_watch">Want to Watch</option>
-                <option value="currently_watching">Currently Watching</option>
-                <option value="watched">Watched</option>
-              </select>
+              {watchStatusLoading ? (
+                <span style={{ marginLeft: "0.5rem", color: "#aaa" }}>...</span>
+              ) : (
+                <select
+                  id="watchStatus"
+                  value={watchStatus}
+                  onChange={handleWatchStatusChange}
+                  className="watch-status-dropdown"
+                  onMouseOver={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#f0f0f0")
+                  }
+                  onMouseOut={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#f9f9f9")
+                  }
+                >
+                  <option value="">Select...</option>
+                  <option value="want_to_watch">Want to Watch</option>
+                  <option value="currently_watching">Currently Watching</option>
+                  <option value="watched">Watched</option>
+                </select>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Your Review */}
-      {user_id && !loadingReview && (
+      {/* Your Review — always reserve space, show spinner while loading */}
+      {user_id && (
         <>
-          {userHasRated && <h3 className="headings">Your Review</h3>}
+          {ratingsLoading ? (
+            <div className="review-section-loading">
+              <div className="spinner"></div>
+            </div>
+          ) : (
+            <>
+              {userHasRated && <h3 className="headings">Your Review</h3>}
 
-          {userHasRated && (
-            <div className="rating-cards-container">
-              {[userReview]
-                .filter((review: any) => String(review.show_id) === String(id))
-                .map((review: any) => (
-                  <div className="rating-card" key={review.show_id}>
-                    <div className="rating-details">
-                      <div className="rating-score">{review.rating}</div>
-                      <div className="rating-text">
-                        <p>{review.comment}</p>
+              {userHasRated && (
+                <div className="rating-cards-container">
+                  {[userReview]
+                    .filter((review: any) => String(review.show_id) === String(id))
+                    .map((review: any) => (
+                      <div className="rating-card" key={review.show_id}>
+                        <div className="rating-details">
+                          <div className="rating-score">{review.rating}</div>
+                          <div className="rating-text">
+                            <p>{review.comment}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setIsEditingReview((prev) => !prev)}
+                          className="edit-review-button"
+                          onMouseEnter={(e) => {
+                            (e.currentTarget.style.color = "white");
+                            (e.currentTarget.style.backgroundColor = "#333");
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget.style.color = "#333");
+                            (e.currentTarget.style.backgroundColor = "transparent");
+                          }}
+                        >
+                          {isEditingReview ? "Cancel" : "Update"}
+                        </button>
                       </div>
-                    </div>
-                    <button
-                      onClick={() => setIsEditingReview((prev) => !prev)}
-                      className="edit-review-button"
-                      onMouseEnter={(e) => {
-                        (e.currentTarget.style.color = "white");
-                        (e.currentTarget.style.backgroundColor = "#333");
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget.style.color = "#333");
-                        (e.currentTarget.style.backgroundColor = "transparent");
-                      }}
-                    >
-                      {isEditingReview ? "Cancel" : "Update"}
-                    </button>
-                  </div>
-                ))}
-            </div>
-          )}
+                    ))}
+                </div>
+              )}
 
-          {(!userHasRated || isEditingReview) && (
-            <div>
-              {!userHasRated && <h3 className="headings">Review</h3>}
-              <div className="write-review-container">
-                <div className="slider-container">
-                  <input
-                    type="range"
-                    min="0"
-                    max="10"
-                    value={rating}
-                    onChange={(e) => setRating(Number(e.target.value))}
-                  />
-                  <span>{rating}</span>
+              {(!userHasRated || isEditingReview) && (
+                <div>
+                  {!userHasRated && <h3 className="headings">Review</h3>}
+                  <div className="write-review-container">
+                    <div className="slider-container">
+                      <input
+                        type="range"
+                        min="0"
+                        max="10"
+                        value={rating}
+                        onChange={(e) => setRating(Number(e.target.value))}
+                        style={
+                          { "--slider-fill": `${rating * 10}%` } as React.CSSProperties
+                        }
+                      />
+                      <span>{rating}</span>
+                    </div>
+                    <div className="review-input-group">
+                      <textarea
+                        id="reviewText"
+                        value={reviewText}
+                        onChange={(e) => setReviewText(e.target.value)}
+                        rows={4}
+                        placeholder="What did you think of this show?"
+                        className="review-textbox"
+                      />
+                      <button
+                        onClick={handleReviewSubmit}
+                        className="submit-review-button"
+                      >
+                        {userHasRated ? "Update" : "Submit"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="review-input-group">
-                  <textarea
-                    id="reviewText"
-                    value={reviewText}
-                    onChange={(e) => setReviewText(e.target.value)}
-                    rows={4}
-                    placeholder="What did you think of this show?"
-                    className="review-textbox"
-                  />
-                  <button
-                    onClick={handleReviewSubmit}
-                    className="submit-review-button"
-                  >
-                    {userHasRated ? "Update" : "Submit"}
-                  </button>
-                  {submitted && <p>Review submitted!</p>}
-                </div>
-              </div>
-            </div>
+              )}
+            </>
           )}
         </>
       )}
@@ -404,7 +417,11 @@ export default function ShowDetails() {
       {selectedSeason && seasonEpisodes[selectedSeason] && (
         <div>
           <h3 className="episodes-header">Episodes</h3>
-          <div className="episode-list-container">
+          <div
+            className={`episode-list-container${
+              showAllEpisodes ? "" : " episode-list-collapsed"
+            }`}
+          >
             {seasonEpisodes[selectedSeason].episodes.map((episode: any) => {
               const stillUrl = episode.still_path
                 ? `https://image.tmdb.org/t/p/w300${episode.still_path}`
@@ -417,8 +434,7 @@ export default function ShowDetails() {
               };
 
               const hasEpisodeReview = (episodeReviews as any[]).some(
-                (review: any) =>
-                  review.episode_number === episode.episode_number
+                (review: any) => review.episode_number === episode.episode_number
               );
 
               return (
@@ -442,7 +458,7 @@ export default function ShowDetails() {
                       </p>
                     </div>
 
-                    {user_id && !loadingReview && (
+                    {user_id && !episodeReviewsLoading && (
                       <button
                         onClick={() =>
                           toggleEpisodeReview(episode.episode_number)
@@ -496,6 +512,11 @@ export default function ShowDetails() {
                                 Number(e.target.value)
                               )
                             }
+                            style={
+                              {
+                                "--slider-fill": `${epState.rating * 10}%`,
+                              } as React.CSSProperties
+                            }
                           />
                           <span>{epState.rating}</span>
                         </div>
@@ -537,6 +558,16 @@ export default function ShowDetails() {
               );
             })}
           </div>
+          {seasonEpisodes[selectedSeason].episodes.length > 5 && (
+            <button
+              className="show-more-btn"
+              onClick={() => setShowAllEpisodes((prev) => !prev)}
+            >
+              {showAllEpisodes
+                ? "Show Less"
+                : `Show All ${seasonEpisodes[selectedSeason].episodes.length} Episodes`}
+            </button>
+          )}
         </div>
       )}
     </div>

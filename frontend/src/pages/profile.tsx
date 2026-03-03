@@ -33,7 +33,7 @@ export default function Profile() {
   const { data: ratings = [], isLoading: ratingsLoading } =
     useUserRatings(user_id);
   const { data: watchedShows = [], isLoading: watchedShowsLoading } =
-    useWatchedShowDetails(user_id === loggedInUserId ? user_id : null);
+    useWatchedShowDetails(user_id);
 
   const followUserMutation = useFollowUser();
   const unfollowUserMutation = useUnfollowUser();
@@ -244,7 +244,7 @@ export default function Profile() {
         )}
       </div>
 
-      {user_id === loggedInUserId && (
+      {(ratings as any[]).length > 0 && (
         <ProfileStats
           ratings={ratings as any[]}
           watchedShows={watchedShows as any[]}
