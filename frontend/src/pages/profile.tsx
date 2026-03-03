@@ -2,6 +2,7 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 import { useUser } from "../UserContext";
 import ReviewCard from "../components/ReviewCard";
 import ShowPosterCard from "../components/ShowPosterCard";
+import ProfileStats from "../components/ProfileStats";
 import { formatRelativeTime } from "../components/formatRelativeTime";
 import {
   useUserProfile,
@@ -9,6 +10,7 @@ import {
   useUserWatchList,
   useUserFollowers,
   useUserFollowing,
+  useWatchedShowDetails,
 } from "../hooks/useUser";
 import { useFollowUser, useUnfollowUser } from "../hooks/useMutations";
 
@@ -30,6 +32,8 @@ export default function Profile() {
   const { data: loggedInFollowing = [] } = useUserFollowing(loggedInUserId);
   const { data: ratings = [], isLoading: ratingsLoading } =
     useUserRatings(user_id);
+  const { data: watchedShows = [], isLoading: watchedShowsLoading } =
+    useWatchedShowDetails(user_id === loggedInUserId ? user_id : null);
 
   const followUserMutation = useFollowUser();
   const unfollowUserMutation = useUnfollowUser();
@@ -239,6 +243,15 @@ export default function Profile() {
           </div>
         )}
       </div>
+
+      {user_id === loggedInUserId && (
+        <ProfileStats
+          ratings={ratings as any[]}
+          watchedShows={watchedShows as any[]}
+          watchedCount={(watchedList as any[]).length}
+          isLoadingShows={watchedShowsLoading}
+        />
+      )}
     </div>
   );
 }

@@ -131,6 +131,27 @@ export function useFollowingProfiles(userId: string | null | undefined) {
   return { data: profiles, isLoading };
 }
 
+// Fetches watched show IDs and returns full TMDB show details (for stats computation)
+export function useWatchedShowDetails(userId: string | null | undefined) {
+  const { data: watchList = [], isLoading: listLoading } = useUserWatchList(
+    userId,
+    "watched"
+  );
+
+  const showQueries = useQueries({
+    queries: (watchList as any[]).map((item) => ({
+      queryKey: queryKeys.show.details(item.show_id),
+      queryFn: () => getShowDetails(item.show_id),
+      staleTime: 60 * 60 * 1000,
+    })),
+  });
+
+  const isLoading = listLoading || showQueries.some((q) => q.isLoading);
+  const shows = showQueries.map((q) => q.data).filter(Boolean);
+
+  return { data: shows, isLoading };
+}
+
 // Fetches watch list IDs then enriches with show details using parallel queries
 export function useEnrichedWatchList(
   userId: string | null | undefined,
