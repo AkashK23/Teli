@@ -369,7 +369,10 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
           </div>
         </Link>
 
-        <Link to="/browse" className="feature-card">
+        <Link
+          to={popularShows.length > 0 ? `/show/${popularShows[0].id}` : "/browse"}
+          className="feature-card"
+        >
           <img
             src="/features-showdetails.png"
             alt="show details"
@@ -377,7 +380,7 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
           />
           <div className="feature-text">
             <h3>Show Details</h3>
-            <p>See more information about every show</p>
+            <p>Explore seasons, episodes, and ratings for any show</p>
           </div>
         </Link>
 

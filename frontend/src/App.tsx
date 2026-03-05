@@ -15,6 +15,7 @@ import YourShows from "./pages/yourShows";
 
 import { Routes, Route } from "react-router-dom";
 import { UserProvider } from "./UserContext";
+import { ToastProvider } from "./ToastContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -33,6 +34,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <UserProvider>
+        <ToastProvider>
           <Navbar />
           <div>
             <Routes>
@@ -54,6 +56,7 @@ function App() {
 
             </Routes>
           </div>
+        </ToastProvider>
       </UserProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

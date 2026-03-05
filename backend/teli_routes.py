@@ -464,7 +464,9 @@ def update_feeds_with_rating(user_id, rating_id, rating_data):
 
         for follower in followers:
             follower_id = follower.to_dict()["follower_id"]
-            feed_ref = db.collection("feeds").document(follower_id).collection("items").document()
+            # Use rating_id as document ID so the same rating can never be
+            # written twice into any follower's feed
+            feed_ref = db.collection("feeds").document(follower_id).collection("items").document(rating_id)
             batch.set(feed_ref, feed_data)
             batch_count += 1
             # If we hit 500, commit the batch and start a new one
@@ -633,10 +635,6 @@ class FollowRequest(BaseModel):
     follower_id: str
     followee_id: str
 
-class FollowRequest(BaseModel):
-    follower_id: str
-    followee_id: str
-
 @teli.route("/follow", methods=["POST"])
 def follow_user():
     try:
@@ -696,15 +694,17 @@ def populate_feed_from_follow(follower_id, followee_id):
             .order_by("timestamp", direction=firestore.Query.DESCENDING) \
             .limit(20) \
             .stream()
-            
+
         batch = db.batch()
         for rating in ratings:
             rating_data = rating.to_dict()
             rating_data["rating_id"] = rating.id
-            
-            feed_ref = db.collection("feeds").document(follower_id).collection("items").document()
+
+            # Use the rating's own ID as the feed document ID so that
+            # re-following the same user never creates duplicate feed items
+            feed_ref = db.collection("feeds").document(follower_id).collection("items").document(rating.id)
             batch.set(feed_ref, rating_data)
-            
+
         batch.commit()
     except Exception as e:
         logger.error(f"Error populating feed from follow: {e}")
@@ -807,12 +807,20 @@ def get_feed(user_id):
 
         docs = list(query.stream())
         feed = []
-        
+        seen_rating_ids = set()
+
         # Include user details in feed
         for doc in docs:
             item = doc.to_dict()
             item["id"] = doc.id
-            
+
+            # Deduplicate by rating_id to handle any legacy duplicate docs
+            rating_id = item.get("rating_id")
+            if rating_id:
+                if rating_id in seen_rating_ids:
+                    continue
+                seen_rating_ids.add(rating_id)
+
             # Get user info if available
             if "user_id" in item:
                 user_doc = db.collection("users").document(item["user_id"]).get()
@@ -820,9 +828,9 @@ def get_feed(user_id):
                     user_data = user_doc.to_dict()
                     item["user_name"] = user_data.get("name", "")
                     item["user_username"] = user_data.get("username", "")
-            
+
             feed.append(item)
-            
+
         return jsonify({"feed": feed}), 200
     
     except Exception as e:

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useUser } from "../UserContext";
 import ReviewCard from "../components/ReviewCard";
 import { useLocation } from "react-router-dom";
@@ -13,7 +13,7 @@ export default function Activity() {
   const user_id = useUser().userId;
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   
-  React.useEffect(() => {
+  useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 768);
     };
@@ -32,6 +32,17 @@ export default function Activity() {
 
   const loading = feedLoading || ratingsLoading;
 
+  // Deduplicate feed by rating_id (or id) to guard against legacy Firestore dupes
+  const deduplicatedFeed = useMemo(() => {
+    const seen = new Set<string>();
+    return (feed as any[]).filter((item) => {
+      const key = item.rating_id || item.id || `${item.user_id}-${item.show_id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [feed]);
+
   const renderReviews = (reviews: any[]) => {
     return reviews.length === 0 ? (
       <p>No reviews yet.</p>
@@ -41,7 +52,7 @@ export default function Activity() {
           <div className="review-cards-container">
             {reviews.map((rating: any) => (
               <ReviewCard
-                key={`${rating.user_id}-${rating.show_id}`}
+                key={rating.id}
                 showId={rating.show_id}
                 userId={rating.user_id}
                 comment={rating.comment}
@@ -86,9 +97,12 @@ export default function Activity() {
         </div>
       </div>
 
-      <div className="activity-contentContainer">
+      {/* key={activeTab} forces a full unmount/remount when switching tabs,
+          preventing React from reusing ReviewCard instances across tabs
+          which would cause stale props and visual duplicates */}
+      <div key={activeTab} className="activity.contentContainer">
         {activeTab === "following"
-          ? renderReviews(feed as any[])
+          ? renderReviews(deduplicatedFeed)
           : renderReviews(userRatings as any[])}
       </div>
     </div>
