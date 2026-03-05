@@ -2,19 +2,14 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import ShowTooltip from "../components/ShowTooltip";
 import ReactDOM from "react-dom";
+import { useShowDetails, useShowAverageRating } from "../hooks/useShow";
+import { useUserProfile } from "../hooks/useUser";
 
 interface ReviewCardProps {
   showId: string;
   userId: string;
-  userName: string;
-  userProfilePic?: string;
   comment?: string;
   rating?: number;
-  showImageUrl?: string;
-  showName?: string;
-  overview?: string;
-  averageRating?: number;
-  firstAirDate?: string;
   compact?: boolean;
   reviewDate?: string;
 }
@@ -22,22 +17,32 @@ interface ReviewCardProps {
 const ReviewCard: React.FC<ReviewCardProps> = ({
   showId,
   userId,
-  userName,
-  userProfilePic,
   comment,
   rating,
-  showImageUrl,
-  showName,
-  overview,
-  averageRating,
-  firstAirDate,
   compact,
-  reviewDate
+  reviewDate,
 }) => {
   const navigate = useNavigate();
+  const { data: show } = useShowDetails(showId);
+  const { data: ratingData } = useShowAverageRating(showId);
+  const { data: user } = useUserProfile(userId);
+
+  const imagePath = show?.poster_path;
+  const showImageUrl = imagePath?.startsWith("http")
+    ? imagePath
+    : imagePath
+    ? `https://image.tmdb.org/t/p/w500${imagePath}`
+    : show?.image_url || show?.thumbnail || null;
+
+  const showName = show?.name;
+  const overview = show?.overview;
+  const firstAirDate = show?.first_air_date;
+  const averageRating = ratingData?.average_rating;
   const profilePic =
-    (userProfilePic ? userProfilePic.slice(0, -4) + "1080" : null) ||
+    (user?.picture ? user.picture.slice(0, -4) + "1080" : null) ||
     "/avatar.jpg";
+  const userName = user?.name;
+  
 
 const goToProfile = (e: React.MouseEvent) => {
     e.stopPropagation(); // prevent card click
@@ -50,6 +55,7 @@ const goToShow = () => {
 
 const [expanded, setExpanded] = React.useState(false);
 const commentRef = React.useRef<HTMLParagraphElement>(null);
+const titleRef = React.useRef<HTMLParagraphElement>(null);
 const [isOverflowing, setIsOverflowing] = React.useState(false);
 const cardRef = React.useRef<HTMLDivElement>(null);
 const [cardPosition, setCardPosition] = React.useState<{
@@ -64,6 +70,15 @@ React.useEffect(() => {
     setIsOverflowing(el.scrollHeight > el.clientHeight);
   }
 }, [comment, expanded]);
+
+React.useEffect(() => {
+  if (expanded) return;
+
+  const el = titleRef.current;
+  if (!el) return;
+
+  setIsOverflowing(el.scrollWidth > el.clientWidth);
+}, [showName, expanded]);
 
 
 const handleCardClick = (e: React.MouseEvent) => {
@@ -166,7 +181,10 @@ return (
             <div className="rating-details">
               <div className="rating-text">
                 <p
-                  className="rating-show-name"
+                  ref={titleRef}
+                  className={`rating-show-name ${
+                    !expanded && isOverflowing ? "fade" : ""
+                  } ${expanded ? "expanded" : ""}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     goToShow();
@@ -192,8 +210,8 @@ return (
             <div className="rating-score">{rating}</div>
           </div>
         </div>,
-      document.body
-  )}
+        document.body,
+      )}
   </>
 );
 };

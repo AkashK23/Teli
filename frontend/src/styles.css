@@ -616,6 +616,10 @@ body {
   margin-top: 1rem;
 }
 
+.desktop-break {
+  display: inline;
+}
+
 .features-title {
   font-size: 2rem;
   margin-bottom: 1.5rem;
@@ -797,6 +801,12 @@ body {
   padding: 0 1rem;
 }
 
+.show-details-headings {
+  font-size: 2rem;
+  align-items: center;
+  text-align: center;
+}
+
 .show-details-upper {
   display: flex;
   gap: 2rem;
@@ -961,7 +971,7 @@ body {
 }
 
 .season-ticker-container {
-  margin-top: 3rem;
+  margin-top: 2rem;
   text-align: center;
 }
 
@@ -1023,7 +1033,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  background: #f4f4f4;
+  background: var(--color-bg-components);
+  border: .1rem solid var(--color-accent-components);
   border-radius: .5rem;
   padding: 1rem;
 }
@@ -1055,7 +1066,7 @@ body {
 .episode-review-button {
   padding: 0.5rem 1rem;
   border-radius: .375rem;
-  border: .1rem solid #333;
+  border: .1rem solid var(--color-accent-components);
   height: fit-content;
   align-self: center;
   cursor: pointer;
@@ -1087,6 +1098,52 @@ body {
 .episode-review-container {
   width: 100%;
   padding: 1rem;
+}
+
+/* Container */
+.mobile-show-upper {
+  display: flex;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+/* Poster */
+.mobile-show-poster {
+  width: 7.5rem;
+  flex-shrink: 0;
+  border-radius: 0.5rem;
+}
+
+/* Right column */
+.mobile-show-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Title area takes top */
+.mobile-show-top {
+  flex-grow: 1;
+}
+
+/* Title */
+.mobile-title {
+  font-size: 2rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+/* Date lighter */
+.mobile-date {
+  font-size: 1rem;
+  font-weight: normal;
+  color: var(--color-bg-navbar-active);
+}
+
+/* Rating pushed to bottom right */
+.mobile-rating-wrapper {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* #Profile */
@@ -1127,11 +1184,12 @@ body {
 .profile-stats {
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
 
 .stats-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 2.5rem;
   margin-top: 6rem;
   margin-bottom: 6.75rem;
@@ -1148,7 +1206,7 @@ body {
   padding: .625rem;
   font-size: 1rem;
   font-weight: bold;
-  border: .125rem solid #333;
+  border: .125rem solid var(--color-bg-navbar);
   border-radius: .375rem;
   cursor: pointer;
   background-color: var(--color-bg-main);
@@ -1204,6 +1262,18 @@ body {
 
 .disabled-stat:hover {
   background: none;
+}
+
+.home-section-profile {
+  min-width: 0;
+  width: 50%;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  margin: 0 auto;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .favorite-shows {
@@ -1430,23 +1500,23 @@ body {
 
 .activity-tabContainer {
   display: flex;
-  border-radius: .375rem;
+  border-radius: 0.5rem;
   overflow: hidden;
-  border: .1rem solid #ccc;
-  margin-top: 2rem;
-  margin-bottom: 2rem;
+  border: 0.1rem solid var(--color-accent-components);
+  margin: 1.5rem auto;
   width: 100%;
-  max-width: 37.5rem;
+  max-width: 32rem;
 }
 
 .activity-tab {
   flex: 1;
   text-align: center;
-  padding: 0.75rem;
+  padding: 0.9rem 0.5rem;
   cursor: pointer;
   background-color: var(--color-bg-components);
   font-weight: 600;
   transition: background-color 0.2s ease;
+  font-size: 0.95rem;
 }
 
 .activity-activeTab {
@@ -1455,7 +1525,7 @@ body {
 }
 
 .activity-contentContainer {
-  margin-top: 1rem;
+  width: 100%;
 }
 
 /* #Following/Followers */
@@ -1521,7 +1591,7 @@ body {
 .onboarding-field textarea {
   padding: 0.75rem;
   border-radius: .5rem;
-  border: .1rem solid #ccc;
+  border: .1rem solid var(--color-accent-components);
   font-size: 1rem;
 }
 
@@ -1557,14 +1627,14 @@ body {
   font-size: 1.1rem;
   background-color: var(--color-bg-components);
   color: var(--color-text-primary);
-  border: none;
+  border: .1rem solid var(--color-accent-components);
   border-radius: .5rem;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .onboarding-cancel:hover {
-  background-color: var(--color-bg-components-hover);
+  background-color: var(--color-bg-navbar-hover);
   color: var(--color-text-secondary);
 }
 
@@ -1653,8 +1723,7 @@ body {
   position: relative;
   display: flex;
   justify-content: space-between;
-  width: 100%;
-  max-width: 37.5rem;
+  width: 37.5rem;
   margin: 0 auto;
   background: var(--color-bg-components);
   border-radius: 2rem;
@@ -1670,6 +1739,7 @@ body {
   font-weight: 500;
   color: var(--color-bg-navbar);
   transition: color 0.3s ease;
+  white-space: nowrap;
 }
 
 .toggle-option-yourshows.active {
@@ -1701,6 +1771,8 @@ body {
 }
 
 .no-shows-message {
+  width: 100%;
+  max-width: 100%;
   text-align: center;
   color: var(--color-text-primary);
   font-size: 1.2rem;
@@ -1948,8 +2020,14 @@ body {
   font-size: 1.5rem;
   font-weight: bold;
   margin: 0;
+  max-width: 100%;
   margin-bottom: .4rem;
   margin-left: .4rem;
+
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rating-user-name {
@@ -2003,8 +2081,10 @@ body {
 .rating-details {
   display: flex;
   flex-direction: row;
-  width: 100%;
-  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 1rem;
 }
 
 .rating-text {
@@ -2012,8 +2092,9 @@ body {
   flex-direction: column;
   align-items: flex-start;
   text-align: left;
-  flex: 1;
+  font-size: 1.5rem;
   gap: .5rem;
+  min-width: 0;
 }
 
 .rating-score {
@@ -2440,10 +2521,6 @@ body {
     padding: 0 0.5rem;
   }
 
-  .review-cards-container {
-    padding: 0 0.5rem;
-  }
-
   .features-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
@@ -2493,6 +2570,10 @@ body {
     padding: 0;
   }
 
+  .scroll-container p {
+    padding-left: 0.5rem;
+  }
+
   .show-link {
     flex: 0 0 auto;
     scroll-snap-align: start;
@@ -2506,15 +2587,21 @@ body {
   }
 
   .review-cards-container {
+    display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 1rem;
     width: 100%;
+  }
+
+  .desktop-break {
+    display: none;
   }
 
   .features-title {
     font-size: 1.6rem;
     margin-bottom: 1rem;
-    padding-left: 1rem;
+    padding-left: 0.5rem;
   }
 
   .features-grid {
@@ -2612,13 +2699,12 @@ body {
     font-weight: 600;
   }
 
-  /* !ReviewCard */
+  /* #ReviewCard */
   
   /* Base card smaller + tighter */
   .rating-card {
     padding: 0.75rem;
     border-radius: 0.5rem;
-    align-items: flex-start;
   }
 
   /* Remove fixed compact width on mobile */
@@ -2629,7 +2715,7 @@ body {
 
   /* Smaller show image */
   .rating-show-img {
-    width: 3.5rem;
+    width: 4rem;
     margin-right: 0.75rem;
     border-radius: 0.4rem;
   }
@@ -2641,18 +2727,28 @@ body {
     margin-bottom: 0.25rem;
   }
 
+  .rating-show-name.expanded {
+    white-space: normal;
+    overflow: visible;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
   /* Smaller comment */
   .rating-comment {
     font-size: 0.85rem;
     margin-left: 0;
     margin-bottom: 0.5rem;
     line-height: 1.4;
+    word-break: break-word;
   }
+  
 
   /* Smaller rating score box */
   .rating-score {
-    height: 3rem;
-    font-size: 1.75rem;
+    aspect-ratio: 1 / 1;
+    height: 5rem;
+    font-size: 3rem;
     margin: 0 0 0 0.5rem;
     border-radius: 0.4rem;
   }
@@ -2755,6 +2851,10 @@ body {
       padding: 0 1rem;
     }
 
+    .show-details-headings {
+      padding-left: 0;
+    }
+
     /* KEEP side-by-side but tighten spacing */
     .show-details-upper {
       flex-direction: row;
@@ -2809,12 +2909,54 @@ body {
       margin-top: 0.5rem;
     }
 
-    /* Watch dropdown full width but compact */
-    .watch-status-dropdown {
-      width: 100%;
+    /* Row alignment */
+    .watch-status-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
       margin-top: 1rem;
-      font-size: 0.9rem;
-      padding: 0.4rem;
+      margin-bottom: 2rem;
+    }
+
+    /* Container for positioning */
+    .watch-status-container {
+      position: relative;
+    }
+
+    /* Button smaller */
+    .watch-status-button {
+      min-width: 9rem;
+      padding: 0.4rem 0.6rem;
+      font-size: 0.85rem;
+      border-radius: 0.5rem;
+      border: 1px solid #ddd;
+      background: #f9f9f9;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    /* Dropdown */
+    .watch-status-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 100%;
+      background: white;
+      border-radius: 0.5rem;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      margin-top: 0.3rem;
+      z-index: 1000;
+    }
+
+    /* Options */
+    .watch-status-menu div {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .watch-status-menu div:hover {
+      background: #f0f0f0;
     }
 
     /* Review section full width */
@@ -2842,4 +2984,140 @@ body {
       font-size: 1.8rem;
     }
 
+    .season-poster {
+      width: 7rem;
+    }
+
+    .rating-text {
+      font-size: 1.2rem;
+      gap: .5rem;
+      min-width: 0;
+    }
+
+    /* #Activity */
+    .activity-tabContainer {
+      margin: 1rem;
+      width: calc(100% - 2rem);
+    }
+
+    .activity-tab {
+      padding: 0.75rem 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    .user-ratings {
+      margin: 0;
+      width: 100%;
+    }
+    
+    /* #Profile */
+
+    .profile-content {
+      width: 100%;
+      padding: 1.25rem;
+    }
+
+    .profile-header {
+      grid-template-columns: auto auto;
+      column-gap: 2rem;
+      padding: 0 1rem;
+    }
+
+    .profile-avatar {
+      width: 8rem;
+      height: 8rem;
+    }
+
+    .username {
+      font-size: 1.4rem;
+    }
+
+    .stats-row {
+      margin-top: 4rem;
+      margin-bottom: 4.75rem;
+      gap: 1rem;
+    }
+
+    .stat-number {
+      font-size: 1.2rem;
+    }
+
+    .stat-label {
+      font-size: 1rem;
+    }
+
+    .follow-btn {
+      width: 100%;
+      max-width: 10rem;
+    }
+
+    .show-icon.small-icon {
+      width: 6rem;
+    }
+
+    .favorite-shows-images {
+      width: 100%;
+    }
+
+    .home-section-profile {
+      width: 100%;
+      padding: 0 .5rem;
+      align-items: center;
+    
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0 auto;
+    }
+    
+    /* #yourShows */
+    .yourshows-padding {
+      padding: 1rem;
+    }
+
+    .toggle-slider-yourshows {
+      position: absolute;
+      top: .25rem;
+      bottom: .25rem;
+      left: .25rem;
+      width: calc((100% - .5rem) / 3);
+      border-radius: 2rem;
+      background: var(--color-bg-navbar);
+      transition: transform 0.3s ease;
+      z-index: 1;
+    }
+
+    .toggle-container-yourshows {
+      width: 25rem;
+      padding: .5rem;
+      border-radius: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .toggle-slider-yourshows.want_to_watch {
+      transform: translateX(0%);
+    }
+
+    .toggle-slider-yourshows.currently_watching {
+      transform: translateX(100%);
+    }
+
+    .toggle-slider-yourshows.watched {
+      transform: translateX(200%);
+    }
+
+    .toggle-option-yourshows {
+      font-size: 0.8rem;
+      padding: .4rem 0;
+    }
+
+    .toggle-slider-yourshows {
+      border-radius: 1.5rem;
+    } 
+
+    /* #Onboarding Form */
+    .onboarding-form {
+      box-shadow: none;
+      margin-top: 0;
+    }
 }

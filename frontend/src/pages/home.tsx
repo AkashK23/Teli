@@ -1,305 +1,110 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useUser } from "../UserContext";
 import ReviewCard from "../components/ReviewCard";
-import ShowTooltip from "../components/ShowTooltip";
+import ShowPosterCard from "../components/ShowPosterCard";
 import { formatRelativeTime } from "../components/formatRelativeTime";
+import ShowTooltip from "../components/ShowTooltip";
+import { usePopularShows, useShowAverageRating, useShowDetails } from "../hooks/useShow";
+import {
+  useUserWatchList,
+  useUserFeed,
+  useUserRatings,
+} from "../hooks/useUser";
+
+const STAFF_PICK_IDS = [66732, 125935, 136311, 103540];
+
+function StaffPickCard({ showId }: { showId: number }) {
+  const { data: show } = useShowDetails(showId);
+  const { data: ratingData } = useShowAverageRating(showId);
+
+  if (!show) return null;
+
+  const imagePath = show.poster_path;
+  const imageUrl = imagePath
+    ? `https://image.tmdb.org/t/p/w500${imagePath}`
+    : show.image_url || show.thumbnail || null;
+
+  if (!imageUrl) return null;
+
+  return (
+    <Link to={`/show/${showId}`} className="staff-item">
+      <ShowTooltip
+        show={{
+          name: show.name,
+          first_air_date: show.first_air_date,
+          overview: show.overview,
+          rating: ratingData?.average_rating,
+        }}
+      >
+        <img
+          src={imageUrl}
+          alt={show.name}
+          className="staff-thumb"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+          }}
+        />
+      </ShowTooltip>
+      <span className="staff-title">{show.name}</span>
+    </Link>
+  );
+}
+
+// Renders a single hero banner slide with its own average rating query
+function HeroBannerSlide({ show }: { show: any }) {
+  const { data: ratingData } = useShowAverageRating(show.id);
+  return (
+    <div key={show.id} className="hero-banner-slide">
+      <Link to={`/show/${show.id}`} className="hero-card-link">
+        <img
+          src={`https://image.tmdb.org/t/p/original${
+            show.backdrop_path || show.poster_path
+          }`}
+          alt={show.name}
+        />
+        <div className="hero-banner-content">
+          <div className="hero-title-row">
+            <h1>{show.name}</h1>
+            {ratingData?.average_rating && (
+              <div className="hero-rating-box">
+                {parseFloat(ratingData.average_rating).toFixed(1)}
+              </div>
+            )}
+          </div>
+        </div>
+      </Link>
+    </div>
+  );
+}
 
 export default function Home() {
-  const navigate = useNavigate();
-  const [ratingsWithImages, setRatingsWithImages] = useState<any[]>([]);
-  const [userRatingsWithImages, setUserRatingsWithImages] = useState<any[]>([]);
-  const [popularShows, setPopularShows] = useState<any[]>([]);
-  const [currentlyWatchingWithImages, setCurrentlyWatchingWithImages] =
-    useState<any[]>([]);
-  const [newFromFriends, setNewFromFriends] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [bannerIndex, setBannerIndex] = useState(0);
-  const [watchedCount, setWatchedCount] = useState(0);
-  const [displayCount, setDisplayCount] = useState(0);
-  const [watchedTicker, setWatchedTicker] = useState(0);
-  
-  const [staffPickIds] = useState([66732, 125935, 136311, 103540]);
-  const [staffPicks, setStaffPicks] = useState<any[]>([]);
 
-  const url = process.env.REACT_APP_API_URL;
   const user_id = useUser().userId;
 
-  useEffect(() => {
-    if (!user_id) return;
+  const { data: popularShows = [], isLoading: popularLoading } =
+    usePopularShows(100, 4);
+  const { data: cwList = [], isLoading: cwLoading } = useUserWatchList(
+    user_id,
+    "currently_watching"
+  );
+const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
+  const { data: userRatings = [], isLoading: ratingsLoading } =
+    useUserRatings(user_id);
 
-    const fetchData = async () => {
-      try {
-        const [currentlyWatchingRes, popularRes, ratingsRes, userRatingsRes] =
-          await Promise.all([
-            axios.get(`${url}/users/${user_id}/currently_watching`),
-            axios.get(`${url}/shows/popular`, {
-              params: { timeframe: 100, num_most_popular: 4 },
-            }),
-            axios.get(`${url}/users/${user_id}/feed`),
-            axios.get(`${url}/users/${user_id}/ratings`),
-          ]);
+  const loading = popularLoading || cwLoading || feedLoading || ratingsLoading;
 
-        const currentlyWatching = currentlyWatchingRes.data;
-        const popularShows_backend = popularRes.data.popular_shows;
-        const fetchedRatings = ratingsRes.data.feed;
-        const fetchedUserRatings = userRatingsRes.data;
-
-        const W2Wres = await axios.get(`${url}/users/${user_id}/want_to_watch`);
-        const CWres = await axios.get(
-          `${url}/users/${user_id}/currently_watching`
-        );
-        const Wres = await axios.get(`${url}/users/${user_id}/watched`);
-        setWatchedCount(
-          W2Wres.data.length + CWres.data.length + Wres.data.length
-        );
-
-        console.log(popularRes);
-
-        // Fetch currently watching with details
-        const updatedCurrentlyWatching = await Promise.all(
-          currentlyWatching.map(async (show: any) => {
-            try {
-              const res = await axios.get(`${url}/shows/${show.show_id}`);
-              const showData = res.data;
-              const imagePath = showData.poster_path;
-              const imageUrl = imagePath?.startsWith("http")
-                ? imagePath
-                : `https://image.tmdb.org/t/p/w500${imagePath}`;
-              const ratingRes = await axios.get(
-                `${url}/shows/${show.show_id}/average-rating`
-              );
-              return {
-                ...show,
-                image_url:
-                  showData?.image_url ||
-                  showData?.thumbnail ||
-                  imageUrl ||
-                  null,
-                name: showData.name || show.show_name,
-                overview: showData.overview,
-                first_air_date: showData.first_air_date,
-                rating: ratingRes.data.average_rating,
-              };
-            } catch {
-              return { ...show, image_url: null };
-            }
-          })
-        );
-
-        // Fetch popular shows with ratings
-        const updatedPopularShows = await Promise.all(
-          popularShows_backend.map(async (show: any) => {
-            try {
-              const ratingRes = await axios.get(
-                `${url}/shows/${show.id}/average-rating`
-              );
-              return { ...show, rating: ratingRes.data.average_rating };
-            } catch {
-              return { ...show, rating: null };
-            }
-          })
-        );
-
-        // Feed reviews
-        const updatedRatings = await Promise.all(
-          fetchedRatings.map(async (rating: any) => {
-            try {
-              const [showRes, userRes] = await Promise.all([
-                axios.get(`${url}/shows/${rating.show_id}`),
-                axios.get(`${url}/user/${rating.user_id}`),
-              ]);
-              const showData = showRes.data;
-              const imagePath = showData.poster_path;
-              const imageUrl = imagePath?.startsWith("http")
-                ? imagePath
-                : `https://image.tmdb.org/t/p/w500${imagePath}`;
-              const ratingRes = await axios.get(
-                `${url}/shows/${rating.show_id}/average-rating`
-              );
-              console.log(ratingRes.data.average_rating);
-              return {
-                ...rating,
-                show_name: showData?.name,
-                image_url:
-                  showData?.image_url ||
-                  showData?.thumbnail ||
-                  imageUrl ||
-                  null,
-                user_name: userRes.data.name,
-                user_id: userRes.data.id,
-                user_profile_pic: userRes.data.picture,
-                overview: showData.overview,
-                first_air_date: showData.first_air_date,
-                average_rating: ratingRes.data.average_rating,
-                review_date: formatRelativeTime(rating.timestamp),
-              };
-            } catch {
-              return { ...rating, image_url: null };
-            }
-          })
-        );
-
-        // User reviews
-        const updatedUserRatings = await Promise.all(
-          fetchedUserRatings.map(async (rating: any) => {
-            try {
-              const [showRes, userRes] = await Promise.all([
-                axios.get(`${url}/shows/${rating.show_id}`),
-                axios.get(`${url}/user/${rating.user_id}`),
-              ]);
-              const showData = showRes.data;
-              const imagePath = showData.poster_path;
-              const imageUrl = imagePath?.startsWith("http")
-                ? imagePath
-                : `https://image.tmdb.org/t/p/w500${imagePath}`;
-              const ratingRes = await axios.get(
-                `${url}/shows/${rating.show_id}/average-rating`
-              );
-              return {
-                ...rating,
-                show_name: showData?.name,
-                image_url:
-                  showData?.image_url ||
-                  showData?.thumbnail ||
-                  imageUrl ||
-                  null,
-                user_name: userRes.data.name,
-                user_id: userRes.data.id,
-                user_profile_pic: userRes.data.picture,
-                overview: showData.overview,
-                first_air_date: showData.first_air_date,
-                average_rating: ratingRes.data.average_rating,
-                review_date: formatRelativeTime(rating.timestamp),
-              };
-            } catch {
-              return { ...rating, image_url: null };
-            }
-          })
-        );
-
-        // New from friends
-        const top3Ratings = updatedRatings.slice(0, 10);
-        const newShows = await Promise.all(
-          top3Ratings.map(async (rating: any) => {
-            try {
-              const res = await axios.get(`${url}/shows/${rating.show_id}`);
-              const showData = res.data;
-              const imagePath = showData.poster_path;
-              const imageUrl = imagePath?.startsWith("http")
-                ? imagePath
-                : `https://image.tmdb.org/t/p/w500${imagePath}`;
-              const ratingRes = await axios.get(
-                `${url}/shows/${rating.show_id}/average-rating`
-              );
-              console.log(ratingRes.data.average_rating);
-              return {
-                ...showData,
-                image_url:
-                  showData?.image_url ||
-                  showData?.thumbnail ||
-                  imageUrl ||
-                  null,
-                show_id: rating.show_id,
-                rating: ratingRes.data.average_rating,
-              };
-            } catch {
-              return null;
-            }
-          })
-        );
-
-        const fetchedStaffPicks = await Promise.all(
-          staffPickIds.map(async (id) => {
-            try {
-              const res = await axios.get(`${url}/shows/${id}`);
-              const showData = res.data;
-              const imagePath = showData.poster_path;
-              const imageUrl = imagePath?.startsWith("http")
-                ? imagePath
-                : `https://image.tmdb.org/t/p/w500${imagePath}`;
-              const ratingRes = await axios.get(
-                `${url}/shows/${id}/average-rating`
-              );
-              return {
-                id,
-                title: showData?.name,
-                image_url:
-                  showData?.image_url ||
-                  showData?.thumbnail ||
-                  imageUrl ||
-                  null,
-                name: showData.name,
-                overview: showData.overview,
-                first_air_date: showData.first_air_date,
-                rating: ratingRes.data.average_rating,
-              };
-            } catch {
-              return { id, title: "Unknown", image_url: null };
-            }
-          })
-        );
-        setStaffPicks(fetchedStaffPicks);
-
-        setCurrentlyWatchingWithImages(updatedCurrentlyWatching);
-        setPopularShows(updatedPopularShows);
-        setRatingsWithImages(updatedRatings.slice(0,3));
-        setUserRatingsWithImages(updatedUserRatings.slice(0,3));
-        setNewFromFriends(newShows.filter(Boolean));
-        console.log(newFromFriends);
-        setLoading(false);
-      } catch (err) {
-        console.error("Failed to fetch home data:", err);
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [user_id]);
-
-  // Rotate through slides (title card + popular shows)
+  // Rotate banner
   useEffect(() => {
     if (!popularShows.length) return;
-    const totalSlides = popularShows.length + 1; // +1 for the Teli card
+    const totalSlides = popularShows.length + 1;
     const interval = setInterval(() => {
       setBannerIndex((prev) => (prev + 1) % totalSlides);
     }, 6000);
     return () => clearInterval(interval);
   }, [popularShows.length]);
 
-  useEffect(() => {
-    if (!loading && watchedCount > 0) {
-      let start = 0;
-      const duration = 2000; // 2 seconds
-      const startTime = performance.now();
-
-      const animate = (currentTime: number) => {
-        const progress = Math.min((currentTime - startTime) / duration, 1);
-        const eased = progress * (2 - progress); // ease-out
-        const value = Math.floor(eased * watchedCount);
-        setDisplayCount(value);
-
-        if (progress < 1) requestAnimationFrame(animate);
-      };
-
-      requestAnimationFrame(animate);
-    }
-  }, [loading, watchedCount]);
-
-  useEffect(() => {
-    let current = 0;
-    const interval = setInterval(() => {
-      current += 1;
-      setWatchedTicker(current);
-
-      if (current >= watchedCount) {
-        clearInterval(interval);
-      }
-    }, 20);
-
-    return () => clearInterval(interval);
-  }, [user_id]);
 
   if (loading) {
     return (
@@ -309,15 +114,24 @@ export default function Home() {
       </div>
     );
   }
-  
 
   const totalSlides = popularShows.length + 1;
   const nextBanner = () => setBannerIndex((prev) => (prev + 1) % totalSlides);
   const prevBanner = () =>
     setBannerIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
 
-  const isTeliSlide = bannerIndex === 0;
-  const currentBanner = isTeliSlide ? null : popularShows[bannerIndex - 1];
+  // Unique show IDs from feed for "New From Friends"
+  const friendShowIds = [
+    ...new Set(
+      (feed as any[]).slice(0, 10).map((item: any) => item.show_id)
+    ),
+  ];
+
+  // Feed reviews (top 3) — ReviewCard fetches its own show/user data
+  const feedReviews = (feed as any[]).slice(0, 3);
+
+  // User reviews (top 3) — ReviewCard fetches its own show/user data
+  const userReviews = (userRatings as any[]).slice(0, 3);
 
   return (
     <div className="page-container fade-in">
@@ -326,14 +140,12 @@ export default function Home() {
         <div className="hero-banner-wrapper">
           <div
             className="hero-banner-slider"
-            style={{
-              transform: `translateX(-${bannerIndex * 100}%)`,
-            }}
+            style={{ transform: `translateX(-${bannerIndex * 100}%)` }}
           >
             {/* Slide 0: Teli Title Card */}
             <div className="hero-banner-slide hero-banner-teli">
               <img
-                src="/Teli Slide.jpg" // Replace with your image path or URL
+                src="/teli-slide.jpg"
                 alt="Teli Slide"
                 className="hero-background-img"
               />
@@ -344,30 +156,8 @@ export default function Home() {
             </div>
 
             {/* Slides 1+: Popular Shows */}
-            {popularShows.map((show) => (
-              <div key={show.id} className="hero-banner-slide">
-                <Link to={`/show/${show.id}`} className="hero-card-link">
-                  <img
-                    src={`https://image.tmdb.org/t/p/original${
-                      show.backdrop_path || show.poster_path
-                    }`}
-                    alt={show.name}
-                  />
-                  <div className="hero-banner-content">
-                    <div className="hero-title-row">
-                      <h1>{show.name}</h1>
-                      {show.rating && (
-                        <div className="hero-rating-box">
-                          {parseFloat(show.rating).toFixed(1)}
-                        </div>
-                      )}
-                    </div>
-                    {/* <p>
-                      {show.overview || "Discover trending shows this week."}
-                    </p> */}
-                  </div>
-                </Link>
-              </div>
+            {popularShows.map((show: any) => (
+              <HeroBannerSlide key={show.id} show={show} />
             ))}
           </div>
 
@@ -379,101 +169,45 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Staff Picks Section */}
+        {/* Staff Picks — desktop sidebar */}
         <div className="staff-picks-container desktop-only">
           <h2 className="staff-picks-title">Staff Picks</h2>
-
           <ul className="staff-list">
-            {staffPicks.map((show) => (
-              <Link
-                key={show.id}
-                to={`/show/${show.id}`}
-                className="staff-item"
-              >
-                <ShowTooltip
-                  show={{
-                    name: show.name,
-                    first_air_date: show.first_air_date,
-                    overview: show.overview,
-                    rating: show.rating,
-                  }}
-                >
-                  <img
-                    src={show.image_url}
-                    alt={show.name}
-                    className="staff-thumb"
-                  />
-                </ShowTooltip>
-                <span className="staff-title">{show.name}</span>
-              </Link>
+            {STAFF_PICK_IDS.map((id) => (
+              <StaffPickCard key={id} showId={id} />
             ))}
           </ul>
         </div>
       </div>
 
-      {/* <div className="watch-ticker-wrapper">
-        <div className="watch-ticker-box">
-          <span className="ticker-number">{displayCount}</span>
-        </div>
-        <p className="watch-ticker-label">Shows</p>
-      </div> */}
-
       {/* Mobile Staff Picks */}
       <div className="home-sections-row">
         <div className="staff-mobile home-section">
           <h1 className="headings">Staff Picks</h1>
-
           <div className="scroll-container">
-            {staffPicks.map((show) => (
-              <Link key={show.id} to={`/show/${show.id}`} className="show-link">
-                <ShowTooltip
-                  show={{
-                    name: show.name,
-                    first_air_date: show.first_air_date,
-                    overview: show.overview,
-                    rating: show.rating,
-                  }}
-                >
-                  <img
-                    src={show.image_url}
-                    alt={show.name}
-                    className="show-icon home-icon"
-                  />
-                </ShowTooltip>
-              </Link>
+            {STAFF_PICK_IDS.map((id) => (
+              <ShowPosterCard
+                key={id}
+                showId={id}
+                className="show-icon home-icon"
+              />
             ))}
           </div>
         </div>
       </div>
 
-      
       <div className="home-sections-row">
         {/* You're Watching */}
-        {currentlyWatchingWithImages.length > 0 ? (
+        {cwList.length > 0 ? (
           <div className="home-section">
             <h1 className="headings">You're Watching</h1>
             <div className="scroll-container">
-              {currentlyWatchingWithImages.map((show) => (
-                <Link
-                  to={`/show/${show.show_id}`}
+              {(cwList as any[]).map((show: any) => (
+                <ShowPosterCard
                   key={show.show_id}
-                  className="show-link"
-                >
-                  <ShowTooltip
-                    show={{
-                      name: show.name,
-                      first_air_date: show.first_air_date,
-                      overview: show.overview,
-                      rating: show.rating,
-                    }}
-                  >
-                    <img
-                      src={show.image_url}
-                      alt={show.name}
-                      className="show-icon home-icon"
-                    />
-                  </ShowTooltip>
-                </Link>
+                  showId={show.show_id}
+                  className="show-icon home-icon"
+                />
               ))}
             </div>
           </div>
@@ -482,66 +216,24 @@ export default function Home() {
             <h1 className="headings">You're Watching</h1>
             <div className="scroll-container">
               <p>
-                Start watching shows <br />
+                Start watching shows <br className="desktop-break" />
                 to see them here!
               </p>
             </div>
           </div>
-        )} 
-
-        {/* Popular This Week */}
-        {/* {popularShows.length > 0 && (
-        <>
-          <h1 className="headings">Popular This Week</h1>
-          <div className="scroll-container">
-            {popularShows.map((show) => (
-              <Link to={`/show/${show.id}`} key={show.id} className="show-link">
-                <ShowTooltip
-                  show={{
-                    name: show.name,
-                    first_air_date: show.first_air_date,
-                    overview: show.overview,
-                    rating: show.rating,
-                  }}
-                >
-                  <img
-                    src={`https://image.tmdb.org/t/p/w300${show.poster_path}`}
-                    alt={show.name}
-                    className="show-icon home-icon"
-                  />
-                </ShowTooltip>
-              </Link>
-            ))}
-          </div>
-        </>
-      )} */}
+        )}
 
         {/* New From Friends */}
-        {newFromFriends.length > 0 ? (
+        {friendShowIds.length > 0 ? (
           <div className="home-section">
             <h1 className="headings">New From Friends</h1>
             <div className="scroll-container">
-              {newFromFriends.map((show) => (
-                <Link
-                  to={`/show/${show.show_id}`}
-                  key={show.show_id}
-                  className="show-link"
-                >
-                  <ShowTooltip
-                    show={{
-                      name: show.name,
-                      first_air_date: show.first_air_date,
-                      overview: show.overview,
-                      rating: show.rating,
-                    }}
-                  >
-                    <img
-                      src={show.image_url}
-                      alt={show.name}
-                      className="show-icon home-icon"
-                    />
-                  </ShowTooltip>
-                </Link>
+              {friendShowIds.map((showId: any) => (
+                <ShowPosterCard
+                  key={showId}
+                  showId={showId}
+                  className="show-icon home-icon"
+                />
               ))}
             </div>
           </div>
@@ -550,7 +242,7 @@ export default function Home() {
             <h1 className="headings">New From Friends</h1>
             <div className="scroll-container">
               <p>
-                Add friends to see <br />
+                Add friends to see <br className="desktop-break" />
                 what they're watching!
               </p>
             </div>
@@ -560,39 +252,24 @@ export default function Home() {
 
       <div className="home-sections-row">
         {/* Your Reviews */}
-        {userRatingsWithImages.length > 0 ? (
+        {userReviews.length > 0 ? (
           <div className="review-container">
             <Link to="/activity?tab=user" className="heading-link">
               <h1 className="headings">Your Reviews</h1>
             </Link>
             <div className="review-cards-container">
-              {userRatingsWithImages.map((rating: any) => (
+              {userReviews.map((rating: any) => (
                 <ReviewCard
                   key={`${rating.user_id}-${rating.show_id}`}
                   showId={rating.show_id}
                   userId={rating.user_id}
-                  userName={rating.user_name}
-                  userProfilePic={rating.user_profile_pic}
                   comment={rating.comment}
                   rating={rating.rating}
-                  showImageUrl={rating.image_url}
-                  showName={rating.show_name}
-                  overview={rating.overview}
-                  averageRating={rating.average_rating}
-                  firstAirDate={rating.first_air_date}
                   compact={true}
-                  reviewDate={rating.review_date}
+                  reviewDate={formatRelativeTime(rating.timestamp)}
                 />
               ))}
             </div>
-            {/* <div className="see-more-container">
-              <button
-                className="see-more-button"
-                onClick={() => navigate("/activity?tab=user")}
-              >
-                See More
-              </button>
-            </div> */}
           </div>
         ) : (
           <div className="home-section">
@@ -604,40 +281,24 @@ export default function Home() {
         )}
 
         {/* Following Reviews */}
-        {ratingsWithImages.length > 0 ? (
+        {feedReviews.length > 0 ? (
           <div className="review-container">
             <Link to="/activity?tab=following" className="heading-link">
               <h1 className="headings">Following Reviews</h1>
             </Link>
             <div className="review-cards-container">
-              {ratingsWithImages.map((rating: any) => (
+              {feedReviews.map((rating: any) => (
                 <ReviewCard
                   key={`${rating.user_id}-${rating.show_id}`}
                   showId={rating.show_id}
                   userId={rating.user_id}
-                  userName={rating.user_name}
-                  userProfilePic={rating.user_profile_pic}
                   comment={rating.comment}
                   rating={rating.rating}
-                  showImageUrl={rating.image_url}
-                  showName={rating.show_name}
-                  overview={rating.overview}
-                  averageRating={rating.average_rating}
-                  firstAirDate={rating.first_air_date}
                   compact={true}
-                  reviewDate={rating.review_date}
+                  reviewDate={formatRelativeTime(rating.timestamp)}
                 />
               ))}
             </div>
-
-            {/* <div className="see-more-container">
-              <button
-                className="see-more-button"
-                onClick={() => navigate("/activity?tab=following")}
-              >
-                See More
-              </button>
-            </div> */}
           </div>
         ) : (
           <div className="home-section">
@@ -650,8 +311,9 @@ export default function Home() {
       </div>
 
       {/* Features Section */}
-      <h2 className="features-title">Features</h2>
-
+      <div className="home-section">
+        <h2 className="features-title">Features</h2>
+      </div>
       <div className="features-grid">
         <Link to="/browse" className="feature-card">
           <img
@@ -701,7 +363,7 @@ export default function Home() {
           <div className="feature-text">
             <h3>Search</h3>
             <p>
-              Quickly search for TV shows and users to find exactly what you’re
+              Quickly search for TV shows and users to find exactly what you're
               looking for
             </p>
           </div>

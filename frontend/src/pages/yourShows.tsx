@@ -1,66 +1,21 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import ShowsGrid from "../components/ShowsGrid";
+import { useEnrichedWatchList } from "../hooks/useUser";
 
 export default function YourShows() {
   const [watchStatus, setWatchStatus] = useState<
     "want_to_watch" | "currently_watching" | "watched"
   >("want_to_watch");
-  const [shows, setShows] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  
 
-  const url = process.env.REACT_APP_API_URL;
   const { userId } = useParams<{ userId: string }>();
 
-  /* Fetch shows for current watch status */
-  useEffect(() => {
-    const fetchShows = async () => {
-      try {
-        const res = await axios.get(`${url}/users/${userId}/${watchStatus}`);
-        console.log(res);
-        const watchStatusShows = res.data;
+  const { data: shows, isLoading } = useEnrichedWatchList(userId, watchStatus);
 
-        const updated = await Promise.all(
-          watchStatusShows.map(async (show: any) => {
-            try {
-              const detailRes = await axios.get(`${url}/shows/${show.show_id}`);
-              const showData = detailRes.data;
-              const imagePath = showData.poster_path;
-              const imageUrl = imagePath?.startsWith("http")
-                ? imagePath
-                : `https://image.tmdb.org/t/p/w500${imagePath}`;
-              return {
-                ...show,
-                name: showData?.name,
-                overview: showData?.overview,
-                image_url: imageUrl || null,
-                id: showData.id.toString(),
-              };
-            } catch (err) {
-              console.error("Failed to fetch image for:", show.show_name);
-              return { ...show, image_url: null };
-            }
-          })
-        );
-        console.log(updated)
-        setShows(updated || []);
-        setTotalPages(Math.max(1, Math.ceil(updated.length / 20)));
-      } catch (error) {
-        console.error("Error fetching shows:", error);
-        setShows([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const totalPages = Math.max(1, Math.ceil((shows?.length ?? 0) / 20));
 
-    fetchShows();
-  }, [watchStatus, currentPage, url, userId]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="loading-container">
         <div className="spinner"></div>
@@ -71,48 +26,60 @@ export default function YourShows() {
 
   return (
     <div className="page-container">
-      {/* Toggle Tabs for watch status */}
-      <div className="toggle-container-yourshows">
-        <div
-          className={`toggle-option-yourshows ${
-            watchStatus === "want_to_watch" ? "active" : ""
-          }`}
-          onClick={() => setWatchStatus("want_to_watch")}
-        >
-          Want To Watch
-        </div>
-        <div
-          className={`toggle-option-yourshows ${
-            watchStatus === "currently_watching" ? "active" : ""
-          }`}
-          onClick={() => setWatchStatus("currently_watching")}
-        >
-          Currently Watching
-        </div>
-        <div
-          className={`toggle-option-yourshows ${
-            watchStatus === "watched" ? "active" : ""
-          }`}
-          onClick={() => setWatchStatus("watched")}
-        >
-          Watched
+      <div className="yourshows-padding">
+        {/* Toggle Tabs for watch status */}
+        <div className="toggle-container-yourshows">
+          <div
+            className={`toggle-option-yourshows ${
+              watchStatus === "want_to_watch" ? "active" : ""
+            }`}
+            onClick={() => {
+              setWatchStatus("want_to_watch");
+              setCurrentPage(1);
+            }}
+          >
+            Want To Watch
+          </div>
+          <div
+            className={`toggle-option-yourshows ${
+              watchStatus === "currently_watching" ? "active" : ""
+            }`}
+            onClick={() => {
+              setWatchStatus("currently_watching");
+              setCurrentPage(1);
+            }}
+          >
+            Currently Watching
+          </div>
+          <div
+            className={`toggle-option-yourshows ${
+              watchStatus === "watched" ? "active" : ""
+            }`}
+            onClick={() => {
+              setWatchStatus("watched");
+              setCurrentPage(1);
+            }}
+          >
+            Watched
+          </div>
+
+          <div className={`toggle-slider-yourshows ${watchStatus}`} />
         </div>
 
-        <div className={`toggle-slider-yourshows ${watchStatus}`} />
+        <div className="yourshows-content">
+          {!shows || shows.length === 0 ? (
+            <div className="no-shows-message">No shows in this list.</div>
+          ) : (
+            <ShowsGrid
+              items={shows}
+              searchType="shows"
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          )}
+        </div>
       </div>
-
-      {/* If empty, show message */}
-      {shows.length === 0 ? (
-        <div className="no-shows-message">No shows in this list.</div>
-      ) : (
-        <ShowsGrid
-          items={shows}
-          searchType="shows"
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
-      )}
     </div>
   );
 }
