@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Search as SearchIcon } from "lucide-react";
 import ShowsGrid from "../components/ShowsGrid";
 
 export default function Search() {
@@ -10,6 +11,8 @@ export default function Search() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchInput, setSearchInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const url = process.env.REACT_APP_API_URL;
   const location = useLocation();
@@ -30,6 +33,9 @@ export default function Search() {
     const fetchSearchResults = async () => {
       if (!query.trim()) return;
 
+      setIsLoading(true);
+      setError(null);
+
       try {
         if (searchType === "shows") {
           const response = await axios.get(
@@ -46,7 +52,6 @@ export default function Search() {
                 const ratingRes = await axios.get(
                   `${url}/shows/${show.id}/average-rating`
                 );
-                console.log(show, ratingRes);
                 return {
                   ...show,
                   rating: ratingRes.data.average_rating,
@@ -70,10 +75,13 @@ export default function Search() {
           setSearchedUsers(response.data?.results || []);
           setTotalPages(response.data?.total_pages || 1);
         }
-      } catch (error) {
-        console.error("Error fetching search results:", error);
+      } catch (err) {
+        console.error("Error fetching search results:", err);
+        setError("Something went wrong. Please try again.");
         setSearchedShows([]);
         setSearchedUsers([]);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -110,6 +118,7 @@ export default function Search() {
           onClick={() => {
             setSearchType("shows");
             setCurrentPage(1);
+            if (query) navigate(`/search?query=${encodeURIComponent(query)}&type=shows`);
           }}
         >
           Shows
@@ -119,6 +128,7 @@ export default function Search() {
           onClick={() => {
             setSearchType("users");
             setCurrentPage(1);
+            if (query) navigate(`/search?query=${encodeURIComponent(query)}&type=users`);
           }}
         >
           Users
@@ -127,12 +137,30 @@ export default function Search() {
       </div>
 
       {/* Search results message */}
-      <div className="search-results-message">
-        Showing search results for "<b>{query}</b>"
-      </div>
+      {query && (
+        <div className="search-results-message">
+          Showing search results for "<b>{query}</b>"
+        </div>
+      )}
 
       {/* Results */}
-      {searchType === "shows" && searchedShows.length > 0 && (
+      {isLoading ? (
+        <div className="loading-container" style={{ minHeight: "auto", padding: "3rem 0" }}>
+          <div className="spinner"></div>
+        </div>
+      ) : error ? (
+        <div className="empty-state-card">
+          <p>{error}</p>
+          <button onClick={() => handleSearch()} className="empty-state-cta" style={{ border: "none", cursor: "pointer" }}>
+            Try Again
+          </button>
+        </div>
+      ) : !query ? (
+        <div className="empty-state-card">
+          <SearchIcon className="empty-state-icon" />
+          <p>Search for shows or users above</p>
+        </div>
+      ) : searchType === "shows" && searchedShows.length > 0 ? (
         <ShowsGrid
           items={searchedShows}
           searchType="shows"
@@ -140,9 +168,7 @@ export default function Search() {
           totalPages={totalPages}
           onPageChange={setCurrentPage}
         />
-      )}
-
-      {searchType === "users" && searchedUsers.length > 0 && (
+      ) : searchType === "users" && searchedUsers.length > 0 ? (
         <ShowsGrid
           items={searchedUsers}
           searchType="users"
@@ -150,7 +176,12 @@ export default function Search() {
           totalPages={totalPages}
           onPageChange={setCurrentPage}
         />
-      )}
+      ) : query ? (
+        <div className="empty-state-card">
+          <SearchIcon className="empty-state-icon" />
+          <p>No {searchType} found for "{query}"</p>
+        </div>
+      ) : null}
     </div>
   );
 }

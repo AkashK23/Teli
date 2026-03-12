@@ -1,4 +1,5 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
+import { Users } from "lucide-react";
 import UserList from "../components/UserList";
 import { useFollowingProfiles } from "../hooks/useUser";
 
@@ -19,7 +20,15 @@ export default function Following() {
     <div className="following-page">
       <h2 className="following-title">Following</h2>
       <div className="following-container">
-        <UserList users={following} />
+        {(following as any[])?.length === 0 ? (
+          <div className="empty-state-card">
+            <Users className="empty-state-icon" />
+            <p>Not following anyone yet</p>
+            <Link to="/search?type=users" className="empty-state-cta">Find People</Link>
+          </div>
+        ) : (
+          <UserList users={following} />
+        )}
       </div>
     </div>
   );

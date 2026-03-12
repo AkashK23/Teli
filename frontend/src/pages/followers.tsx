@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import { Users } from "lucide-react";
 import { useUser } from "../UserContext";
 import { useFollowerProfiles, useUserFollowing } from "../hooks/useUser";
 import { useFollowUser, useUnfollowUser } from "../hooks/useMutations";
@@ -35,6 +36,13 @@ export default function Followers() {
     <div className="following-page">
       <h2 className="following-title">Followers</h2>
       <div className="following-container">
+        {(followers as any[]).length === 0 ? (
+          <div className="empty-state-card">
+            <Users className="empty-state-icon" />
+            <p>No followers yet</p>
+            <Link to="/search?type=users" className="empty-state-cta">Find People</Link>
+          </div>
+        ) : (
         <ul className="following-list">
           {(followers as any[]).map((user) => {
             const isFollowingBack = (loggedInFollowing as string[]).some(
@@ -70,6 +78,7 @@ export default function Followers() {
             );
           })}
         </ul>
+        )}
       </div>
     </div>
   );
