@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useUser } from "../UserContext";
 import ReviewCard from "../components/ReviewCard";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { MessageSquare } from "lucide-react";
 import { formatRelativeTime } from "../components/formatRelativeTime";
 import { useUserFeed, useUserRatings } from "../hooks/useUser";
 
@@ -45,7 +46,11 @@ export default function Activity() {
 
   const renderReviews = (reviews: any[]) => {
     return reviews.length === 0 ? (
-      <p>No reviews yet.</p>
+      <div className="empty-state-card">
+        <MessageSquare className="empty-state-icon" />
+        <p>No reviews yet</p>
+        <Link to="/browse" className="empty-state-cta">Browse Shows</Link>
+      </div>
     ) : (
       <div className="review-container">
         <div className="user-ratings">

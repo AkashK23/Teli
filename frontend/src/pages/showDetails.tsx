@@ -1,5 +1,7 @@
 import { useParams } from "react-router-dom";
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
+import { Tv } from "lucide-react";
+import ShareButton from "../components/ShareButton";
 import { useUser } from "../UserContext";
 import { useShowDetails, useShowAverageRating } from "../hooks/useShow";
 import {
@@ -32,8 +34,6 @@ export default function ShowDetails() {
   const [watchStatus, setWatchStatus] = useState<WatchStatus>("");
   const [isEditingReview, setIsEditingReview] = useState(false);
   const [watchStatusSynced, setWatchStatusSynced] = useState(false);
-  const [open, setOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: showData, isLoading: showLoading } = useShowDetails(id);
   const { data: avgRatingData } = useShowAverageRating(id);
@@ -90,20 +90,6 @@ export default function ShowDetails() {
       fetchSeason(1);
     }
   }, [showData]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const fetchSeason = async (seasonNumber: number) => {
     if (seasonEpisodes[seasonNumber]) {
@@ -210,8 +196,6 @@ export default function ShowDetails() {
         status: newStatus,
       });
     }
-
-    setOpen(false);
   };
 
   const toggleEpisodeReview = (episodeNumber: number) => {
@@ -242,12 +226,6 @@ export default function ShowDetails() {
     }));
   };
 
-  const formatStatus = (status: string) =>
-    status
-      .split("_")
-      .map((word) => word[0].toUpperCase() + word.slice(1))
-      .join(" ");
-
   const loadingReview = ratingsLoading || watchStatusLoading;
 
   if (showLoading || !showData || isUserDataLoading) {
@@ -275,7 +253,14 @@ export default function ShowDetails() {
           <div className="show-details-info">
             <div className="show-data">
               <div className="show-data-text">
-                <h1>{showData.name}</h1>
+                <div className="show-title-row">
+                  <h1>{showData.name}</h1>
+                  <ShareButton
+                    title={showData.name}
+                    text={`Check out ${showData.name} on Teli!`}
+                    url={`${window.location.origin}/show/${id}`}
+                  />
+                </div>
                 <p>
                   {showData.first_air_date?.slice(0, 4)}-
                   {showData.last_air_date?.slice(0, 4)}
@@ -310,12 +295,6 @@ export default function ShowDetails() {
                   value={watchStatus}
                   onChange={handleWatchStatusChange}
                   className="watch-status-dropdown"
-                  onMouseOver={(e) =>
-                    (e.currentTarget.style.backgroundColor = "#f0f0f0")
-                  }
-                  onMouseOut={(e) =>
-                    (e.currentTarget.style.backgroundColor = "#f9f9f9")
-                  }
                 >
                   <option value="">Select...</option>
                   <option value="want_to_watch">Want to Watch</option>
@@ -337,7 +316,14 @@ export default function ShowDetails() {
 
             <div className="mobile-show-info">
               <div className="mobile-show-top">
-                <h1 className="mobile-title">{showData.name}</h1>
+                <div className="show-title-row">
+                  <h1 className="mobile-title">{showData.name}</h1>
+                  <ShareButton
+                    title={showData.name}
+                    text={`Check out ${showData.name} on Teli!`}
+                    url={`${window.location.origin}/show/${id}`}
+                  />
+                </div>
 
                 <p className="mobile-date">
                   {showData.first_air_date?.slice(0, 4)}–
@@ -366,41 +352,19 @@ export default function ShowDetails() {
           </p>
 
           {user_id && !loadingReview && (
-            <div>
-              {user_id && !loadingReview && (
-                <div className="watch-status-row" ref={dropdownRef}>
-                  <strong>Watch Status:</strong>
-
-                  <div className="watch-status-container">
-                    <button
-                      className="watch-status-button"
-                      onClick={() => setOpen(!open)}
-                    >
-                      {watchStatus ? formatStatus(watchStatus) : "Select..."}
-                    </button>
-
-                    {open && (
-                      <div className="watch-status-menu">
-                        {["want_to_watch", "currently_watching", "watched"].map(
-                          (status) => (
-                            <div
-                              key={status}
-                              onClick={() => {
-                                handleWatchStatusChange({
-                                  target: { value: status },
-                                } as React.ChangeEvent<HTMLSelectElement>);
-                                setOpen(false); // close dropdown after selection
-                              }}
-                            >
-                              {formatStatus(status)}
-                            </div>
-                          ),
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+            <div className="watch-status-row">
+              <strong>Watch Status:</strong>
+              <select
+                id="watchStatusMobile"
+                value={watchStatus}
+                onChange={handleWatchStatusChange}
+                className="watch-status-dropdown"
+              >
+                <option value="">Select...</option>
+                <option value="want_to_watch">Want to Watch</option>
+                <option value="currently_watching">Currently Watching</option>
+                <option value="watched">Watched</option>
+              </select>
             </div>
           )}
         </>
@@ -426,14 +390,6 @@ export default function ShowDetails() {
                     <button
                       onClick={() => setIsEditingReview((prev) => !prev)}
                       className="edit-review-button"
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = "white";
-                        e.currentTarget.style.backgroundColor = "#333";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = "#333";
-                        e.currentTarget.style.backgroundColor = "transparent";
-                      }}
                     >
                       {isEditingReview ? "Cancel" : "Update"}
                     </button>
@@ -468,8 +424,9 @@ export default function ShowDetails() {
                   <button
                     onClick={handleReviewSubmit}
                     className="submit-review-button"
+                    disabled={submitRatingMutation.isPending}
                   >
-                    {userHasRated ? "Update" : "Submit"}
+                    {submitRatingMutation.isPending ? "Submitting..." : userHasRated ? "Update" : "Submit"}
                   </button>
                   {submitted && <p>Review submitted!</p>}
                 </div>
@@ -548,7 +505,7 @@ export default function ShowDetails() {
                         className="episode-poster"
                       />
                     ) : (
-                      <div className="no-img-poster">No Image</div>
+                      <div className="no-img-poster"><Tv size={20} /> No Image</div>
                     )}
                     <div style={{ flex: 1 }}>
                       <strong>

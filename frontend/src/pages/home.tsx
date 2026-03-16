@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Tv, Users, Star, MessageSquare } from "lucide-react";
 import { useUser } from "../UserContext";
 import ReviewCard from "../components/ReviewCard";
 import ShowPosterCard from "../components/ShowPosterCard";
 import { formatRelativeTime } from "../components/formatRelativeTime";
 import ShowTooltip from "../components/ShowTooltip";
+import ShowPlaceholder from "../components/ShowPlaceholder";
 import { usePopularShows, useShowAverageRating, useShowDetails } from "../hooks/useShow";
 import {
   useUserWatchList,
@@ -25,8 +27,6 @@ function StaffPickCard({ showId }: { showId: number }) {
     ? `https://image.tmdb.org/t/p/w500${imagePath}`
     : show.image_url || show.thumbnail || null;
 
-  if (!imageUrl) return null;
-
   return (
     <Link to={`/show/${showId}`} className="staff-item">
       <ShowTooltip
@@ -37,14 +37,18 @@ function StaffPickCard({ showId }: { showId: number }) {
           rating: ratingData?.average_rating,
         }}
       >
-        <img
-          src={imageUrl}
-          alt={show.name}
-          className="staff-thumb"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
-        />
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={show.name}
+            className="staff-thumb"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        ) : (
+          <ShowPlaceholder className="staff-thumb" />
+        )}
       </ShowTooltip>
       <span className="staff-title">{show.name}</span>
     </Link>
@@ -93,8 +97,6 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
   const { data: userRatings = [], isLoading: ratingsLoading } =
     useUserRatings(user_id);
 
-  const loading = popularLoading || cwLoading || feedLoading || ratingsLoading;
-
   // Rotate banner
   useEffect(() => {
     if (!popularShows.length) return;
@@ -105,8 +107,8 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
     return () => clearInterval(interval);
   }, [popularShows.length]);
 
-
-  if (loading) {
+  // Only block on popular shows for the hero banner; let other sections load independently
+  if (popularLoading) {
     return (
       <div className="loading-container">
         <div className="spinner"></div>
@@ -171,7 +173,7 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
 
         {/* Staff Picks — desktop sidebar */}
         <div className="staff-picks-container desktop-only">
-          <h2 className="staff-picks-title">Staff Picks</h2>
+          <h2 className="staff-picks-title">Our Picks</h2>
           <ul className="staff-list">
             {STAFF_PICK_IDS.map((id) => (
               <StaffPickCard key={id} showId={id} />
@@ -198,7 +200,14 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
 
       <div className="home-sections-row">
         {/* You're Watching */}
-        {cwList.length > 0 ? (
+        {cwLoading ? (
+          <div className="home-section">
+            <h1 className="headings">You're Watching</h1>
+            <div className="skeleton-row">
+              {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton-poster" />)}
+            </div>
+          </div>
+        ) : cwList.length > 0 ? (
           <div className="home-section">
             <h1 className="headings">You're Watching</h1>
             <div className="scroll-container">
@@ -214,17 +223,23 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
         ) : (
           <div className="home-section">
             <h1 className="headings">You're Watching</h1>
-            <div className="scroll-container">
-              <p>
-                Start watching shows <br className="desktop-break" />
-                to see them here!
-              </p>
+            <div className="empty-state-card">
+              <Tv className="empty-state-icon" />
+              <p>Start tracking shows you're watching</p>
+              <Link to="/browse" className="empty-state-cta">Browse Shows</Link>
             </div>
           </div>
         )}
 
         {/* New From Friends */}
-        {friendShowIds.length > 0 ? (
+        {feedLoading ? (
+          <div className="home-section">
+            <h1 className="headings">New From Friends</h1>
+            <div className="skeleton-row">
+              {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton-poster" />)}
+            </div>
+          </div>
+        ) : friendShowIds.length > 0 ? (
           <div className="home-section">
             <h1 className="headings">New From Friends</h1>
             <div className="scroll-container">
@@ -240,11 +255,10 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
         ) : (
           <div className="home-section">
             <h1 className="headings">New From Friends</h1>
-            <div className="scroll-container">
-              <p>
-                Add friends to see <br className="desktop-break" />
-                what they're watching!
-              </p>
+            <div className="empty-state-card">
+              <Users className="empty-state-icon" />
+              <p>See what your friends are watching</p>
+              <Link to="/search" className="empty-state-cta">Find Friends</Link>
             </div>
           </div>
         )}
@@ -252,7 +266,14 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
 
       <div className="home-sections-row">
         {/* Your Reviews */}
-        {userReviews.length > 0 ? (
+        {ratingsLoading ? (
+          <div className="home-section">
+            <h1 className="headings">Your Reviews</h1>
+            <div className="skeleton-row">
+              {[1, 2, 3].map((i) => <div key={i} className="skeleton-review" />)}
+            </div>
+          </div>
+        ) : userReviews.length > 0 ? (
           <div className="review-container">
             <Link to="/activity?tab=user" className="heading-link">
               <h1 className="headings">Your Reviews</h1>
@@ -274,14 +295,23 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
         ) : (
           <div className="home-section">
             <h1 className="headings">Your Reviews</h1>
-            <div className="scroll-container">
-              <p>No shows reviewed</p>
+            <div className="empty-state-card">
+              <Star className="empty-state-icon" />
+              <p>Share your thoughts on shows</p>
+              <Link to="/browse" className="empty-state-cta">Find a Show to Review</Link>
             </div>
           </div>
         )}
 
         {/* Following Reviews */}
-        {feedReviews.length > 0 ? (
+        {feedLoading ? (
+          <div className="home-section">
+            <h1 className="headings">Following Reviews</h1>
+            <div className="skeleton-row">
+              {[1, 2, 3].map((i) => <div key={i} className="skeleton-review" />)}
+            </div>
+          </div>
+        ) : feedReviews.length > 0 ? (
           <div className="review-container">
             <Link to="/activity?tab=following" className="heading-link">
               <h1 className="headings">Following Reviews</h1>
@@ -303,8 +333,10 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
         ) : (
           <div className="home-section">
             <h1 className="headings">Following Reviews</h1>
-            <div className="scroll-container">
-              <p>No reviews in your feed</p>
+            <div className="empty-state-card">
+              <MessageSquare className="empty-state-icon" />
+              <p>Follow people to see their reviews</p>
+              <Link to="/search" className="empty-state-cta">Find People</Link>
             </div>
           </div>
         )}

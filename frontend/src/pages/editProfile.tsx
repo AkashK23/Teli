@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "../UserContext";
 
 export default function EditProfile() {
-  const { userId } = useUser();
+  const { userId, setUserId } = useUser();
   const navigate = useNavigate();
   const url = process.env.REACT_APP_API_URL;
 
@@ -61,6 +61,8 @@ export default function EditProfile() {
     try {
       await axios.delete(`${url}/user/${userId}`);
       alert("Your profile has been deleted.");
+      setUserId(null);
+      localStorage.removeItem("user_id");
       navigate(`/login`);
     } catch (err) {
       console.error("Failed to delete profile:", err);

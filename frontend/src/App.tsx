@@ -50,7 +50,7 @@ function App() {
               <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
               <Route path="/activity" element={<ProtectedRoute><Activity /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/profile/:id" element={<Profile />} />
               <Route path="/editprofile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
 
 

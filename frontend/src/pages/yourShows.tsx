@@ -1,17 +1,26 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
+import { Tv } from "lucide-react";
 import ShowsGrid from "../components/ShowsGrid";
 import { useEnrichedWatchList } from "../hooks/useUser";
 
 export default function YourShows() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialList = (searchParams.get("list") as "want_to_watch" | "currently_watching" | "watched") || "want_to_watch";
   const [watchStatus, setWatchStatus] = useState<
     "want_to_watch" | "currently_watching" | "watched"
-  >("want_to_watch");
+  >(initialList);
   const [currentPage, setCurrentPage] = useState(1);
 
   const { userId } = useParams<{ userId: string }>();
 
   const { data: shows, isLoading } = useEnrichedWatchList(userId, watchStatus);
+
+  const changeTab = (status: "want_to_watch" | "currently_watching" | "watched") => {
+    setWatchStatus(status);
+    setCurrentPage(1);
+    setSearchParams({ list: status });
+  };
 
   const totalPages = Math.max(1, Math.ceil((shows?.length ?? 0) / 20));
 
@@ -33,10 +42,7 @@ export default function YourShows() {
             className={`toggle-option-yourshows ${
               watchStatus === "want_to_watch" ? "active" : ""
             }`}
-            onClick={() => {
-              setWatchStatus("want_to_watch");
-              setCurrentPage(1);
-            }}
+            onClick={() => changeTab("want_to_watch")}
           >
             Want To Watch
           </div>
@@ -44,10 +50,7 @@ export default function YourShows() {
             className={`toggle-option-yourshows ${
               watchStatus === "currently_watching" ? "active" : ""
             }`}
-            onClick={() => {
-              setWatchStatus("currently_watching");
-              setCurrentPage(1);
-            }}
+            onClick={() => changeTab("currently_watching")}
           >
             Currently Watching
           </div>
@@ -55,10 +58,7 @@ export default function YourShows() {
             className={`toggle-option-yourshows ${
               watchStatus === "watched" ? "active" : ""
             }`}
-            onClick={() => {
-              setWatchStatus("watched");
-              setCurrentPage(1);
-            }}
+            onClick={() => changeTab("watched")}
           >
             Watched
           </div>
@@ -68,7 +68,11 @@ export default function YourShows() {
 
         <div className="yourshows-content">
           {!shows || shows.length === 0 ? (
-            <div className="no-shows-message">No shows in this list.</div>
+            <div className="empty-state-card">
+              <Tv className="empty-state-icon" />
+              <p>No shows in this list yet</p>
+              <Link to="/browse" className="empty-state-cta">Browse Shows</Link>
+            </div>
           ) : (
             <ShowsGrid
               items={shows}

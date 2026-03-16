@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import ShowTooltip from "./ShowTooltip";
+import ShowPlaceholder from "./ShowPlaceholder";
 import { useShowDetails } from "../hooks/useShow";
 import { useShowAverageRating } from "../hooks/useShow";
 
@@ -10,6 +12,7 @@ interface ShowPosterCardProps {
 }
 
 export default function ShowPosterCard({ showId, className, showName }: ShowPosterCardProps) {
+  const [imgError, setImgError] = useState(false);
   const { data: show } = useShowDetails(showId);
   const { data: ratingData } = useShowAverageRating(showId);
 
@@ -19,8 +22,6 @@ export default function ShowPosterCard({ showId, className, showName }: ShowPost
     : imagePath
     ? `https://image.tmdb.org/t/p/w500${imagePath}`
     : show?.image_url || show?.thumbnail || null;
-
-  if (!imageUrl) return null;
 
   return (
     <Link to={`/show/${showId}`} className="show-link">
@@ -32,14 +33,17 @@ export default function ShowPosterCard({ showId, className, showName }: ShowPost
           rating: ratingData?.average_rating,
         }}
       >
-        <img
-          src={imageUrl}
-          alt={show?.name || "Show poster"}
-          className={className}
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
-        />
+        {imageUrl && !imgError ? (
+          <img
+            src={imageUrl}
+            alt={show?.name || "Show poster"}
+            className={className}
+            loading="lazy"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <ShowPlaceholder className={className} />
+        )}
       </ShowTooltip>
       {showName && show?.name && (
         <span className="staff-title">{show.name}</span>

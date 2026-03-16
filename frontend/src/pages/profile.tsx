@@ -1,4 +1,6 @@
 import { useNavigate, Link, useParams } from "react-router-dom";
+import { Tv, Star } from "lucide-react";
+import ShareButton from "../components/ShareButton";
 import { useUser } from "../UserContext";
 import ReviewCard from "../components/ReviewCard";
 import ShowPosterCard from "../components/ShowPosterCard";
@@ -82,100 +84,91 @@ export default function Profile() {
 
   return (
     <div className="page-container">
-      {/* Profile Header + Bio */}
-      <div className="profile-header">
-        <div className="profile-pic">
-          <img
-            src={
-              userInfo?.picture
-                ? userInfo.picture.slice(0, -4) + "1080"
-                : "/avatar.jpg"
-            }
-            alt={userInfo?.name || "Profile"}
-            referrerPolicy="no-referrer"
-            className="profile-avatar"
+      {/* Profile Header Card */}
+      <div className="profile-header-card">
+        <img
+          src={
+            userInfo?.picture
+              ? userInfo.picture.slice(0, -4) + "1080"
+              : "/avatar.jpg"
+          }
+          alt={userInfo?.name || "Profile"}
+          referrerPolicy="no-referrer"
+          className="profile-avatar"
+        />
+        <div className="profile-name-row">
+          <h1 className="username">
+            <b>{userInfo?.name}</b>
+          </h1>
+          <ShareButton
+            title={`${userInfo?.name} on Teli`}
+            text={`Check out ${userInfo?.name}'s profile on Teli!`}
+            url={`${window.location.origin}/profile/${user_id}`}
           />
-          <div className="profile-main">
-            <h4 className="username">
-              <b>{userInfo?.name}</b>
-            </h4>
-          </div>
         </div>
-        <div className="profile-stats">
-          {/* Stats Row */}
-          <div className="stats-top">
-            <div className="stats-row">
-              {showNumber > 0 ? (
-                <Link to={`/users/${user_id}/yourshows`} className="stat-link">
-                  <div className="stat">
-                    <div className="stat-number">
-                      <b>{showNumber}</b>
-                    </div>
-                    <div className="stat-label">Shows</div>
-                  </div>
-                </Link>
-              ) : (
-                <div className="stat">
-                  <div className="stat-number">
-                    <b>{showNumber}</b>
-                  </div>
-                  <div className="stat-label">Shows</div>
-                </div>
-              )}
-              {following > 0 ? (
-                <Link to={`/users/${user_id}/following`} className="stat-link">
-                  <div className="stat">
-                    <div className="stat-number">
-                      <b>{following}</b>
-                    </div>
-                    <div className="stat-label">Following</div>
-                  </div>
-                </Link>
-              ) : (
-                <div className="stat">
-                  <div className="stat-number">
-                    <b>{following}</b>
-                  </div>
-                  <div className="stat-label">Following</div>
-                </div>
-              )}
-              {followers > 0 ? (
-                <Link to={`/users/${user_id}/followers`} className="stat-link">
-                  <div className="stat">
-                    <div className="stat-number">
-                      <b>{followers}</b>
-                    </div>
-                    <div className="stat-label">Followers</div>
-                  </div>
-                </Link>
-              ) : (
-                <div className="stat">
-                  <div className="stat-number">
-                    <b>{followers}</b>
-                  </div>
-                  <div className="stat-label">Followers</div>
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* Follow / Edit button */}
-          {user_id !== loggedInUserId ? (
-            <button
-              className={`follow-btn ${!isFollowing ? "followed" : ""}`}
-              onClick={handleFollowToggle}
-            >
-              {isFollowing ? "Following" : "Follow"}
-            </button>
+        {/* Stats Row */}
+        <div className="stats-row">
+          {showNumber > 0 ? (
+            <Link to={`/users/${user_id}/yourshows`} className="stat-link">
+              <div className="stat">
+                <div className="stat-number"><b>{showNumber}</b></div>
+                <div className="stat-label">Shows</div>
+              </div>
+            </Link>
           ) : (
-            <button
-              className="follow-btn followed"
-              onClick={() => navigate("/editprofile")}
-            >
-              Edit Profile
-            </button>
+            <div className="stat">
+              <div className="stat-number"><b>{showNumber}</b></div>
+              <div className="stat-label">Shows</div>
+            </div>
+          )}
+          {following > 0 ? (
+            <Link to={`/users/${user_id}/following`} className="stat-link">
+              <div className="stat">
+                <div className="stat-number"><b>{following}</b></div>
+                <div className="stat-label">Following</div>
+              </div>
+            </Link>
+          ) : (
+            <div className="stat">
+              <div className="stat-number"><b>{following}</b></div>
+              <div className="stat-label">Following</div>
+            </div>
+          )}
+          {followers > 0 ? (
+            <Link to={`/users/${user_id}/followers`} className="stat-link">
+              <div className="stat">
+                <div className="stat-number"><b>{followers}</b></div>
+                <div className="stat-label">Followers</div>
+              </div>
+            </Link>
+          ) : (
+            <div className="stat">
+              <div className="stat-number"><b>{followers}</b></div>
+              <div className="stat-label">Followers</div>
+            </div>
           )}
         </div>
+
+        {/* Follow / Edit button */}
+        {user_id !== loggedInUserId ? (
+          <button
+            className={`follow-btn ${!isFollowing ? "followed" : ""}`}
+            onClick={handleFollowToggle}
+            disabled={followUserMutation.isPending || unfollowUserMutation.isPending}
+          >
+            {followUserMutation.isPending || unfollowUserMutation.isPending
+              ? "..."
+              : isFollowing ? "Following" : "Follow"}
+          </button>
+        ) : (
+          <button
+            className="follow-btn followed"
+            onClick={() => navigate("/editprofile")}
+          >
+            Edit Profile
+          </button>
+        )}
 
         {userInfo?.bio && (
           <div className="profile-bio">
@@ -201,12 +194,13 @@ export default function Profile() {
             </div>
           </div>
         ) : (
-          <div className="home-section-profile">
-            <h1 className="headings">You're Watching</h1>
-            <p>
-              Start watching shows <br />
-              to see them here!
-            </p>
+          <div className="profile-section-card">
+            <h3 className="shows-label">Currently Watching</h3>
+            <div className="empty-state-card">
+              <Tv className="empty-state-icon" />
+              <p>Start tracking shows you're watching</p>
+              <Link to="/browse" className="empty-state-cta">Browse Shows</Link>
+            </div>
           </div>
         )}
 
@@ -230,12 +224,13 @@ export default function Profile() {
             </div>
           </div>
         ) : (
-          <div className="home-section-profile">
-            <h1 className="headings">Recent Reviews</h1>
-            <p>
-              Start watching shows <br />
-              to see them here!
-            </p>
+          <div className="profile-section-card">
+            <h3 className="shows-label">Recent Reviews</h3>
+            <div className="empty-state-card">
+              <Star className="empty-state-icon" />
+              <p>Share your thoughts on shows</p>
+              <Link to="/browse" className="empty-state-cta">Find a Show to Review</Link>
+            </div>
           </div>
         )}
 

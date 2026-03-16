@@ -63,6 +63,15 @@ const [cardPosition, setCardPosition] = React.useState<{
   left: number;
 } | null>(null);
 
+// Close expanded overlay on Escape key
+React.useEffect(() => {
+  if (!expanded) return;
+  const handleEsc = (e: KeyboardEvent) => {
+    if (e.key === "Escape") setExpanded(false);
+  };
+  document.addEventListener("keydown", handleEsc);
+  return () => document.removeEventListener("keydown", handleEsc);
+}, [expanded]);
 
 React.useEffect(() => {
   if (commentRef.current) {
@@ -161,7 +170,7 @@ return (
     {/* EXPANDED OVERLAY */}
     {expanded &&
       ReactDOM.createPortal(
-        <div className="review-overlay" onClick={() => setExpanded(false)}>
+        <div className="review-overlay" onClick={() => setExpanded(false)} role="dialog" aria-modal="true">
           <div
             className="rating-card expanded"
             onClick={(e) => e.stopPropagation()}

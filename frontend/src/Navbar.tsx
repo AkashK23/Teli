@@ -136,7 +136,7 @@ export default function Navbar() {
       setError("No credential received from Google");
       return;
     }
-
+    localStorage.removeItem(RECENT_SEARCHES_KEY);
     setLoading(true);
     setError(null);
 
@@ -174,6 +174,7 @@ export default function Navbar() {
 
 
   const handleLogout = () => {
+    localStorage.removeItem(RECENT_SEARCHES_KEY);
     setUserId(null);
     localStorage.removeItem("user_id"); // Use consistent key with UserContext
     navigate("/login");
@@ -289,13 +290,18 @@ export default function Navbar() {
                     <div className="search-dropdown-toggle">
                       <button
                         onClick={() => setSearchType("shows")}
-                        className="search-dropdown-toggle-button"
+                        className={`search-dropdown-toggle-button ${
+                          searchType === "shows" ? "selected" : ""
+                        }`}
                       >
                         Shows
                       </button>
+
                       <button
                         onClick={() => setSearchType("users")}
-                        className="search-dropdown-toggle-button"
+                        className={`search-dropdown-toggle-button ${
+                          searchType === "users" ? "selected" : ""
+                        }`}
                       >
                         Users
                       </button>
@@ -469,13 +475,18 @@ export default function Navbar() {
                     <div className="search-dropdown-toggle">
                       <button
                         onClick={() => setSearchType("shows")}
-                        className="search-dropdown-toggle-button"
+                        className={`search-dropdown-toggle-button ${
+                          searchType === "shows" ? "selected" : ""
+                        }`}
                       >
                         Shows
                       </button>
+
                       <button
                         onClick={() => setSearchType("users")}
-                        className="search-dropdown-toggle-button"
+                        className={`search-dropdown-toggle-button ${
+                          searchType === "users" ? "selected" : ""
+                        }`}
                       >
                         Users
                       </button>

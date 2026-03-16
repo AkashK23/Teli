@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import ShowTooltip from "../components/ShowTooltip";
+import ShowPlaceholder from "../components/ShowPlaceholder";
 
 type ShowItem = {
   id?: string | number;
@@ -53,6 +55,20 @@ const generatePageDots = (
   return pages;
 };
 
+function ShowResultImage({ src, alt }: { src: string; alt: string }) {
+  const [error, setError] = useState(false);
+  if (error) return <ShowPlaceholder className="search-result-img-show" />;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="search-result-img-show"
+      loading="lazy"
+      onError={() => setError(true)}
+    />
+  );
+}
+
 export default function SearchResultsWithPagination({
   items,
   searchType,
@@ -76,7 +92,7 @@ export default function SearchResultsWithPagination({
               ? imagePath
               : imagePath
               ? `https://image.tmdb.org/t/p/w500${imagePath}`
-              : "https://via.placeholder.com/150x225?text=No+Image";
+              : null;
 
             return (
               <Link
@@ -93,11 +109,11 @@ export default function SearchResultsWithPagination({
                       rating: show.rating,
                     }}
                   >
-                    <img
-                      src={imageUrl}
-                      alt={name ?? ""}
-                      className="search-result-img-show"
-                    />
+                    {imageUrl ? (
+                      <ShowResultImage src={imageUrl} alt={name ?? ""} />
+                    ) : (
+                      <ShowPlaceholder className="search-result-img-show" />
+                    )}
                   </ShowTooltip>
                   <p>{name}</p>
                 </div>
@@ -132,65 +148,48 @@ export default function SearchResultsWithPagination({
       </div>
 
       {/* Pagination */}
-      <div className="grid-container">
-        <nav aria-label="Pagination" className="grid-nav">
-          <button
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            aria-label="Previous page"
-            className="arrow-button-left"
-            style={{
-              cursor: currentPage === 1 ? "not-allowed" : "pointer",
-            }}
-          >
-            ◀
-          </button>
+      {totalPages > 1 && (
+        <div className="pagination-container">
+          <nav aria-label="Pagination" className="pagination-nav">
+            <button
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              aria-label="Previous page"
+              className="pagination-arrow"
+            >
+              ◀
+            </button>
 
-          <ul className="dots-container">
-            {pageDots.map((page, idx) =>
-              page === "..." ? (
-                <li key={`ellipsis-${idx}`} className="page-ellipses">
-                  &hellip;
-                </li>
-              ) : (
-                <li
-                  key={page}
-                  style={{ textAlign: "center", cursor: "pointer" }}
-                >
-                  <div
-                    onClick={() => onPageChange(Number(page))}
-                    className="page-dots"
-                    style={{
-                      backgroundColor: page === currentPage ? "blue" : "#ccc",
-                    }}
-                  />
-                  <div
-                    className="current-page"
-                    style={{
-                      color: page === currentPage ? "blue" : "#333",
-                      fontWeight: page === currentPage ? "bold" : "normal",
-                    }}
-                  >
-                    {page}
-                  </div>
-                </li>
-              )
-            )}
-          </ul>
+            <ul className="pagination-list">
+              {pageDots.map((page, idx) =>
+                page === "..." ? (
+                  <li key={`ellipsis-${idx}`} className="pagination-ellipsis">
+                    &hellip;
+                  </li>
+                ) : (
+                  <li key={page}>
+                    <button
+                      onClick={() => onPageChange(Number(page))}
+                      className={`pagination-btn ${page === currentPage ? "active" : ""}`}
+                    >
+                      {page}
+                    </button>
+                  </li>
+                )
+              )}
+            </ul>
 
-          <button
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            aria-label="Next page"
-            className="arrow-button-right"
-            style={{
-              cursor: currentPage === totalPages ? "not-allowed" : "pointer",
-            }}
-          >
-            ▶
-          </button>
-        </nav>
-      </div>
+            <button
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              aria-label="Next page"
+              className="pagination-arrow"
+            >
+              ▶
+            </button>
+          </nav>
+        </div>
+      )}
     </div>
   );
 }
