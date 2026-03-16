@@ -203,10 +203,10 @@ export default function Profile() {
         ) : (
           <div className="home-section-profile">
             <h1 className="headings">You're Watching</h1>
-              <p>
-                Start watching shows <br />
-                to see them here!
-              </p>
+            <p>
+              Start watching shows <br />
+              to see them here!
+            </p>
           </div>
         )}
 
@@ -232,22 +232,22 @@ export default function Profile() {
         ) : (
           <div className="home-section-profile">
             <h1 className="headings">Recent Reviews</h1>
-              <p>
-                Start watching shows <br />
-                to see them here!
-              </p>
+            <p>
+              Start watching shows <br />
+              to see them here!
+            </p>
           </div>
         )}
-      </div>
 
-      {(ratings as any[]).length > 0 && (
-        <ProfileStats
-          ratings={ratings as any[]}
-          watchedShows={watchedShows as any[]}
-          watchedCount={(watchedList as any[]).length}
-          isLoadingShows={watchedShowsLoading}
-        />
-      )}
+        {(ratings as any[]).length > 0 && (
+          <ProfileStats
+            ratings={ratings as any[]}
+            watchedShows={watchedShows as any[]}
+            watchedCount={(watchedList as any[]).length}
+            isLoadingShows={watchedShowsLoading}
+          />
+        )}
+      </div>
     </div>
   );
 }

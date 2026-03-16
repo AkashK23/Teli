@@ -100,7 +100,7 @@ export default function Activity() {
       {/* key={activeTab} forces a full unmount/remount when switching tabs,
           preventing React from reusing ReviewCard instances across tabs
           which would cause stale props and visual duplicates */}
-      <div key={activeTab} className="activity.contentContainer">
+      <div key={activeTab} className="activity-contentContainer">
         {activeTab === "following"
           ? renderReviews(deduplicatedFeed)
           : renderReviews(userRatings as any[])}
