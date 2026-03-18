@@ -51,7 +51,7 @@ function StaffPickCard({ showId }: { showId: number }) {
         )}
       </ShowTooltip>
       <span className="staff-title">{show.name}</span>
-      <div className="staff-score">{Number(ratingData.average_rating).toFixed(1)}</div>
+      <div className="staff-score">{Number(ratingData?.average_rating).toFixed(1)}</div>
     </Link>
   );
 }
