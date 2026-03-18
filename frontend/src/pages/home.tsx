@@ -14,7 +14,7 @@ import {
   useUserRatings,
 } from "../hooks/useUser";
 
-const STAFF_PICK_IDS = [66732, 125935, 136311, 103540];
+const STAFF_PICK_IDS = [66732, 125935, 136311, 201834];
 
 function StaffPickCard({ showId }: { showId: number }) {
   const { data: show } = useShowDetails(showId);
@@ -51,6 +51,7 @@ function StaffPickCard({ showId }: { showId: number }) {
         )}
       </ShowTooltip>
       <span className="staff-title">{show.name}</span>
+      <div className="staff-score">{Number(ratingData.average_rating).toFixed(1)}</div>
     </Link>
   );
 }

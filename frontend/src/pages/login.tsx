@@ -7,7 +7,7 @@ import ShowTooltip from "../components/ShowTooltip";
 import ShowPosterCard from "../components/ShowPosterCard";
 import { usePopularShows, useShowAverageRating, useShowDetails } from "../hooks/useShow";
 
-const STAFF_PICK_IDS = [66732, 125935, 136311, 103540];
+const STAFF_PICK_IDS = [66732, 125935, 136311, 201834];
 
 function StaffPickCard({ showId }: { showId: number }) {
   const { data: show } = useShowDetails(showId);
@@ -42,6 +42,7 @@ function StaffPickCard({ showId }: { showId: number }) {
         />
       </ShowTooltip>
       <span className="staff-title">{show.name}</span>
+      <div className="staff-score">{Number(ratingData.average_rating).toFixed(1)}</div>
     </Link>
   );
 }
