@@ -1,5 +1,5 @@
-import { useParams } from "react-router-dom";
-import React, { useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import React, { useState, useRef } from "react";
 import { Tv } from "lucide-react";
 import ShareButton from "../components/ShareButton";
 import { useUser } from "../UserContext";
@@ -23,17 +23,18 @@ export default function ShowDetails() {
   const user_id = useUser().userId;
   const { id } = useParams<{ id: string }>();
 
+  const [activeTab, setActiveTab] = useState<"seasons" | "reviews">("reviews");
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
   const [seasonEpisodes, setSeasonEpisodes] = useState<any>({});
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState(0);
   const [submitted, setSubmitted] = useState(false);
-  const [episodeReviewStates, setEpisodeReviewStates] = useState<
-    Record<number, { open: boolean; rating: number; text: string }>
-  >({});
   const [watchStatus, setWatchStatus] = useState<WatchStatus>("");
   const [isEditingReview, setIsEditingReview] = useState(false);
   const [watchStatusSynced, setWatchStatusSynced] = useState(false);
+  const [showStatusMessage, setShowStatusMessage] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: showData, isLoading: showLoading } = useShowDetails(id);
   const { data: avgRatingData } = useShowAverageRating(id);
@@ -51,7 +52,6 @@ export default function ShowDetails() {
   const updateWatchStatusMutation = useUpdateWatchStatus();
   const deleteWatchStatusMutation = useDeleteWatchStatus();
   const submitRatingMutation = useSubmitRating();
-  const submitEpisodeRatingMutation = useSubmitEpisodeRating();
 
   const avgRating = avgRatingData?.average_rating ?? null;
   const ratingCount = avgRatingData?.total_ratings ?? 0;
@@ -59,10 +59,7 @@ export default function ShowDetails() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   React.useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -75,13 +72,13 @@ export default function ShowDetails() {
     }
   }, [watchStatusLoading, watchStatusData]);
 
-  // Reset local state when show ID changes
+  // Reset local state only when show ID changes
   React.useEffect(() => {
     setSelectedSeason(null);
     setSeasonEpisodes({});
     setWatchStatusSynced(false);
-    setEpisodeReviewStates({});
     setIsEditingReview(false);
+    setActiveTab("reviews");
   }, [id]);
 
   // Load Season 1 automatically once show data arrives
@@ -94,7 +91,6 @@ export default function ShowDetails() {
   const fetchSeason = async (seasonNumber: number) => {
     if (seasonEpisodes[seasonNumber]) {
       setSelectedSeason(seasonNumber);
-      setEpisodeReviewStates({});
       return;
     }
     try {
@@ -108,7 +104,6 @@ export default function ShowDetails() {
         },
       }));
       setSelectedSeason(seasonNumber);
-      setEpisodeReviewStates({});
     } catch (err) {
       console.error(`Failed to fetch season ${seasonNumber} episodes:`, err);
     }
@@ -141,7 +136,6 @@ export default function ShowDetails() {
         setSubmitted(true);
         setTimeout(() => setSubmitted(false), 3000);
         setIsEditingReview(false);
-        // Also update watch status to watched
         if (user_id && id) {
           updateWatchStatusMutation.mutate({
             user_id,
@@ -154,77 +148,53 @@ export default function ShowDetails() {
     });
   };
 
-  const submitEpisodeReview = (episodeNumber: number, seasonNumber: number) => {
-    const state = episodeReviewStates[episodeNumber];
-    if (!state || state.text.trim() === "") return;
-    const payload = {
-      user_id,
-      show_id: id,
-      season_number: seasonNumber,
-      episode_number: episodeNumber,
-      rating: state.rating,
-      comment: state.text,
-    };
-    submitEpisodeRatingMutation.mutate(payload, {
-      onSuccess: () => {
-        setEpisodeReviewStates((prev) => ({
-          ...prev,
-          [episodeNumber]: {
-            ...prev[episodeNumber],
-            open: false,
-            text: "",
-            rating: 0,
-          },
-        }));
-      },
-    });
-  };
-
   const handleWatchStatusChange = (
     event: React.ChangeEvent<HTMLSelectElement>,
   ) => {
     const newStatus = event.target.value as WatchStatus;
     setWatchStatus(newStatus);
+
     if (!user_id || !id) return;
 
+    let message = "";
     if (newStatus === "") {
       deleteWatchStatusMutation.mutate({ user_id, show_id: id });
+      message = "Watch Status Cleared";
     } else {
       updateWatchStatusMutation.mutate({
         user_id,
         show_id: id,
         status: newStatus,
       });
+      switch (newStatus) {
+        case "want_to_watch":
+          message = "Added to Want to Watch";
+          break;
+        case "currently_watching":
+          message = "Added to Currently Watching";
+          break;
+        case "watched":
+          message = "Added to Watched";
+          break;
+      }
     }
+
+    setStatusMessage(message);
+    setShowStatusMessage(true);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => setShowStatusMessage(false), 2500);
   };
 
-  const toggleEpisodeReview = (episodeNumber: number) => {
-    const existingReview = (episodeReviews as any[]).find(
-      (r: any) => r.episode_number === episodeNumber,
-    );
-    setEpisodeReviewStates((prev) => {
-      const isOpen = prev[episodeNumber]?.open;
-      return {
-        ...prev,
-        [episodeNumber]: {
-          open: !isOpen,
-          rating: existingReview?.rating ?? prev[episodeNumber]?.rating ?? 0,
-          text: existingReview?.comment ?? prev[episodeNumber]?.text ?? "",
-        },
-      };
-    });
-  };
+  const thumbColor = (val: number) =>
+    val <= 3
+      ? "#e05050"
+      : val <= 6
+        ? "#e0a830"
+        : val <= 8
+          ? "#5aab5a"
+          : "#2d8a2d";
 
-  const updateEpisodeReview = (
-    episodeId: number,
-    field: "rating" | "text",
-    value: string | number,
-  ) => {
-    setEpisodeReviewStates((prev) => ({
-      ...prev,
-      [episodeId]: { ...prev[episodeId], [field]: value },
-    }));
-  };
+  const thumbLeft = (val: number) => `calc(${val / 10} * (100% - 3rem))`;
 
   const loadingReview = ratingsLoading || watchStatusLoading;
 
@@ -301,6 +271,9 @@ export default function ShowDetails() {
                   <option value="currently_watching">Currently Watching</option>
                   <option value="watched">Watched</option>
                 </select>
+                {showStatusMessage && statusMessage && (
+                  <span className="watch-status-label">{statusMessage}</span>
+                )}
               </div>
             )}
           </div>
@@ -313,7 +286,6 @@ export default function ShowDetails() {
               alt={showData.name}
               className="mobile-show-poster"
             />
-
             <div className="mobile-show-info">
               <div className="mobile-show-top">
                 <div className="show-title-row">
@@ -324,13 +296,11 @@ export default function ShowDetails() {
                     url={`${window.location.origin}/show/${id}`}
                   />
                 </div>
-
                 <p className="mobile-date">
                   {showData.first_air_date?.slice(0, 4)}–
                   {showData.last_air_date?.slice(0, 4)}
                 </p>
               </div>
-
               {avgRating !== null && (
                 <div className="mobile-rating-wrapper">
                   <div className="show-data-rating">
@@ -370,250 +340,214 @@ export default function ShowDetails() {
         </>
       )}
 
-      {/* Your Review */}
-      {user_id && !loadingReview && (
-        <>
-          {userHasRated && <h3 className="show-details-headings">Your Review</h3>}
-
-          {userHasRated && (
-            <div className="rating-cards-container">
-              {[userReview]
-                .filter((review: any) => String(review.show_id) === String(id))
-                .map((review: any) => (
-                  <div className="rating-card" key={review.show_id}>
-                    <div className="rating-details">
-                      <div className="rating-score">{review.rating}</div>
-                      <div className="rating-text">
-                        <p>{review.comment}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setIsEditingReview((prev) => !prev)}
-                      className="edit-review-button"
-                    >
-                      {isEditingReview ? "Cancel" : "Update"}
-                    </button>
-                  </div>
-                ))}
-            </div>
-          )}
-
-          {(!userHasRated || isEditingReview) && (
-            <div>
-              {!userHasRated && <h3 className="headings">Review</h3>}
-              <div className="write-review-container">
-                <div className="slider-container">
-                  <input
-                    type="range"
-                    min="0"
-                    max="10"
-                    value={rating}
-                    onChange={(e) => setRating(Number(e.target.value))}
-                  />
-                  <span>{rating}</span>
-                </div>
-                <div className="review-input-group">
-                  <textarea
-                    id="reviewText"
-                    value={reviewText}
-                    onChange={(e) => setReviewText(e.target.value)}
-                    rows={4}
-                    placeholder="What did you think of this show?"
-                    className="review-textbox"
-                  />
-                  <button
-                    onClick={handleReviewSubmit}
-                    className="submit-review-button"
-                    disabled={submitRatingMutation.isPending}
-                  >
-                    {submitRatingMutation.isPending ? "Submitting..." : userHasRated ? "Update" : "Submit"}
-                  </button>
-                  {submitted && <p>Review submitted!</p>}
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Season ticker */}
-      <div className="season-ticker-container">
-        <h3 className="show-details-headings">Seasons</h3>
-        <div className="ticker-container">
-          {seasons.map((season: any) => (
-            <button
-              key={season.season_number}
-              onClick={() => fetchSeason(season.season_number)}
-              className={`ticker-buttons ${
-                selectedSeason === season.season_number ? "active" : ""
-              }`}
-            >
-              S{season.season_number}
-            </button>
-          ))}
+      {/* Tabs */}
+      <div className="show-tabs-container">
+        <div className="show-tabs-slider">
+          <div
+            className={`show-tabs-indicator ${activeTab === "seasons" ? "right" : "left"}`}
+          />
+          <button
+            className={`show-tab-button ${activeTab === "reviews" ? "active" : ""}`}
+            onClick={() => setActiveTab("reviews")}
+          >
+            Reviews
+          </button>
+          <button
+            className={`show-tab-button ${activeTab === "seasons" ? "active" : ""}`}
+            onClick={() => setActiveTab("seasons")}
+          >
+            Episodes
+          </button>
         </div>
       </div>
 
-      {/* Season overview and poster */}
-      {selectedSeason && seasonEpisodes[selectedSeason] && (
-        <div className="season-info-container">
-          {seasonEpisodes[selectedSeason].poster_path && (
-            <img
-              src={`https://image.tmdb.org/t/p/w300${seasonEpisodes[selectedSeason].poster_path}`}
-              alt={`Season ${selectedSeason} Poster`}
-              className="season-poster"
-            />
-          )}
-          <div>
-            <h3>Season {selectedSeason}</h3>
-            <p>
-              {seasonEpisodes[selectedSeason].overview ||
-                "No description available."}
-            </p>
+      {/* Episodes Tab */}
+      <div style={{ display: activeTab === "seasons" ? "block" : "none" }}>
+        <div className="season-ticker-container">
+          <div className="ticker-container">
+            {seasons.map((season: any) => (
+              <button
+                key={season.season_number}
+                onClick={() => fetchSeason(season.season_number)}
+                className={`ticker-buttons ${
+                  selectedSeason === season.season_number ? "active" : ""
+                }`}
+              >
+                S{season.season_number}
+              </button>
+            ))}
           </div>
         </div>
-      )}
 
-      {/* Episodes list */}
-      {selectedSeason && seasonEpisodes[selectedSeason] && (
-        <div>
-          <h3 className="episodes-header">Episodes</h3>
-          <div className="episode-list-container">
-            {seasonEpisodes[selectedSeason].episodes.map((episode: any) => {
-              const stillUrl = episode.still_path
-                ? `https://image.tmdb.org/t/p/w300${episode.still_path}`
-                : null;
+        {selectedSeason && seasonEpisodes[selectedSeason] && (
+          <div className="season-info-container">
+            {seasonEpisodes[selectedSeason].poster_path && (
+              <img
+                src={`https://image.tmdb.org/t/p/w300${seasonEpisodes[selectedSeason].poster_path}`}
+                alt={`Season ${selectedSeason} Poster`}
+                className="season-poster"
+              />
+            )}
+            <div>
+              <h3>Season {selectedSeason}</h3>
+              <p>
+                {seasonEpisodes[selectedSeason].overview ||
+                  "No description available."}
+              </p>
+            </div>
+          </div>
+        )}
 
-              const epState = episodeReviewStates[episode.episode_number] || {
-                open: false,
-                rating: 0,
-                text: "",
-              };
+        {selectedSeason && seasonEpisodes[selectedSeason] && (
+          <div>
+            <h3 className="episodes-header">Episodes</h3>
+            <div className="episode-list-container">
+              {seasonEpisodes[selectedSeason].episodes.map((episode: any) => {
+                const stillUrl = episode.still_path
+                  ? `https://image.tmdb.org/t/p/w300${episode.still_path}`
+                  : null;
 
-              const hasEpisodeReview = (episodeReviews as any[]).some(
-                (review: any) =>
-                  review.episode_number === episode.episode_number,
-              );
+                const hasEpisodeReview = (episodeReviews as any[]).some(
+                  (review: any) =>
+                    review.episode_number === episode.episode_number,
+                );
 
-              return (
-                <div key={episode.id} className="episode-container">
-                  <div className="episode-box">
-                    {stillUrl ? (
-                      <img
-                        src={stillUrl}
-                        alt={`Episode ${episode.episode_number}`}
-                        className="episode-poster"
-                      />
-                    ) : (
-                      <div className="no-img-poster"><Tv size={20} /> No Image</div>
-                    )}
-                    <div style={{ flex: 1 }}>
-                      <strong>
-                        {episode.episode_number}. {episode.name}
-                      </strong>
-                      <p style={{ marginTop: "0.5rem" }}>
-                        {episode.overview || "No description available."}
-                      </p>
-                    </div>
-
-                    {user_id && !loadingReview && (
-                      <button
-                        onClick={() =>
-                          toggleEpisodeReview(episode.episode_number)
-                        }
-                        className={`episode-review-button ${
-                          hasEpisodeReview ? "has-review" : "no-review"
-                        }`}
-                      >
-                        {epState.open
-                          ? "Hide"
-                          : hasEpisodeReview
-                            ? "Update"
-                            : "Review"}
-                      </button>
-                    )}
-                  </div>
-
-                  {epState.open && (
-                    <div className="episode-review-container">
-                      {(episodeReviews as any[])
-                        .filter(
-                          (review: any) =>
-                            review.episode_number === episode.episode_number,
-                        )
-                        .map((review: any) => (
-                          <div
-                            className="rating-card"
-                            key={review.episode_number}
-                          >
-                            <div className="rating-details">
-                              <div className="rating-score">
-                                {review.rating}
-                              </div>
-                              <div className="rating-text">
-                                <p>{review.comment}</p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      <div className="write-review-container">
-                        <div className="slider-container">
-                          <input
-                            type="range"
-                            min="0"
-                            max="10"
-                            value={epState.rating}
-                            onChange={(e) =>
-                              updateEpisodeReview(
-                                episode.episode_number,
-                                "rating",
-                                Number(e.target.value),
-                              )
-                            }
-                          />
-                          <span>{epState.rating}</span>
+                return (
+                  <Link
+                    key={episode.id}
+                    to={`/show/${id}/season/${selectedSeason}/episode/${episode.episode_number}`}
+                    className="episode-container episode-container--link"
+                  >
+                    <div className="episode-box">
+                      {stillUrl ? (
+                        <img
+                          src={stillUrl}
+                          alt={`Episode ${episode.episode_number}`}
+                          className="episode-poster"
+                        />
+                      ) : (
+                        <div className="no-img-poster">
+                          <Tv size={20} /> No Image
                         </div>
-                        <div className="review-input-group">
-                          <textarea
-                            value={epState.text}
-                            onChange={(e) =>
-                              updateEpisodeReview(
-                                episode.episode_number,
-                                "text",
-                                e.target.value,
-                              )
-                            }
-                            rows={3}
-                            placeholder="What did you think of this episode?"
-                            className="review-textbox"
-                          />
-                          <button
-                            className="submit-review-button"
-                            onClick={() =>
-                              submitEpisodeReview(
-                                episode.episode_number,
-                                selectedSeason!,
-                              )
-                            }
-                          >
-                            {(episodeReviews as any[]).some(
-                              (review: any) =>
-                                review.episode_number ===
-                                episode.episode_number,
-                            )
-                              ? "Update"
-                              : "Submit"}
-                          </button>
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <strong>
+                          {episode.episode_number}. {episode.name}
+                        </strong>
+                        <p style={{ marginTop: "0.5rem" }}>
+                          {episode.overview || "No description available."}
+                        </p>
+                      </div>
+                      {hasEpisodeReview && (
+                        <div className="episode-reviewed-badge">✓</div>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Reviews Tab */}
+      <div style={{ display: activeTab === "reviews" ? "block" : "none" }}>
+        {user_id && !loadingReview ? (
+          <>
+            {userHasRated && (
+              <h3 className="show-details-headings">Your Review</h3>
+            )}
+
+            {userHasRated && (
+              <div className="rating-cards-container">
+                {[userReview]
+                  .filter(
+                    (review: any) => String(review.show_id) === String(id),
+                  )
+                  .map((review: any) => (
+                    <div className="rating-card" key={review.show_id}>
+                      <div className="rating-details">
+                        <div className="rating-score">{review.rating}</div>
+                        <div className="rating-text">
+                          <p>{review.comment}</p>
                         </div>
                       </div>
+                      <button
+                        onClick={() => setIsEditingReview((prev) => !prev)}
+                        className="edit-review-button"
+                      >
+                        {isEditingReview ? "Cancel" : "Update"}
+                      </button>
                     </div>
-                  )}
+                  ))}
+              </div>
+            )}
+
+            {(!userHasRated || isEditingReview) && (
+              <div>
+                {!userHasRated && (
+                  <h3 className="show-details-headings">Leave a Review</h3>
+                )}
+                <div className="write-review-container">
+                  <div className="slider-container">
+                    <div
+                      className="slider-wrapper"
+                      style={
+                        {
+                          "--slider-fill": `${rating * 10}%`,
+                          "--thumb-color": thumbColor(rating),
+                        } as React.CSSProperties
+                      }
+                    >
+                      <input
+                        type="range"
+                        min="0"
+                        max="10"
+                        step="1"
+                        value={rating}
+                        onChange={(e) => setRating(Number(e.target.value))}
+                      />
+                      <span
+                        className="slider-thumb-label"
+                        style={{ left: thumbLeft(rating) }}
+                        data-value={rating}
+                      >
+                        {rating}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="review-input-group">
+                    <textarea
+                      id="reviewText"
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      rows={4}
+                      placeholder="What did you think of this show?"
+                      className="review-textbox"
+                    />
+                    <button
+                      onClick={handleReviewSubmit}
+                      className="submit-review-button"
+                      disabled={submitRatingMutation.isPending}
+                    >
+                      {submitRatingMutation.isPending
+                        ? "Submitting..."
+                        : userHasRated
+                          ? "Update"
+                          : "Submit"}
+                    </button>
+                    {submitted && <p>Review submitted!</p>}
+                  </div>
                 </div>
-              );
-            })}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="empty-state-card">
+            <p>Sign in to leave a review.</p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

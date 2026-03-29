@@ -179,7 +179,7 @@ export default function Onboarding() {
           </div>
         </div>
 
-        <div className="onboarding-field">
+        {/* <div className="onboarding-field">
           <label>Currently Watching</label>
           <div className="horizontal-scroll-container">
             {popularShows.map((show) => {
@@ -214,7 +214,7 @@ export default function Onboarding() {
               );
             })}
           </div>
-        </div>
+        </div> */}
 
         <button className="onboarding-submit" onClick={handleSubmit}>
           Finish Setup

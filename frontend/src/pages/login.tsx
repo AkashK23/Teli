@@ -199,7 +199,11 @@ export default function Login() {
           <h1 className="headings">Staff Picks</h1>
           <div className="scroll-container">
             {STAFF_PICK_IDS.map((id) => (
-              <ShowPosterCard key={id} showId={id} className="show-icon home-icon" />
+              <ShowPosterCard
+                key={id}
+                showId={id}
+                className="show-icon home-icon"
+              />
             ))}
           </div>
         </div>
@@ -207,52 +211,100 @@ export default function Login() {
 
       {/* Features Section */}
       <h2 className="features-title">Features</h2>
-      <div className="features-grid">
-        <Link to="/browse" className="feature-card">
-          <img src="/features-browse.png" alt="Discover shows" className="feature-icon-img" />
-          <div className="feature-text">
-            <h3>Discover Shows</h3>
-            <p>Browse trending and popular TV shows to find your next watch</p>
-          </div>
-        </Link>
 
-        <div className="feature-card-off">
-          <img src="/features-activity.png" alt="reviews" className="feature-icon-img" />
-          <div className="feature-text">
-            <h3>Reviews</h3>
-            <p>Rate and comment on your favorite shows, then see what your friends are saying</p>
+      <div className="features-columns">
+        {/* LEFT: Available Now */}
+        <div className="features-column">
+          <h3 className="column-title">Start Exploring</h3>
+          <div className="features-grid">
+            <Link to="/browse" className="feature-card">
+              <img
+                src="/features-browse.png"
+                alt="Discover shows"
+                className="feature-icon-img"
+              />
+              <div className="feature-text">
+                <h3>Discover Shows</h3>
+                <p>
+                  Browse trending and popular TV shows to find your next watch
+                </p>
+              </div>
+            </Link>
+
+            <Link to="/search" className="feature-card">
+              <img
+                src="/features-search.png"
+                alt="search"
+                className="feature-icon-img"
+              />
+              <div className="feature-text">
+                <h3>Search</h3>
+                <p>
+                  Quickly search for TV shows and users to find exactly what
+                  you're looking for
+                </p>
+              </div>
+            </Link>
+
+            <Link to="/browse" className="feature-card">
+              <img
+                src="/features-showdetails.png"
+                alt="show details"
+                className="feature-icon-img"
+              />
+              <div className="feature-text">
+                <h3>Show Details</h3>
+                <p>See more information about every show</p>
+              </div>
+            </Link>
           </div>
         </div>
 
-        <div className="feature-card-off">
-          <img src="/features-profile.png" alt="profile" className="feature-icon-img" />
-          <div className="feature-text">
-            <h3>Profile</h3>
-            <p>Customize your profile to show what you're watching</p>
-          </div>
-        </div>
+        {/* RIGHT: Requires Login */}
+        <div className="features-column">
+          <h3 className="column-title">Login to Unlock</h3>
+          <div className="features-grid">
+            <div className="feature-card-off">
+              <img
+                src="/features-activity.png"
+                alt="reviews"
+                className="feature-icon-img"
+              />
+              <div className="feature-text">
+                <h3>Reviews</h3>
+                <p>
+                  Rate and comment on your favorite shows, then see what your
+                  friends are saying
+                </p>
+              </div>
+            </div>
 
-        <Link to="/search" className="feature-card">
-          <img src="/features-search.png" alt="search" className="feature-icon-img" />
-          <div className="feature-text">
-            <h3>Search</h3>
-            <p>Quickly search for TV shows and users to find exactly what you're looking for</p>
-          </div>
-        </Link>
+            <div className="feature-card-off">
+              <img
+                src="/features-profile.png"
+                alt="profile"
+                className="feature-icon-img"
+              />
+              <div className="feature-text">
+                <h3>Profile</h3>
+                <p>Customize your profile to show what you're watching</p>
+              </div>
+            </div>
 
-        <Link to="/browse" className="feature-card">
-          <img src="/features-showdetails.png" alt="show details" className="feature-icon-img" />
-          <div className="feature-text">
-            <h3>Show Details</h3>
-            <p>See more information about every show</p>
-          </div>
-        </Link>
-
-        <div className="feature-card-off">
-          <img src="/features-watchlists.png" alt="watchlists" className="feature-icon-img" />
-          <div className="feature-text">
-            <h3>Watchlists</h3>
-            <p>Manage the shows you want to watch, are currently watching and have watched</p>
+            <div className="feature-card-off">
+              <img
+                src="/features-watchlists.png"
+                alt="watchlists"
+                className="feature-icon-img"
+              />
+              <div className="feature-text">
+                <h3>Watchlists</h3>
+                <p>
+                  Manage the shows you want to watch, are currently watching and
+                  have watched
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

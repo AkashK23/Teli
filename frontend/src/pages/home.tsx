@@ -205,7 +205,9 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
           <div className="home-section">
             <h1 className="headings">You're Watching</h1>
             <div className="skeleton-row">
-              {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton-poster" />)}
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="skeleton-poster" />
+              ))}
             </div>
           </div>
         ) : cwList.length > 0 ? (
@@ -227,7 +229,9 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
             <div className="empty-state-card">
               <Tv className="empty-state-icon" />
               <p>Start tracking shows you're watching</p>
-              <Link to="/browse" className="empty-state-cta">Browse Shows</Link>
+              <Link to="/browse" className="empty-state-cta">
+                Browse Shows
+              </Link>
             </div>
           </div>
         )}
@@ -237,7 +241,9 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
           <div className="home-section">
             <h1 className="headings">New From Friends</h1>
             <div className="skeleton-row">
-              {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton-poster" />)}
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="skeleton-poster" />
+              ))}
             </div>
           </div>
         ) : friendShowIds.length > 0 ? (
@@ -259,7 +265,9 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
             <div className="empty-state-card">
               <Users className="empty-state-icon" />
               <p>See what your friends are watching</p>
-              <Link to="/search" className="empty-state-cta">Find Friends</Link>
+              <Link to="/search" className="empty-state-cta">
+                Find Friends
+              </Link>
             </div>
           </div>
         )}
@@ -271,7 +279,9 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
           <div className="home-section">
             <h1 className="headings">Your Reviews</h1>
             <div className="skeleton-row">
-              {[1, 2, 3].map((i) => <div key={i} className="skeleton-review" />)}
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="skeleton-review" />
+              ))}
             </div>
           </div>
         ) : userReviews.length > 0 ? (
@@ -299,7 +309,9 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
             <div className="empty-state-card">
               <Star className="empty-state-icon" />
               <p>Share your thoughts on shows</p>
-              <Link to="/browse" className="empty-state-cta">Find a Show to Review</Link>
+              <Link to="/browse" className="empty-state-cta">
+                Find a Show to Review
+              </Link>
             </div>
           </div>
         )}
@@ -309,7 +321,9 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
           <div className="home-section">
             <h1 className="headings">Following Reviews</h1>
             <div className="skeleton-row">
-              {[1, 2, 3].map((i) => <div key={i} className="skeleton-review" />)}
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="skeleton-review" />
+              ))}
             </div>
           </div>
         ) : feedReviews.length > 0 ? (
@@ -337,100 +351,109 @@ const { data: feed = [], isLoading: feedLoading } = useUserFeed(user_id);
             <div className="empty-state-card">
               <MessageSquare className="empty-state-icon" />
               <p>Follow people to see their reviews</p>
-              <Link to="/search" className="empty-state-cta">Find People</Link>
+              <Link to="/search" className="empty-state-cta">
+                Find People
+              </Link>
             </div>
           </div>
         )}
       </div>
 
       {/* Features Section */}
-      <div className="home-section">
-        <h2 className="features-title">Features</h2>
-      </div>
-      <div className="features-grid">
-        <Link to="/browse" className="feature-card">
-          <img
-            src="/features-browse.png"
-            alt="Discover shows"
-            className="feature-icon-img"
-          />
-          <div className="feature-text">
-            <h3>Discover Shows</h3>
-            <p>Browse trending and popular TV shows to find your next watch</p>
-          </div>
-        </Link>
+      <h2 className="features-title">Features</h2>
 
-        <Link to="/activity" className="feature-card">
-          <img
-            src="/features-activity.png"
-            alt="reviews"
-            className="feature-icon-img"
-          />
-          <div className="feature-text">
-            <h3>Reviews</h3>
-            <p>
-              Rate and comment on your favorite shows, then see what your
-              friends are saying
-            </p>
-          </div>
-        </Link>
+      <div className="features-columns">
+        {/* LEFT: Available Now */}
+        <div className="features-column">
+          <div className="features-grid">
+            <Link to="/browse" className="feature-card">
+              <img
+                src="/features-browse.png"
+                alt="Discover shows"
+                className="feature-icon-img"
+              />
+              <div className="feature-text">
+                <h3>Discover Shows</h3>
+                <p>
+                  Browse trending and popular TV shows to find your next watch
+                </p>
+              </div>
+            </Link>
 
-        <Link to="/profile" className="feature-card">
-          <img
-            src="/features-profile.png"
-            alt="profile"
-            className="feature-icon-img"
-          />
-          <div className="feature-text">
-            <h3>Profile</h3>
-            <p>Customize your profile to show what you're watching</p>
-          </div>
-        </Link>
+            <Link to="/search" className="feature-card">
+              <img
+                src="/features-search.png"
+                alt="search"
+                className="feature-icon-img"
+              />
+              <div className="feature-text">
+                <h3>Search</h3>
+                <p>
+                  Quickly search for TV shows and users to find exactly what
+                  you're looking for
+                </p>
+              </div>
+            </Link>
 
-        <Link to="/search" className="feature-card">
-          <img
-            src="/features-search.png"
-            alt="search"
-            className="feature-icon-img"
-          />
-          <div className="feature-text">
-            <h3>Search</h3>
-            <p>
-              Quickly search for TV shows and users to find exactly what you're
-              looking for
-            </p>
+            <Link to="/browse" className="feature-card">
+              <img
+                src="/features-showdetails.png"
+                alt="show details"
+                className="feature-icon-img"
+              />
+              <div className="feature-text">
+                <h3>Show Details</h3>
+                <p>See more information about every show</p>
+              </div>
+            </Link>
           </div>
-        </Link>
+        </div>
 
-        <Link
-          to={popularShows.length > 0 ? `/show/${popularShows[0].id}` : "/browse"}
-          className="feature-card"
-        >
-          <img
-            src="/features-showdetails.png"
-            alt="show details"
-            className="feature-icon-img"
-          />
-          <div className="feature-text">
-            <h3>Show Details</h3>
-            <p>Explore seasons, episodes, and ratings for any show</p>
-          </div>
-        </Link>
+        <div className="features-column">
+          <div className="features-grid">
+            <Link to="/activity" className="feature-card">
+              <img
+                src="/features-activity.png"
+                alt="reviews"
+                className="feature-icon-img"
+              />
+              <div className="feature-text">
+                <h3>Reviews</h3>
+                <p>
+                  Rate and comment on your favorite shows, then see what your
+                  friends are saying
+                </p>
+              </div>
+            </Link>
 
-        <Link to={`/users/${user_id}/yourshows`} className="feature-card">
-          <img
-            src="/features-watchlists.png"
-            alt="watchlists"
-            className="feature-icon-img"
-          />
-          <div className="feature-text">
-            <h3>Watchlists</h3>
-            <p>
-              Manage the shows you want to watch, are currently watching and
-              have watched
-            </p>
+            <Link to="/profile" className="feature-card">
+              <img
+                src="/features-profile.png"
+                alt="profile"
+                className="feature-icon-img"
+              />
+              <div className="feature-text">
+                <h3>Profile</h3>
+                <p>Customize your profile to show what you're watching</p>
+              </div>
+            </Link>
+
+            <Link to={`/users/${user_id}/yourshows`} className="feature-card">
+              <img
+                src="/features-watchlists.png"
+                alt="watchlists"
+                className="feature-icon-img"
+              />
+              <div className="feature-text">
+                <h3>Watchlists</h3>
+                <p>
+                  Manage the shows you want to watch, are currently watching and
+                  have watched
+                </p>
+              </div>
+            </Link>
           </div>
-        </Link>
+        </div>
       </div>
     </div>
   );

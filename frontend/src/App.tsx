@@ -7,6 +7,7 @@ import Activity from "./pages/activity";
 import Profile from "./pages/profile";
 import Login from "./pages/login";
 import ShowDetails from './pages/showDetails';
+import EpisodeDetails from "./pages/episodeDetails";
 import Followers from './pages/followers';
 import Following from './pages/following';
 import Onboarding from "./pages/onboarding";
@@ -40,6 +41,7 @@ function App() {
             <Routes>
               <Route path="/browse" element={<Browse />} />
               <Route path="/show/:id" element={<ShowDetails />} />
+              <Route path="/show/:id/season/:season/episode/:episode" element={<EpisodeDetails />} />
               <Route path="/search" element={<Search />} />
               <Route path="/login" element={<Login />} />
               <Route path="/users/:userId/followers" element={<Followers />} />
@@ -47,13 +49,39 @@ function App() {
               <Route path="/users/:userId/yourshows" element={<YourShows />} />
               <Route path="/onboarding" element={<Onboarding />} />
 
-              <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-              <Route path="/activity" element={<ProtectedRoute><Activity /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Home />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/activity"
+                element={
+                  <ProtectedRoute>
+                    <Activity />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/profile/:id" element={<Profile />} />
-              <Route path="/editprofile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
-
-
+              <Route
+                path="/editprofile"
+                element={
+                  <ProtectedRoute>
+                    <EditProfile />
+                  </ProtectedRoute>
+                }
+              />
             </Routes>
           </div>
         </ToastProvider>
