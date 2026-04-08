@@ -58,7 +58,7 @@ function HeroBannerSlide({ show }: { show: any }) {
           }`}
           alt={show.name}
         />
-        <div className="hero-banner-content">
+        <div className="hero-top-right">
           <div className="hero-title-row">
             <h1>{show.name}</h1>
             {ratingData?.average_rating && (
@@ -82,12 +82,12 @@ export default function Login() {
   const [bannerIndex, setBannerIndex] = useState(0);
 
   const { data: popularShows = [], isLoading: popularLoading } =
-    usePopularShows(100, 4);
+    usePopularShows(7, 4);
 
   // Rotate banner
   useEffect(() => {
     if (!popularShows.length) return;
-    const totalSlides = popularShows.length + 1;
+    const totalSlides = popularShows.length;
     const interval = setInterval(() => {
       setBannerIndex((prev) => (prev + 1) % totalSlides);
     }, 6000);
@@ -129,7 +129,7 @@ export default function Login() {
     setError("Google login failed. Please try again.");
   };
 
-  const totalSlides = popularShows.length + 1;
+  const totalSlides = popularShows.length;
   const nextBanner = () => setBannerIndex((prev) => (prev + 1) % totalSlides);
   const prevBanner = () =>
     setBannerIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
@@ -148,28 +148,38 @@ export default function Login() {
       <div className="hero-staff-wrapper">
         {/* Hero Banner */}
         <div className="hero-banner-wrapper">
+          {/* 🔥 Top-left logo */}
+          <div className="hero-logo-overlay">
+            <img src="/teli-logo.svg" alt="Teli" />
+          </div>
+
+          {/* 🔥 Bottom-center tagline */}
+          <div className="hero-tagline-overlay">
+            <p>
+              Discover Shows • Track What You're Watching • Share Reviews with
+              Friends
+            </p>
+          </div>
+
           <div
             className="hero-banner-slider"
-            style={{
-              transform: `translateX(-${bannerIndex * 100}%)`,
-              transition: "transform 0.8s ease-in-out",
-            }}
+            style={{ transform: `translateX(-${bannerIndex * 100}%)` }}
           >
             {/* Slide 0: Teli Title Card */}
-            <div className="hero-banner-slide hero-banner-teli">
+            {/* <div className="hero-banner-slide hero-banner-teli">
               <img
-                src="/TV Static Background.jpg"
-                alt="TV Static Background"
+                src="/teli-slide.jpg"
+                alt="Teli Slide"
                 className="hero-background-img"
               />
               <div className="hero-text">
                 <h1 className="teli-title">Teli</h1>
                 <h2 className="teli-subtitle">Channel What You Love</h2>
               </div>
-            </div>
+            </div> */}
 
             {/* Slides 1+: Popular Shows */}
-            {(popularShows as any[]).map((show: any) => (
+            {popularShows.map((show: any) => (
               <HeroBannerSlide key={show.id} show={show} />
             ))}
           </div>
