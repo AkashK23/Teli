@@ -32,14 +32,16 @@ logger = logging.getLogger(__name__)
 API_PREFIX = '/api'
 
 def create_app():
-    app = Flask(__name__, static_folder='../frontend/build', static_url_path='')
+    app = Flask(__name__, static_folder=None)
     CORS(app)
-    
+
+    build_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'build')
+
     # Register blueprints with API prefix
     app.register_blueprint(tmdb, url_prefix=API_PREFIX)
     app.register_blueprint(teli, url_prefix=API_PREFIX)
     app.register_blueprint(auth, url_prefix=API_PREFIX)
-    
+
     # Serve React App
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
@@ -48,12 +50,12 @@ def create_app():
         api_path = API_PREFIX.lstrip('/')
         if path.startswith(f'{api_path}/'):
             return jsonify({"error": "API endpoint not found"}), 404
-        
+
         # Handle static files and React routes
-        if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
-            return send_from_directory(app.static_folder, path)
+        if path != "" and os.path.exists(os.path.join(build_dir, path)):
+            return send_from_directory(build_dir, path)
         else:
-            return send_from_directory(app.static_folder, 'index.html')
+            return send_from_directory(build_dir, 'index.html')
     
     return app
 
