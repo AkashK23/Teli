@@ -120,8 +120,71 @@ export default function EpisodeDetails() {
 
   return (
     <div className="show-details-container">
-      {/* Episode header — desktop */}
-      {!isMobile ? (
+      {/* ✅ MOBILE */}
+      {isMobile && (
+        <>
+          <div className="episode-banner-wrapper">
+            {stillUrl ? (
+              <img
+                src={stillUrl}
+                alt={episodeData.name}
+                className="episode-banner"
+              />
+            ) : (
+              <div className="no-img-banner">No Image</div>
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="mobile-show-info">
+            <div className="mobile-show-top">
+              <div className="show-title-row">
+                <div>
+                  <Link to={`/show/${id}`} className="episode-show-link">
+                    {showData.name}
+                  </Link>
+
+                  <p className="episode-meta">
+                    S{season} E{episode}
+                  </p>
+                </div>
+
+                <h1 className="ep-title-with-share">
+                  {episodeData.name}
+                  <span className="share-inline">
+                    <ShareButton
+                      title={episodeData.name}
+                      text={`Check out ${episodeData.name} on Teli!`}
+                      url={`${window.location.origin}/show/${id}/season/${season}/episode/${episode}`}
+                    />
+                  </span>
+                </h1>
+              </div>
+
+              {episodeData.air_date && (
+                <p className="mobile-date">
+                  {new Date(episodeData.air_date).toLocaleDateString(
+                    undefined,
+                    {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    },
+                  )}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <p>
+            <strong>Overview:</strong>{" "}
+            {episodeData.overview || "No description available."}
+          </p>
+        </>
+      )}
+
+      {/* ✅ DESKTOP (unchanged) */}
+      {!isMobile && (
         <div className="show-details-upper">
           {stillUrl ? (
             <img
@@ -134,6 +197,7 @@ export default function EpisodeDetails() {
               No Image
             </div>
           )}
+
           <div className="show-details-info">
             <div className="show-data">
               <div className="show-data-text">
@@ -142,31 +206,36 @@ export default function EpisodeDetails() {
                     <Link to={`/show/${id}`} className="episode-show-link">
                       {showData.name}
                     </Link>
-                    <h1>{episodeData.name}</h1>
+
+                    <p className="episode-meta">
+                      S{season} E{episode}
+                    </p>
                   </div>
-                  <ShareButton
-                    title={episodeData.name}
-                    text={`Check out ${episodeData.name} on Teli!`}
-                    url={`${window.location.origin}/show/${id}/season/${season}/episode/${episode}`}
-                  />
+
+                  <h1 className="ep-title-with-share">
+                    {episodeData.name}
+                    <span className="share-inline">
+                      <ShareButton
+                        title={episodeData.name}
+                        text={`Check out ${episodeData.name} on Teli!`}
+                        url={`${window.location.origin}/show/${id}/season/${season}/episode/${episode}`}
+                      />
+                    </span>
+                  </h1>
                 </div>
-                <p>
-                  <strong>Season: </strong>
-                  {season}
-                </p>
-                <p>
-                  <strong>Episode: </strong>
-                  {episode}
-                </p>
                 {episodeData.air_date && (
-                  <p>
-                    <strong>Aired:</strong>{" "}
+                  <p className="mobile-date">
                     {new Date(episodeData.air_date).toLocaleDateString(
                       undefined,
-                      { year: "numeric", month: "long", day: "numeric" },
+                      {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      },
                     )}
                   </p>
                 )}
+
                 <p>
                   <strong>Overview:</strong>{" "}
                   {episodeData.overview || "No description available."}
@@ -175,61 +244,6 @@ export default function EpisodeDetails() {
             </div>
           </div>
         </div>
-      ) : (
-        /* Episode header — mobile */
-        <>
-          <div className="mobile-show-upper">
-            {stillUrl ? (
-              <img
-                src={stillUrl}
-                alt={episodeData.name}
-                className="mobile-show-poster"
-              />
-            ) : (
-              <div
-                className="no-img-poster"
-                style={{ width: 120, height: 180 }}
-              >
-                No Image
-              </div>
-            )}
-            <div className="mobile-show-info">
-              <div className="mobile-show-top">
-                <div className="show-title-row">
-                  <div>
-                    <Link to={`/show/${id}`} className="episode-show-link">
-                      {showData.name}
-                    </Link>
-                    <p
-                      style={{ margin: "0.1rem 0 0.2rem", fontSize: "0.85rem" }}
-                    >
-                      S{season} E{episode}
-                    </p>
-                    <h1 className="mobile-title">{episodeData.name}</h1>
-                  </div>
-                  <ShareButton
-                    title={episodeData.name}
-                    text={`Check out ${episodeData.name} on Teli!`}
-                    url={`${window.location.origin}/show/${id}/season/${season}/episode/${episode}`}
-                  />
-                </div>
-                {episodeData.air_date && (
-                  <p className="mobile-date">
-                    {new Date(episodeData.air_date).toLocaleDateString(
-                      undefined,
-                      { year: "numeric", month: "long", day: "numeric" },
-                    )}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <p>
-            <strong>Overview:</strong>{" "}
-            {episodeData.overview || "No description available."}
-          </p>
-        </>
       )}
 
       {/* Reviews */}
