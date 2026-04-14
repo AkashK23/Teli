@@ -224,12 +224,16 @@ export default function ShowDetails() {
             <div className="show-data">
               <div className="show-data-text">
                 <div className="show-title-row">
-                  <h1>{showData.name}</h1>
-                  <ShareButton
-                    title={showData.name}
-                    text={`Check out ${showData.name} on Teli!`}
-                    url={`${window.location.origin}/show/${id}`}
-                  />
+                  <h1 className="title-with-share">
+                    {showData.name}
+                    <span className="share-inline">
+                      <ShareButton
+                        title={showData.name}
+                        text={`Check out ${showData.name} on Teli!`}
+                        url={`${window.location.origin}/show/${id}`}
+                      />
+                    </span>
+                  </h1>
                 </div>
                 <p>
                   {showData.first_air_date?.slice(0, 4)}-
@@ -258,7 +262,7 @@ export default function ShowDetails() {
             </p>
 
             {user_id && !loadingReview && (
-              <div>
+              <div className="watch-status-row">
                 <strong>Watch Status:</strong>
                 <select
                   id="watchStatus"
