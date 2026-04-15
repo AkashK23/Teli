@@ -46,10 +46,12 @@ http://localhost:5001/api
   - [Search User Rated Shows](#search-user-rated-shows)
   - [Get Show Ratings](#get-show-ratings)
   - [Get Show Average Rating](#get-show-average-rating)
+  - [Get Followed Users' Show Reviews](#get-followed-users-show-reviews)
   - [Get Popular Shows](#get-popular-shows)
 - [Episode Rating Endpoints](#episode-rating-endpoints)
   - [Add Episode Rating](#add-episode-rating)
   - [Get Episode Ratings](#get-episode-ratings)
+  - [Get Followed Users' Episode Reviews](#get-followed-users-episode-reviews)
 - [Watch Status Endpoints](#watch-status-endpoints)
   - [Update Watch Status](#update-watch-status)
   - [Get Currently Watching](#get-currently-watching)
@@ -2121,6 +2123,74 @@ curl -X GET "http://localhost:5001/shows/1396/average-rating"
   }
   ```
 
+### Get Followed Users' Show Reviews
+
+Get show-level reviews from users that a given user follows, scoped to a single show. Results are paginated and sorted by most recent timestamp first. Each review is enriched with the reviewer's name, username, and profile picture.
+
+**URL**: `/users/:user_id/followed-reviews/shows/:show_id`
+
+**Method**: `GET`
+
+**URL Parameters**:
+
+| Parameter | Type   | Required | Description                                               |
+|-----------|--------|----------|-----------------------------------------------------------|
+| user_id   | string | Yes      | ID of the current user whose following list is the filter |
+| show_id   | string | Yes      | ID of the show                                            |
+
+**Query Parameters**:
+
+| Parameter | Type   | Required | Description                                   |
+|-----------|--------|----------|-----------------------------------------------|
+| page      | number | No       | Page number, 1-indexed (default: 1)           |
+| limit     | number | No       | Results per page (default: 20, max: 100)      |
+
+**Example Request**:
+
+```bash
+curl -X GET "http://localhost:5001/api/users/user123/followed-reviews/shows/breaking_bad?page=1&limit=20"
+```
+
+**Example Response**:
+
+```json
+{
+  "results": [
+    {
+      "id": "rating456",
+      "user_id": "friend789",
+      "user_name": "Alex Rivera",
+      "user_username": "alexr",
+      "user_picture": "https://example.com/pic.jpg",
+      "show_id": "breaking_bad",
+      "show_name_lowercase": "breaking bad",
+      "rating": 9,
+      "comment": "Walter's descent is masterful.",
+      "timestamp": "2026-04-12T14:22:10+00:00"
+    }
+  ],
+  "total_results": 1,
+  "total_pages": 1,
+  "current_page": 1,
+  "limit": 20
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request`: Invalid `page` or `limit` parameter
+  ```json
+  { "error": "Invalid parameter format" }
+  ```
+- `404 Not Found`: User does not exist
+  ```json
+  { "error": "User not found" }
+  ```
+- `500 Internal Server Error`: Database error
+  ```json
+  { "error": "Database error occurred" }
+  ```
+
 ### Get Popular Shows
 
 Get a list of the most popular shows based on the number of ratings within a specified timeframe.
@@ -2386,6 +2456,77 @@ curl -X GET "http://localhost:5001/users/user123/shows/1396/season/1/ratings?epi
   {
     "error": "Database error occurred"
   }
+  ```
+
+### Get Followed Users' Episode Reviews
+
+Get episode-level reviews from users that a given user follows, scoped to a single episode of a show. Results are paginated and sorted by most recent timestamp first. Each review is enriched with the reviewer's name, username, and profile picture.
+
+**URL**: `/users/:user_id/followed-reviews/shows/:show_id/season/:season_number/episode/:episode_number`
+
+**Method**: `GET`
+
+**URL Parameters**:
+
+| Parameter      | Type   | Required | Description                                               |
+|----------------|--------|----------|-----------------------------------------------------------|
+| user_id        | string | Yes      | ID of the current user whose following list is the filter |
+| show_id        | string | Yes      | ID of the show                                            |
+| season_number  | number | Yes      | Season number (integer, ≥ 1)                              |
+| episode_number | number | Yes      | Episode number (integer, ≥ 1)                             |
+
+**Query Parameters**:
+
+| Parameter | Type   | Required | Description                                   |
+|-----------|--------|----------|-----------------------------------------------|
+| page      | number | No       | Page number, 1-indexed (default: 1)           |
+| limit     | number | No       | Results per page (default: 20, max: 100)      |
+
+**Example Request**:
+
+```bash
+curl -X GET "http://localhost:5001/api/users/user123/followed-reviews/shows/1396/season/1/episode/1"
+```
+
+**Example Response**:
+
+```json
+{
+  "results": [
+    {
+      "id": "episode_rating789",
+      "user_id": "friend789",
+      "user_name": "Alex Rivera",
+      "user_username": "alexr",
+      "user_picture": "https://example.com/pic.jpg",
+      "show_id": "1396",
+      "season_number": 1,
+      "episode_number": 1,
+      "rating": 9,
+      "comment": "Pilot set the tone perfectly.",
+      "timestamp": "2026-04-12T14:22:10+00:00"
+    }
+  ],
+  "total_results": 1,
+  "total_pages": 1,
+  "current_page": 1,
+  "limit": 20
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request`: Invalid `page` or `limit` parameter
+  ```json
+  { "error": "Invalid parameter format" }
+  ```
+- `404 Not Found`: User does not exist
+  ```json
+  { "error": "User not found" }
+  ```
+- `500 Internal Server Error`: Database error
+  ```json
+  { "error": "Database error occurred" }
   ```
 
 ## Watch Status Endpoints

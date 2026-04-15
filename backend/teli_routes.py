@@ -630,7 +630,148 @@ def get_show_average_rating(show_id):
         logger.error(f"Error getting show average rating: {e}")
         return jsonify({"error": "Database error occurred"}), 500
 
-    
+
+def _get_following_ids(user_id):
+    follows = db.collection("follows").where(
+        filter=FieldFilter("follower_id", "==", user_id)).stream()
+    following_ids = []
+    for doc in follows:
+        following_ids.append(doc.to_dict()["followee_id"])
+    return following_ids
+
+
+def _parse_pagination_params():
+    try:
+        page = int(request.args.get("page", 1))
+        if page < 1:
+            page = 1
+        limit = int(request.args.get("limit", 20))
+        if limit < 1:
+            limit = 20
+        elif limit > 100:
+            limit = 100
+        result = (page, limit, None)
+    except (ValueError, TypeError):
+        result = (None, None, jsonify({"error": "Invalid parameter format"}))
+    return result
+
+
+def _enrich_with_user_info(items):
+    user_cache = {}
+    for item in items:
+        reviewer_id = item.get("user_id")
+        if not reviewer_id:
+            continue
+        if reviewer_id not in user_cache:
+            user_doc = db.collection("users").document(reviewer_id).get()
+            if user_doc.exists:
+                user_cache[reviewer_id] = user_doc.to_dict()
+            else:
+                user_cache[reviewer_id] = {}
+        user_data = user_cache[reviewer_id]
+        item["user_name"] = user_data.get("name", "")
+        item["user_username"] = user_data.get("username", "")
+        item["user_picture"] = user_data.get("picture", "")
+    return items
+
+
+def _paginate_results(sorted_items, page, limit):
+    total_results = len(sorted_items)
+    total_pages = (total_results + limit - 1) // limit if total_results > 0 else 1
+    start_index = (page - 1) * limit
+    end_index = start_index + limit
+    page_items = sorted_items[start_index:end_index]
+    response = {
+        "results": page_items,
+        "total_results": total_results,
+        "total_pages": total_pages,
+        "current_page": page,
+        "limit": limit,
+    }
+    return response
+
+
+@teli.route("/users/<user_id>/followed-reviews/shows/<show_id>", methods=["GET"])
+def get_followed_show_reviews(user_id, show_id):
+    try:
+        user_ref = db.collection("users").document(user_id).get()
+        if not user_ref.exists:
+            return jsonify({"error": "User not found"}), 404
+
+        page, limit, error_response = _parse_pagination_params()
+        if error_response is not None:
+            return error_response, 400
+
+        following_ids = _get_following_ids(user_id)
+        if not following_ids:
+            empty_response = _paginate_results([], page, limit)
+            return jsonify(empty_response), 200
+
+        matching_reviews = []
+        chunk_size = 30
+        for i in range(0, len(following_ids), chunk_size):
+            chunk = following_ids[i:i + chunk_size]
+            query = db.collection("ratings").where(
+                filter=FieldFilter("show_id", "==", show_id)).where(
+                    filter=FieldFilter("user_id", "in", chunk))
+            for doc in query.stream():
+                review = doc.to_dict()
+                review["id"] = doc.id
+                matching_reviews.append(review)
+
+        matching_reviews.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
+        response = _paginate_results(matching_reviews, page, limit)
+        response["results"] = _enrich_with_user_info(response["results"])
+        return jsonify(response), 200
+
+    except Exception as e:
+        logger.error(f"Error getting followed show reviews: {e}")
+        return jsonify({"error": "Database error occurred"}), 500
+
+
+@teli.route(
+    "/users/<user_id>/followed-reviews/shows/<show_id>"
+    "/season/<int:season_number>/episode/<int:episode_number>",
+    methods=["GET"])
+def get_followed_episode_reviews(user_id, show_id, season_number, episode_number):
+    try:
+        user_ref = db.collection("users").document(user_id).get()
+        if not user_ref.exists:
+            return jsonify({"error": "User not found"}), 404
+
+        page, limit, error_response = _parse_pagination_params()
+        if error_response is not None:
+            return error_response, 400
+
+        following_ids = _get_following_ids(user_id)
+        if not following_ids:
+            empty_response = _paginate_results([], page, limit)
+            return jsonify(empty_response), 200
+
+        matching_reviews = []
+        chunk_size = 30
+        for i in range(0, len(following_ids), chunk_size):
+            chunk = following_ids[i:i + chunk_size]
+            query = db.collection("episode_ratings").where(
+                filter=FieldFilter("show_id", "==", show_id)).where(
+                    filter=FieldFilter("season_number", "==", season_number)).where(
+                        filter=FieldFilter("episode_number", "==", episode_number)).where(
+                            filter=FieldFilter("user_id", "in", chunk))
+            for doc in query.stream():
+                review = doc.to_dict()
+                review["id"] = doc.id
+                matching_reviews.append(review)
+
+        matching_reviews.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
+        response = _paginate_results(matching_reviews, page, limit)
+        response["results"] = _enrich_with_user_info(response["results"])
+        return jsonify(response), 200
+
+    except Exception as e:
+        logger.error(f"Error getting followed episode reviews: {e}")
+        return jsonify({"error": "Database error occurred"}), 500
+
+
 class FollowRequest(BaseModel):
     follower_id: str
     followee_id: str
