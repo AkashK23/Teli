@@ -631,6 +631,59 @@ def get_show_average_rating(show_id):
         return jsonify({"error": "Database error occurred"}), 500
 
 
+@teli.route("/shows/<show_id>/season/<season_number>/episode/<episode_number>/average-rating", methods=["GET"])
+def get_episode_average_rating(show_id, season_number, episode_number):
+    try:
+        season_num = int(season_number)
+        episode_num = int(episode_number)
+    except ValueError:
+        return jsonify({"error": "Season and episode numbers must be integers"}), 400
+
+    if season_num < 1 or episode_num < 1:
+        return jsonify({"error": "Season and episode numbers must be positive integers"}), 400
+
+    try:
+        ratings_ref = db.collection("episode_ratings").where(
+            filter=FieldFilter("show_id", "==", show_id)).where(
+            filter=FieldFilter("season_number", "==", season_num)).where(
+            filter=FieldFilter("episode_number", "==", episode_num))
+        docs = list(ratings_ref.stream())
+
+        total_ratings = len(docs)
+
+        if total_ratings == 0:
+            result = {
+                "show_id": show_id,
+                "season_number": season_num,
+                "episode_number": episode_num,
+                "average_rating": None,
+                "total_ratings": 0
+            }
+            return jsonify(result), 200
+
+        total_rating_sum = 0
+        for doc in docs:
+            rating_data = doc.to_dict()
+            rating_value = rating_data.get("rating", 0)
+            total_rating_sum += rating_value
+
+        average_rating = total_rating_sum / total_ratings
+        average_rating_rounded = round(average_rating, 2)
+
+        result = {
+            "show_id": show_id,
+            "season_number": season_num,
+            "episode_number": episode_num,
+            "average_rating": average_rating_rounded,
+            "total_ratings": total_ratings
+        }
+
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Error getting episode average rating: {e}")
+        return jsonify({"error": "Database error occurred"}), 500
+
+
 def _get_following_ids(user_id):
     follows = db.collection("follows").where(
         filter=FieldFilter("follower_id", "==", user_id)).stream()

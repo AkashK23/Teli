@@ -51,6 +51,7 @@ http://localhost:5001/api
 - [Episode Rating Endpoints](#episode-rating-endpoints)
   - [Add Episode Rating](#add-episode-rating)
   - [Get Episode Ratings](#get-episode-ratings)
+  - [Get Episode Average Rating](#get-episode-average-rating)
   - [Get Followed Users' Episode Reviews](#get-followed-users-episode-reviews)
 - [Watch Status Endpoints](#watch-status-endpoints)
   - [Update Watch Status](#update-watch-status)
@@ -2449,6 +2450,73 @@ curl -X GET "http://localhost:5001/users/user123/shows/1396/season/1/ratings?epi
   ```json
   {
     "error": "Episode rating not found"
+  }
+  ```
+- `500 Internal Server Error`: Database error
+  ```json
+  {
+    "error": "Database error occurred"
+  }
+  ```
+
+### Get Episode Average Rating
+
+Get the global average rating for a specific episode across all users.
+
+**URL**: `/shows/:show_id/season/:season_number/episode/:episode_number/average-rating`
+
+**Method**: `GET`
+
+**URL Parameters**:
+
+| Parameter      | Type   | Required | Description           |
+|----------------|--------|----------|-----------------------|
+| show_id        | string | Yes      | The ID of the TV show |
+| season_number  | number | Yes      | The season number     |
+| episode_number | number | Yes      | The episode number    |
+
+**Example Request**:
+
+```bash
+curl -X GET "http://localhost:5001/api/shows/1396/season/1/episode/1/average-rating"
+```
+
+**Example Response (With Ratings)**:
+
+```json
+{
+  "show_id": "1396",
+  "season_number": 1,
+  "episode_number": 1,
+  "average_rating": 8.67,
+  "total_ratings": 3
+}
+```
+
+**Example Response (No Ratings)**:
+
+```json
+{
+  "show_id": "1396",
+  "season_number": 1,
+  "episode_number": 1,
+  "average_rating": null,
+  "total_ratings": 0
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request`: Invalid parameters
+  ```json
+  {
+    "error": "Season and episode numbers must be integers"
+  }
+  ```
+- `400 Bad Request`: Non-positive numbers
+  ```json
+  {
+    "error": "Season and episode numbers must be positive integers"
   }
   ```
 - `500 Internal Server Error`: Database error
