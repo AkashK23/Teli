@@ -6,6 +6,10 @@ import {
   getPopularShows,
   filterShows,
   getShowSeason,
+  getFollowedShowReviews, 
+  getAllShowRatings,
+  getFollowedEpisodeReviews, 
+  getAllEpisodeRatings
 } from "../api/shows";
 
 export function useShowDetails(showId: string | number | undefined) {
@@ -57,3 +61,56 @@ export function useShowSeason(
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 }
+
+// Returns reviews from followed users for a given show
+export const useFollowedShowReviews = (
+  userId: string | null | undefined,
+  showId: string | undefined,
+) => {
+  return useQuery({
+    queryKey: ["followedShowReviews", userId, showId],
+    queryFn: () => getFollowedShowReviews(userId!, showId!),
+    enabled: !!userId && !!showId,
+    staleTime: 1000 * 60 * 2,
+  });
+};
+ 
+// Returns all reviews for a given show
+export const useAllShowRatings = (showId: string | undefined) => {
+  return useQuery({
+    queryKey: ["allShowRatings", showId],
+    queryFn: () => getAllShowRatings(showId!),
+    enabled: !!showId,
+    staleTime: 1000 * 60 * 2,
+  });
+};
+
+// Returns reviews from followed users for a given show
+export const useFollowedEpisodeReviews = (
+  userId: string | null | undefined,
+  showId: string | undefined,
+  season: number | null, 
+  episode: number | null,
+) => {
+  return useQuery({
+    queryKey: ["followedEpisodeReviews", userId, showId, season, episode],
+    queryFn: () => getFollowedEpisodeReviews(userId!, showId!, season!, episode!),
+    enabled: !!userId && !!showId && !!season && !!episode,
+    staleTime: 1000 * 60 * 2,
+  });
+};
+ 
+// Returns all reviews for a given show
+export const useAllEpisodeRatings = (
+  userId: string | null | undefined, 
+  showId: string | undefined, 
+  season: number | null, 
+  episode: number | null,
+) => {
+  return useQuery({
+    queryKey: ["allEpisodeRatings", userId, showId, season, episode],
+    queryFn: () => getAllEpisodeRatings(userId!, showId!, season!, episode!),
+    enabled: !!showId && !!season && !!episode,
+    staleTime: 1000 * 60 * 2,
+  });
+};

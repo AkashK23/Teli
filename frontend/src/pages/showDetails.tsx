@@ -1,7 +1,9 @@
 import { useParams, Link } from "react-router-dom";
 import React, { useState, useRef } from "react";
-import { Tv } from "lucide-react";
+import { Tv, MessageSquare } from "lucide-react";
 import ShareButton from "../components/ShareButton";
+import ReviewCard from "../components/ReviewCard";
+import { formatRelativeTime } from "../components/formatRelativeTime";
 import { useUser } from "../UserContext";
 import { useShowDetails, useShowAverageRating } from "../hooks/useShow";
 import {
@@ -9,21 +11,25 @@ import {
   useUserWatchStatus,
   useEpisodeReviews,
 } from "../hooks/useUser";
+import { useFollowedShowReviews, useAllShowRatings } from "../hooks/useShow"; // adjust if you put them in a different file
 import {
   useUpdateWatchStatus,
   useDeleteWatchStatus,
   useSubmitRating,
-  useSubmitEpisodeRating,
 } from "../hooks/useMutations";
 import { getShowSeason } from "../api/shows";
 
 type WatchStatus = "want_to_watch" | "currently_watching" | "watched" | "";
+type ReviewTab = "you" | "following" | "all";
 
 export default function ShowDetails() {
   const user_id = useUser().userId;
   const { id } = useParams<{ id: string }>();
 
-  const [activeTab, setActiveTab] = useState<"seasons" | "reviews">("reviews");
+  const [reviewTab, setReviewTab] = useState<ReviewTab>(
+    user_id ? "you" : "all",
+  );
+  const [showEpisodes, setShowEpisodes] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
   const [seasonEpisodes, setSeasonEpisodes] = useState<any>({});
   const [reviewText, setReviewText] = useState("");
@@ -47,6 +53,11 @@ export default function ShowDetails() {
     id,
     selectedSeason,
   );
+  const { data: followedReviews = [], isLoading: followedLoading } =
+    useFollowedShowReviews(user_id, id);
+  const { data: allReviews = [], isLoading: allReviewsLoading } =
+    useAllShowRatings(id);
+
   const isUserDataLoading = ratingsLoading || watchStatusLoading;
 
   const updateWatchStatusMutation = useUpdateWatchStatus();
@@ -78,7 +89,7 @@ export default function ShowDetails() {
     setSeasonEpisodes({});
     setWatchStatusSynced(false);
     setIsEditingReview(false);
-    setActiveTab("reviews");
+    setReviewTab(user_id ? "you" : "all");
   }, [id]);
 
   // Load Season 1 automatically once show data arrives
@@ -209,6 +220,47 @@ export default function ShowDetails() {
 
   const seasons =
     showData.seasons?.filter((s: any) => s.season_number > 0) || [];
+
+  // ── Helper: render a list of ReviewCards or an empty state ──────────────────
+  const renderReviewList = (reviews: any[], isLoading: boolean) => {
+    console.log(reviews)
+    if (isLoading) {
+      return (
+        <div className="loading-container">
+          <div className="spinner"></div>
+        </div>
+      );
+    }
+    if (reviews.length === 0) {
+      return (
+        <div className="empty-state-card">
+          <MessageSquare className="empty-state-icon" />
+          <p>No reviews yet</p>
+        </div>
+      );
+    }
+    return (
+      <div className="review-cards-container">
+        {reviews.map((review: any) => (
+          <ReviewCard
+            key={
+              review.id ??
+              review.rating_id ??
+              `${review.user_id}-${review.show_id}`
+            }
+            showId={review.show_id}
+            userId={review.user_id}
+            comment={review.comment}
+            rating={review.rating}
+            compact={false}
+            reviewDate={formatRelativeTime(review.timestamp)}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  const effectiveReviewTab = user_id ? reviewTab : "all";
 
   return (
     <div className="show-details-container">
@@ -344,136 +396,60 @@ export default function ShowDetails() {
         </>
       )}
 
-      {/* Tabs */}
-      <div className="show-tabs-container">
-        <div className="show-tabs-slider">
+      {/* ================= REVIEWS SECTION ================= */}
+      <h2 className="section-header">Reviews</h2>
+
+      {/* 🔥 Keep your original slider UI */}
+      {user_id && (
+        <div className="activity-tabContainer">
           <div
-            className={`show-tabs-indicator ${activeTab === "seasons" ? "right" : "left"}`}
-          />
-          <button
-            className={`show-tab-button ${activeTab === "reviews" ? "active" : ""}`}
-            onClick={() => setActiveTab("reviews")}
+            onClick={() => setReviewTab("you")}
+            className={`activity-tab ${
+              effectiveReviewTab === "you" ? "activity-activeTab" : ""
+            }`}
           >
-            Reviews
-          </button>
-          <button
-            className={`show-tab-button ${activeTab === "seasons" ? "active" : ""}`}
-            onClick={() => setActiveTab("seasons")}
+            You
+          </div>
+          <div
+            onClick={() => setReviewTab("following")}
+            className={`activity-tab ${
+              effectiveReviewTab === "following" ? "activity-activeTab" : ""
+            }`}
           >
-            Episodes
-          </button>
-        </div>
-      </div>
-
-      {/* Episodes Tab */}
-      <div style={{ display: activeTab === "seasons" ? "block" : "none" }}>
-        <div className="season-ticker-container">
-          <div className="ticker-container">
-            {seasons.map((season: any) => (
-              <button
-                key={season.season_number}
-                onClick={() => fetchSeason(season.season_number)}
-                className={`ticker-buttons ${
-                  selectedSeason === season.season_number ? "active" : ""
-                }`}
-              >
-                S{season.season_number}
-              </button>
-            ))}
+            Following
+          </div>
+          <div
+            onClick={() => setReviewTab("all")}
+            className={`activity-tab ${
+              effectiveReviewTab === "all" ? "activity-activeTab" : ""
+            }`}
+          >
+            All
           </div>
         </div>
+      )}
 
-        {selectedSeason && seasonEpisodes[selectedSeason] && (
-          <div className="season-info-container">
-            {seasonEpisodes[selectedSeason].poster_path && (
-              <img
-                src={`https://image.tmdb.org/t/p/w300${seasonEpisodes[selectedSeason].poster_path}`}
-                alt={`Season ${selectedSeason} Poster`}
-                className="season-poster"
-              />
-            )}
-            <div>
-              <h3>Season {selectedSeason}</h3>
-              <p>
-                {seasonEpisodes[selectedSeason].overview ||
-                  "No description available."}
-              </p>
+      {/* ===== YOUR REVIEW ===== */}
+      {effectiveReviewTab === "you" && (
+        <div>
+          {!user_id ? (
+            <div className="empty-state-card">
+              <p>Sign in to leave a review.</p>
             </div>
-          </div>
-        )}
-
-        {selectedSeason && seasonEpisodes[selectedSeason] && (
-          <div>
-            <h3 className="episodes-header">Episodes</h3>
-            <div className="episode-list-container">
-              {seasonEpisodes[selectedSeason].episodes.map((episode: any) => {
-                const stillUrl = episode.still_path
-                  ? `https://image.tmdb.org/t/p/w300${episode.still_path}`
-                  : null;
-
-                const hasEpisodeReview = (episodeReviews as any[]).some(
-                  (review: any) =>
-                    review.episode_number === episode.episode_number,
-                );
-
-                return (
-                  <Link
-                    key={episode.id}
-                    to={`/show/${id}/season/${selectedSeason}/episode/${episode.episode_number}`}
-                    className="episode-container episode-container--link"
-                  >
-                    <div className="episode-box">
-                      {stillUrl ? (
-                        <img
-                          src={stillUrl}
-                          alt={`Episode ${episode.episode_number}`}
-                          className="episode-poster"
-                        />
-                      ) : (
-                        <div className="no-img-poster">
-                          <Tv size={20} /> No Image
-                        </div>
-                      )}
-                      <div style={{ flex: 1 }}>
-                        <strong>
-                          {episode.episode_number}. {episode.name}
-                        </strong>
-                        <p style={{ marginTop: "0.5rem" }}>
-                          {episode.overview || "No description available."}
-                        </p>
-                      </div>
-                      {hasEpisodeReview && (
-                        <div className="episode-reviewed-badge">✓</div>
-                      )}
-                    </div>
-                  </Link>
-                );
-              })}
+          ) : loadingReview ? (
+            <div className="loading-container">
+              <div className="spinner"></div>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Reviews Tab */}
-      <div style={{ display: activeTab === "reviews" ? "block" : "none" }}>
-        {user_id && !loadingReview ? (
-          <>
-            {userHasRated && (
-              <h3 className="show-details-headings">Your Review</h3>
-            )}
-
-            {userHasRated && (
-              <div className="rating-cards-container">
-                {[userReview]
-                  .filter(
-                    (review: any) => String(review.show_id) === String(id),
-                  )
-                  .map((review: any) => (
-                    <div className="rating-card" key={review.show_id}>
+          ) : (
+            <>
+              {userHasRated && (
+                <>
+                  <div className="rating-cards-container">
+                    <div className="rating-card">
                       <div className="rating-details">
-                        <div className="rating-score">{review.rating}</div>
+                        <div className="rating-score">{userReview.rating}</div>
                         <div className="rating-text">
-                          <p>{review.comment}</p>
+                          <p>{userReview.comment}</p>
                         </div>
                       </div>
                       <button
@@ -483,75 +459,167 @@ export default function ShowDetails() {
                         {isEditingReview ? "Cancel" : "Update"}
                       </button>
                     </div>
-                  ))}
-              </div>
-            )}
+                  </div>
+                </>
+              )}
 
-            {(!userHasRated || isEditingReview) && (
-              <div>
-                {!userHasRated && (
-                  <h3 className="show-details-headings">Leave a Review</h3>
-                )}
-                <div className="write-review-container">
-                  <div className="slider-container">
-                    <div
-                      className="slider-wrapper"
-                      style={
-                        {
-                          "--slider-fill": `${rating * 10}%`,
-                          "--thumb-color": thumbColor(rating),
-                        } as React.CSSProperties
-                      }
-                    >
-                      <input
-                        type="range"
-                        min="0"
-                        max="10"
-                        step="1"
-                        value={rating}
-                        onChange={(e) => setRating(Number(e.target.value))}
-                      />
-                      <span
-                        className="slider-thumb-label"
-                        style={{ left: thumbLeft(rating) }}
-                        data-value={rating}
+              {(!userHasRated || isEditingReview) && (
+                <div>
+                  {!userHasRated && (
+                    <h3 className="show-details-headings">Leave a Review</h3>
+                  )}
+
+                  <div className="write-review-container">
+                    <div className="slider-container">
+                      <div
+                        className="slider-wrapper"
+                        style={
+                          {
+                            "--slider-fill": `${rating * 10}%`,
+                            "--thumb-color": thumbColor(rating),
+                          } as React.CSSProperties
+                        }
                       >
-                        {rating}
-                      </span>
+                        <input
+                          type="range"
+                          min="0"
+                          max="10"
+                          value={rating}
+                          onChange={(e) => setRating(Number(e.target.value))}
+                        />
+                        <span
+                          className="slider-thumb-label"
+                          data-value={rating}
+                          style={{ left: thumbLeft(rating) }}
+                        >
+                          {rating}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="review-input-group">
+                      <textarea
+                        value={reviewText}
+                        onChange={(e) => setReviewText(e.target.value)}
+                        rows={4}
+                        placeholder="What did you think?"
+                        className="review-textbox"
+                      />
+
+                      <div className="submit-button-row">
+                        <button
+                          onClick={handleReviewSubmit}
+                          className="submit-review-button"
+                        >
+                          {userHasRated ? "Update" : "Submit"}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div className="review-input-group">
-                    <textarea
-                      id="reviewText"
-                      value={reviewText}
-                      onChange={(e) => setReviewText(e.target.value)}
-                      rows={4}
-                      placeholder="What did you think of this show?"
-                      className="review-textbox"
-                    />
-                    <button
-                      onClick={handleReviewSubmit}
-                      className="submit-review-button"
-                      disabled={submitRatingMutation.isPending}
-                    >
-                      {submitRatingMutation.isPending
-                        ? "Submitting..."
-                        : userHasRated
-                          ? "Update"
-                          : "Submit"}
-                    </button>
-                    {submitted && <p>Review submitted!</p>}
-                  </div>
                 </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="empty-state-card">
-            <p>Sign in to leave a review.</p>
-          </div>
-        )}
+              )}
+              {submitted && (
+                <div className="review-submit-message">
+                  <p>Review submitted!</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ===== FOLLOWING ===== */}
+      {effectiveReviewTab === "following" && (
+        <div>
+          {renderReviewList(followedReviews.results as any[], followedLoading)}
+        </div>
+      )}
+
+      {/* ===== ALL ===== */}
+      {effectiveReviewTab === "all" && (
+        <div>{renderReviewList(allReviews as any[], allReviewsLoading)}</div>
+      )}
+
+      {/* ================= EPISODES SECTION ================= */}
+      <h2 className="section-header">Episodes</h2>
+
+      {/* Season selector */}
+      <div className="season-ticker-container">
+        <div className="ticker-container">
+          {seasons.map((season: any) => (
+            <button
+              key={season.season_number}
+              onClick={() => fetchSeason(season.season_number)}
+              className={`ticker-buttons ${
+                selectedSeason === season.season_number ? "active" : ""
+              }`}
+            >
+              S{season.season_number}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Season info */}
+      {selectedSeason && seasonEpisodes[selectedSeason] && (
+        <div className="season-info-container">
+          {seasonEpisodes[selectedSeason].poster_path && (
+            <img
+              src={`https://image.tmdb.org/t/p/w300${seasonEpisodes[selectedSeason].poster_path}`}
+              className="season-poster"
+            />
+          )}
+          <div>
+            <h3>Season {selectedSeason}</h3>
+            <p>
+              {seasonEpisodes[selectedSeason].overview ||
+                "No description available."}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Episodes list */}
+      {selectedSeason && seasonEpisodes[selectedSeason] && (
+        <div className="episode-list-container">
+          {seasonEpisodes[selectedSeason].episodes.map((episode: any) => {
+            const stillUrl = episode.still_path
+              ? `https://image.tmdb.org/t/p/w300${episode.still_path}`
+              : null;
+
+            const hasEpisodeReview = (episodeReviews as any[]).some(
+              (review: any) => review.episode_number === episode.episode_number,
+            );
+
+            return (
+              <Link
+                key={episode.id}
+                to={`/show/${id}/season/${selectedSeason}/episode/${episode.episode_number}`}
+                className="episode-container episode-container--link"
+              >
+                <div className="episode-box">
+                  {stillUrl ? (
+                    <img src={stillUrl} className="episode-poster" />
+                  ) : (
+                    <div className="no-img-poster">
+                      <Tv size={20} /> No Image
+                    </div>
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <strong>
+                      {episode.episode_number}. {episode.name}
+                    </strong>
+                    <p>{episode.overview}</p>
+                  </div>
+                  {hasEpisodeReview && (
+                    <div className="episode-reviewed-badge">✓</div>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

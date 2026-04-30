@@ -676,6 +676,12 @@ body {
   justify-content: center;
   flex-wrap: wrap;
   gap: 1.5rem;
+
+  max-height: 36rem;
+  overflow-y: auto;
+  
+  padding-top: 0.5rem;
+  padding-right: 0.5rem;
 }
 
 .see-more-container {
@@ -1032,6 +1038,23 @@ body {
   width: 100%;
 }
 
+.section-header {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.review-filter-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.review-filter-bar button.active {
+  font-weight: bold;
+  border-bottom: 2px solid white;
+}
+
 /* Slider thumb label */
 
 .slider-wrapper {
@@ -1061,15 +1084,6 @@ body {
   height: 2.2rem;
   border-radius: 50%;
   background: transparent;
-  cursor: pointer;
-}
-
-.slider-wrapper input[type="range"]::-moz-range-thumb {
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 50%;
-  background: transparent;
-  border: none;
   cursor: pointer;
 }
 
@@ -1169,6 +1183,12 @@ body {
   cursor: not-allowed;
 }
 
+.review-submit-message {
+  display: flex;
+  justify-content: flex-end;
+  color: var(--color-accent-submit);
+}
+
 .season-ticker-container {
   margin-top: 2rem;
   text-align: center;
@@ -1206,6 +1226,7 @@ body {
 
 .season-info-container {
   margin-top: 2rem;
+  margin-bottom: 2rem;
   display: flex;
   gap: 2rem;
   align-items: flex-start;
@@ -1341,7 +1362,7 @@ body {
   background: var(--color-bg-components);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 1.5rem;
+  padding: 0 1.5rem 1.5rem;
   margin-bottom: 1.5rem;
   width: 100%;
 }
@@ -2180,6 +2201,13 @@ body {
 
 .activity-contentContainer {
   width: 90%;
+}
+
+.review-cards-container-activity {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
 }
 
 /* #Following/Followers */
@@ -3194,11 +3222,13 @@ body {
 
   .review-cards-container {
     display: flex;
-    flex-direction: column;
     align-items: center;
     gap: 1rem;
     width: 100%;
     padding: 0 0.5rem;
+
+    max-height: 32rem;
+    overflow-y: auto;
   }
 
   .desktop-break {

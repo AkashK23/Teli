@@ -54,7 +54,7 @@ export default function Activity() {
     ) : (
       <div className="review-container">
         <div className="user-ratings">
-          <div className="review-cards-container">
+          <div className="review-cards-container-activity">
             {reviews.map((rating: any) => (
               <ReviewCard
                 key={rating.id}

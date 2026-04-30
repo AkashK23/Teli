@@ -33,3 +33,28 @@ export const submitRating = (payload: object) =>
 
 export const submitEpisodeRating = (payload: object) =>
   axios.post(`${BASE_URL}/episode_ratings`, payload).then((r) => r.data);
+
+// Fetches reviews from users the current user follows, for a specific show
+export const getFollowedShowReviews = (userId: string, showId: string) =>
+  axios
+    .get(`${BASE_URL}/users/${userId}/followed-reviews/shows/${showId}`)
+    .then((r) => r.data);
+
+// Fetches all user ratings/reviews for a specific show
+export const getAllShowRatings = (showId: string) =>
+  axios
+    .get(`${BASE_URL}/shows/${showId}/ratings`)
+    .then((r) => r.data);
+
+    // Fetches reviews from users the current user follows, for a specific show
+export const getFollowedEpisodeReviews = (userId: string, showId: string, season: number, episode: number) =>
+  axios
+    .get(`${BASE_URL}/users/${userId}/followed-reviews/shows/${showId}/season/${season}/episode/${episode}`)
+    .then((r) => r.data);
+
+// Fetches all user ratings/reviews for a specific show
+export const getAllEpisodeRatings = (userId: string, showId: string, season: number, episode: number) =>
+  axios
+    .get(`${BASE_URL}/users/${userId}/shows/${showId}/season/${season}/ratings?episode_number=${episode}`)
+    .then((r) => r.data);
+ 

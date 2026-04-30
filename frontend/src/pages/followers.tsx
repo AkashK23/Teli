@@ -65,14 +65,14 @@ export default function Followers() {
                     />
                     <span className="following-name">{user.name}</span>
                   </Link>
-                  {loggedInUserId && !isSelf && (
+                  {/* {loggedInUserId && !isSelf && (
                     <button
                       className={`follow-back-btn ${isFollowingBack ? "already-following" : ""}`}
                       onClick={() => handleFollowToggle(user.id, isFollowingBack)}
                     >
                       {isFollowingBack ? "Following" : "Follow Back"}
                     </button>
-                  )}
+                  )} */}
                 </div>
               </li>
             );
