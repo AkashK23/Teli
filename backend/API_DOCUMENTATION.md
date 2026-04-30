@@ -48,6 +48,7 @@ http://localhost:5001/api
   - [Get Show Average Rating](#get-show-average-rating)
   - [Get Followed Users' Show Reviews](#get-followed-users-show-reviews)
   - [Get Popular Shows](#get-popular-shows)
+  - [Get Suggested Shows](#get-suggested-shows)
 - [Episode Rating Endpoints](#episode-rating-endpoints)
   - [Add Episode Rating](#add-episode-rating)
   - [Get Episode Ratings](#get-episode-ratings)
@@ -2173,7 +2174,9 @@ curl -X GET "http://localhost:5001/api/users/user123/followed-reviews/shows/brea
   "total_results": 1,
   "total_pages": 1,
   "current_page": 1,
-  "limit": 20
+  "limit": 20,
+  "followers_average_rating": 9.0,
+  "followers_total_ratings": 1
 }
 ```
 
@@ -2275,6 +2278,74 @@ curl -X GET "http://localhost:5001/shows/popular?num_most_popular=5"
   {
     "error": "Error getting popular shows: [error details]"
   }
+  ```
+
+### Get Suggested Shows
+
+Get personalized show suggestions for a user. Prioritizes shows highly rated by followed users that the user hasn't rated or added to their watchlist. Backfills with globally popular shows when the social pool is too small.
+
+**URL**: `/users/:user_id/suggested-shows`
+
+**Method**: `GET`
+
+**URL Parameters**:
+
+| Parameter | Type   | Required | Description           |
+|-----------|--------|----------|-----------------------|
+| user_id   | string | Yes      | The ID of the user    |
+
+**Query Parameters**:
+
+| Parameter | Type   | Required | Description                              |
+|-----------|--------|----------|------------------------------------------|
+| limit     | number | No       | Number of suggestions (default: 10, max: 50) |
+
+**Example Request**:
+
+```bash
+curl -X GET "http://localhost:5001/api/users/user123/suggested-shows?limit=5"
+```
+
+**Example Response**:
+
+```json
+{
+  "suggestions": [
+    {
+      "show_id": "1396",
+      "source": "followers",
+      "followers_rating_count": 3,
+      "followers_average_rating": 8.67,
+      "show_details": { ... }
+    },
+    {
+      "show_id": "62286",
+      "source": "popular",
+      "rating_count": 15,
+      "show_details": { ... }
+    }
+  ],
+  "total_suggestions": 2
+}
+```
+
+**Source Types**:
+- `"followers"` — show was rated by followed users. Includes `followers_rating_count` and `followers_average_rating`.
+- `"popular"` — show is globally popular (backfill). Includes `rating_count` (ratings in the last 30 days).
+
+**Error Responses**:
+
+- `400 Bad Request`: Invalid limit parameter
+  ```json
+  { "error": "Limit must be a valid integer" }
+  ```
+- `404 Not Found`: User does not exist
+  ```json
+  { "error": "User not found" }
+  ```
+- `500 Internal Server Error`: Database error
+  ```json
+  { "error": "Database error occurred" }
   ```
 
 ## Episode Rating Endpoints
@@ -2578,7 +2649,9 @@ curl -X GET "http://localhost:5001/api/users/user123/followed-reviews/shows/1396
   "total_results": 1,
   "total_pages": 1,
   "current_page": 1,
-  "limit": 20
+  "limit": 20,
+  "followers_average_rating": 9.0,
+  "followers_total_ratings": 1
 }
 ```
 

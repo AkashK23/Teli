@@ -109,6 +109,8 @@ class TestFollowedShowReviews:
         assert followed_reviews_data["followed_b_id"] in reviewer_ids
         assert followed_reviews_data["stranger_id"] not in reviewer_ids
         assert body["total_results"] == 2
+        assert body["followers_average_rating"] == 7.5
+        assert body["followers_total_ratings"] == 2
 
     def test_response_includes_user_enrichment(self, get_client, followed_reviews_data):
         viewer_id = followed_reviews_data["viewer_id"]
@@ -164,6 +166,8 @@ class TestFollowedShowReviews:
             assert body["results"] == []
             assert body["total_results"] == 0
             assert body["total_pages"] == 1
+            assert body["followers_average_rating"] is None
+            assert body["followers_total_ratings"] == 0
         finally:
             get_db.collection("users").document(loner_id).delete()
 
@@ -192,6 +196,8 @@ class TestFollowedEpisodeReviews:
         assert followed_reviews_data["followed_a_id"] in reviewer_ids
         assert followed_reviews_data["stranger_id"] not in reviewer_ids
         assert body["total_results"] == 1
+        assert body["followers_average_rating"] == 8.0
+        assert body["followers_total_ratings"] == 1
 
     def test_episode_with_no_followed_reviews(self, get_client, followed_reviews_data):
         viewer_id = followed_reviews_data["viewer_id"]
@@ -202,6 +208,8 @@ class TestFollowedEpisodeReviews:
         body = response.get_json()
         assert body["results"] == []
         assert body["total_results"] == 0
+        assert body["followers_average_rating"] is None
+        assert body["followers_total_ratings"] == 0
 
     def test_episode_user_enrichment(self, get_client, followed_reviews_data):
         viewer_id = followed_reviews_data["viewer_id"]

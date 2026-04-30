@@ -758,6 +758,8 @@ def get_followed_show_reviews(user_id, show_id):
         following_ids = _get_following_ids(user_id)
         if not following_ids:
             empty_response = _paginate_results([], page, limit)
+            empty_response["followers_average_rating"] = None
+            empty_response["followers_total_ratings"] = 0
             return jsonify(empty_response), 200
 
         matching_reviews = []
@@ -772,9 +774,14 @@ def get_followed_show_reviews(user_id, show_id):
                 review["id"] = doc.id
                 matching_reviews.append(review)
 
+        followers_total = len(matching_reviews)
+        followers_avg = round(sum(r["rating"] for r in matching_reviews) / followers_total, 2) if followers_total > 0 else None
+
         matching_reviews.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
         response = _paginate_results(matching_reviews, page, limit)
         response["results"] = _enrich_with_user_info(response["results"])
+        response["followers_average_rating"] = followers_avg
+        response["followers_total_ratings"] = followers_total
         return jsonify(response), 200
 
     except Exception as e:
@@ -799,6 +806,8 @@ def get_followed_episode_reviews(user_id, show_id, season_number, episode_number
         following_ids = _get_following_ids(user_id)
         if not following_ids:
             empty_response = _paginate_results([], page, limit)
+            empty_response["followers_average_rating"] = None
+            empty_response["followers_total_ratings"] = 0
             return jsonify(empty_response), 200
 
         matching_reviews = []
@@ -815,9 +824,14 @@ def get_followed_episode_reviews(user_id, show_id, season_number, episode_number
                 review["id"] = doc.id
                 matching_reviews.append(review)
 
+        followers_total = len(matching_reviews)
+        followers_avg = round(sum(r["rating"] for r in matching_reviews) / followers_total, 2) if followers_total > 0 else None
+
         matching_reviews.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
         response = _paginate_results(matching_reviews, page, limit)
         response["results"] = _enrich_with_user_info(response["results"])
+        response["followers_average_rating"] = followers_avg
+        response["followers_total_ratings"] = followers_total
         return jsonify(response), 200
 
     except Exception as e:
@@ -1206,6 +1220,110 @@ def get_watch_status(user_id, show_id):
     except Exception as e:
         logger.error(f"Error retrieving watch status: {e}")
         return jsonify({"error": "Database error occurred"}), 500
+
+@teli.route("/users/<user_id>/suggested-shows", methods=["GET"])
+def get_suggested_shows(user_id):
+    try:
+        user_ref = db.collection("users").document(user_id).get()
+        if not user_ref.exists:
+            return jsonify({"error": "User not found"}), 404
+
+        try:
+            limit = int(request.args.get("limit", "10"))
+            limit = max(1, min(limit, 50))
+        except ValueError:
+            return jsonify({"error": "Limit must be a valid integer"}), 400
+
+        excluded_show_ids = set()
+
+        user_ratings = db.collection("ratings").where(
+            filter=FieldFilter("user_id", "==", user_id)).stream()
+        for doc in user_ratings:
+            excluded_show_ids.add(doc.to_dict().get("show_id"))
+
+        user_statuses = db.collection("watch_status").where(
+            filter=FieldFilter("user_id", "==", user_id)).stream()
+        for doc in user_statuses:
+            excluded_show_ids.add(doc.to_dict().get("show_id"))
+
+        suggestions = []
+        suggested_show_ids = set()
+
+        following_ids = _get_following_ids(user_id)
+        if following_ids:
+            show_stats = {}
+            chunk_size = 30
+            for i in range(0, len(following_ids), chunk_size):
+                chunk = following_ids[i:i + chunk_size]
+                query = db.collection("ratings").where(
+                    filter=FieldFilter("user_id", "in", chunk)).limit(1000)
+                for doc in query.stream():
+                    data = doc.to_dict()
+                    sid = data.get("show_id")
+                    if sid and sid not in excluded_show_ids:
+                        if sid not in show_stats:
+                            show_stats[sid] = {"total": 0, "count": 0}
+                        show_stats[sid]["total"] += data.get("rating", 0)
+                        show_stats[sid]["count"] += 1
+
+            ranked = sorted(
+                show_stats.items(),
+                key=lambda x: (x[1]["count"], x[1]["total"] / x[1]["count"]),
+                reverse=True)
+
+            for sid, stats in ranked[:limit]:
+                avg = round(stats["total"] / stats["count"], 2)
+                suggestions.append({
+                    "show_id": sid,
+                    "source": "followers",
+                    "followers_rating_count": stats["count"],
+                    "followers_average_rating": avg
+                })
+                suggested_show_ids.add(sid)
+
+        if len(suggestions) < limit:
+            remaining = limit - len(suggestions)
+            start_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+            recent_ratings = db.collection("ratings").where(
+                filter=FieldFilter("timestamp", ">=", start_date)).limit(10000)
+
+            popular_counts = {}
+            for doc in recent_ratings.stream():
+                data = doc.to_dict()
+                sid = data.get("show_id")
+                if sid and sid not in excluded_show_ids and sid not in suggested_show_ids:
+                    popular_counts[sid] = popular_counts.get(sid, 0) + 1
+
+            popular_ranked = sorted(
+                popular_counts.items(), key=lambda x: x[1], reverse=True)
+
+            for sid, count in popular_ranked[:remaining]:
+                suggestions.append({
+                    "show_id": sid,
+                    "source": "popular",
+                    "rating_count": count
+                })
+
+        from flask import current_app
+        for suggestion in suggestions:
+            try:
+                with current_app.test_client() as client:
+                    response = client.get(f"/api/shows/{suggestion['show_id']}")
+                    if response.status_code == 200:
+                        suggestion["show_details"] = response.get_json()
+            except Exception as e:
+                logger.error(f"Error fetching show details for {suggestion['show_id']}: {e}")
+
+        result = {
+            "suggestions": suggestions,
+            "total_suggestions": len(suggestions)
+        }
+        return jsonify(result), 200
+
+    except Exception as e:
+        logger.error(f"Error getting suggested shows: {e}")
+        return jsonify({"error": "Database error occurred"}), 500
+
 
 @teli.route("/shows/popular", methods=["GET"])
 def get_popular_shows():
