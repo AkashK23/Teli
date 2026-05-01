@@ -161,3 +161,68 @@ def test_get_episode_average_rating_single_rating(get_client):
     finally:
         cleanup_test_data(
             user_ids=[user_id], episode_rating_ids=[episode_rating_id])
+
+
+def test_get_all_episode_ratings(get_client):
+    client = get_client
+
+    show_id = generate_unique_id("all_ep_show")
+    user_base_id = generate_unique_id("all_ep_user")
+
+    user_ids = []
+    for i in range(2):
+        user_data = {
+            "name": f"Test User {i}",
+            "username": f"testuser_{user_base_id}_{i}",
+            "email": f"test_{user_base_id}_{i}@example.com",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        user_ref = db.collection("users").add(user_data)
+        user_ids.append(user_ref[1].id)
+
+    episode_rating_ids = []
+    for i, uid in enumerate(user_ids):
+        rating_data = {
+            "user_id": uid,
+            "show_id": show_id,
+            "season_number": 1,
+            "episode_number": 3,
+            "rating": 7 + i,
+            "comment": f"Review from user {i}",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        rating_ref = db.collection("episode_ratings").add(rating_data)
+        episode_rating_ids.append(rating_ref[1].id)
+
+    try:
+        response = client.get(
+            f"/api/shows/{show_id}/season/1/episode/3/ratings")
+
+        assert response.status_code == 200
+
+        data = response.get_json()
+        assert len(data) == 2
+        returned_user_ids = {r["user_id"] for r in data}
+        assert returned_user_ids == set(user_ids)
+        for r in data:
+            assert r["season_number"] == 1
+            assert r["episode_number"] == 3
+            assert "id" in r
+
+    finally:
+        cleanup_test_data(
+            user_ids=user_ids, episode_rating_ids=episode_rating_ids)
+
+
+def test_get_all_episode_ratings_empty(get_client):
+    client = get_client
+
+    show_id = generate_unique_id("empty_ep")
+
+    response = client.get(
+        f"/api/shows/{show_id}/season/1/episode/1/ratings")
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+    assert data == []

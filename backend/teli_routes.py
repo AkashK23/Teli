@@ -592,6 +592,39 @@ def get_show_ratings(show_id):
         logger.error(f"Error getting show ratings: {e}")
         return jsonify({"error": str(e)}), 500
 
+@teli.route("/shows/<show_id>/season/<season_number>/episode/<episode_number>/ratings", methods=["GET"])
+def get_all_episode_ratings(show_id, season_number, episode_number):
+    try:
+        season_num = int(season_number)
+        episode_num = int(episode_number)
+    except ValueError:
+        return jsonify({"error": "Season and episode numbers must be integers"}), 400
+
+    if season_num < 1 or episode_num < 1:
+        return jsonify({"error": "Season and episode numbers must be positive integers"}), 400
+
+    try:
+        query = db.collection("episode_ratings").where(
+            filter=FieldFilter("show_id", "==", show_id)).where(
+            filter=FieldFilter("season_number", "==", season_num)).where(
+            filter=FieldFilter("episode_number", "==", episode_num))
+
+        docs = query.stream()
+
+        ratings_list = []
+        for doc in docs:
+            rating_data = doc.to_dict()
+            rating_data["id"] = doc.id
+            ratings_list.append(rating_data)
+
+        ratings_list.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
+
+        return jsonify(ratings_list), 200
+    except Exception as e:
+        logger.error(f"Error getting all episode ratings: {e}")
+        return jsonify({"error": "Database error occurred"}), 500
+
+
 @teli.route("/shows/<show_id>/average-rating", methods=["GET"])
 def get_show_average_rating(show_id):
     try:

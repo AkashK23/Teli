@@ -51,6 +51,7 @@ http://localhost:5001/api
   - [Get Suggested Shows](#get-suggested-shows)
 - [Episode Rating Endpoints](#episode-rating-endpoints)
   - [Add Episode Rating](#add-episode-rating)
+  - [Get User Season Ratings](#get-user-season-ratings)
   - [Get Episode Ratings](#get-episode-ratings)
   - [Get Episode Average Rating](#get-episode-average-rating)
   - [Get Followed Users' Episode Reviews](#get-followed-users-episode-reviews)
@@ -2422,9 +2423,9 @@ curl -X POST "http://localhost:5001/episode_ratings" \
   }
   ```
 
-### Get Episode Ratings
+### Get User Season Ratings
 
-Get ratings for episodes in a specific season of a TV show, sorted by most recent rating date first.
+Get a specific user's ratings for all episodes in a season of a TV show, sorted by most recent rating date first. Optionally filter to a single episode.
 
 **URL**: `/users/:user_id/shows/:show_id/season/:season_number/ratings`
 
@@ -2528,6 +2529,70 @@ curl -X GET "http://localhost:5001/users/user123/shows/1396/season/1/ratings?epi
   {
     "error": "Database error occurred"
   }
+  ```
+
+### Get Episode Ratings
+
+Get all ratings for a specific episode of a TV show across all users, sorted by most recent rating date first.
+
+**URL**: `/shows/:show_id/season/:season_number/episode/:episode_number/ratings`
+
+**Method**: `GET`
+
+**URL Parameters**:
+
+| Parameter      | Type   | Required | Description           |
+|----------------|--------|----------|-----------------------|
+| show_id        | string | Yes      | The ID of the TV show |
+| season_number  | number | Yes      | The season number     |
+| episode_number | number | Yes      | The episode number    |
+
+**Example Request**:
+
+```bash
+curl -X GET "http://localhost:5001/api/shows/1396/season/1/episode/1/ratings"
+```
+
+**Example Response**:
+
+```json
+[
+  {
+    "id": "episode_rating456",
+    "user_id": "user789",
+    "show_id": "1396",
+    "season_number": 1,
+    "episode_number": 1,
+    "rating": 9,
+    "comment": "Amazing pilot episode!",
+    "timestamp": "2024-05-31T09:15:30Z"
+  },
+  {
+    "id": "episode_rating123",
+    "user_id": "user456",
+    "show_id": "1396",
+    "season_number": 1,
+    "episode_number": 1,
+    "rating": 8,
+    "comment": "Great start to the series",
+    "timestamp": "2024-05-30T14:22:10Z"
+  }
+]
+```
+
+**Error Responses**:
+
+- `400 Bad Request`: Invalid parameters
+  ```json
+  { "error": "Season and episode numbers must be integers" }
+  ```
+- `400 Bad Request`: Non-positive numbers
+  ```json
+  { "error": "Season and episode numbers must be positive integers" }
+  ```
+- `500 Internal Server Error`: Database error
+  ```json
+  { "error": "Database error occurred" }
   ```
 
 ### Get Episode Average Rating
