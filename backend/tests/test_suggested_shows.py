@@ -1,14 +1,12 @@
 import pytest
-import time
-import uuid
 from datetime import datetime, timezone
 from firebase_db import db
 
 
-def generate_unique_id(prefix="test"):
-    timestamp = int(time.time())
-    unique_suffix = str(uuid.uuid4())[:8]
-    return f"{prefix}_{timestamp}_{unique_suffix}"
+TMDB_SHOW_ALREADY_RATED = "1396"
+TMDB_SHOW_FROM_FOLLOWERS = "1399"
+TMDB_SHOW_FROM_BOTH = "66732"
+TMDB_SHOW_POPULAR = "76479"
 
 
 @pytest.fixture(scope="module")
@@ -56,57 +54,52 @@ def suggested_shows_data(get_client, get_db):
     get_client.post("/api/follow", json={
         "follower_id": viewer_id, "followee_id": followed_b_id})
 
-    show_already_rated = generate_unique_id("rated_show")
-    show_from_followers = generate_unique_id("follower_show")
-    show_from_both = generate_unique_id("both_show")
-    show_popular = generate_unique_id("popular_show")
-
     rating_ids = []
 
     resp = get_client.post("/api/ratings", json={
         "user_id": viewer_id,
-        "show_id": show_already_rated,
-        "show_name_lowercase": "rated show",
+        "show_id": TMDB_SHOW_ALREADY_RATED,
+        "show_name_lowercase": "breaking bad",
         "rating": 7,
     })
     rating_ids.append(resp.get_json()["id"])
 
     resp = get_client.post("/api/ratings", json={
         "user_id": followed_a_id,
-        "show_id": show_already_rated,
-        "show_name_lowercase": "rated show",
+        "show_id": TMDB_SHOW_ALREADY_RATED,
+        "show_name_lowercase": "breaking bad",
         "rating": 8,
     })
     rating_ids.append(resp.get_json()["id"])
 
     resp = get_client.post("/api/ratings", json={
         "user_id": followed_a_id,
-        "show_id": show_from_followers,
-        "show_name_lowercase": "follower show",
+        "show_id": TMDB_SHOW_FROM_FOLLOWERS,
+        "show_name_lowercase": "the sopranos",
         "rating": 9,
     })
     rating_ids.append(resp.get_json()["id"])
 
     resp = get_client.post("/api/ratings", json={
         "user_id": followed_b_id,
-        "show_id": show_from_followers,
-        "show_name_lowercase": "follower show",
+        "show_id": TMDB_SHOW_FROM_FOLLOWERS,
+        "show_name_lowercase": "the sopranos",
         "rating": 8,
     })
     rating_ids.append(resp.get_json()["id"])
 
     resp = get_client.post("/api/ratings", json={
         "user_id": followed_a_id,
-        "show_id": show_from_both,
-        "show_name_lowercase": "both show",
+        "show_id": TMDB_SHOW_FROM_BOTH,
+        "show_name_lowercase": "the boys",
         "rating": 7,
     })
     rating_ids.append(resp.get_json()["id"])
 
     resp = get_client.post("/api/ratings", json={
         "user_id": stranger_id,
-        "show_id": show_popular,
-        "show_name_lowercase": "popular show",
+        "show_id": TMDB_SHOW_POPULAR,
+        "show_name_lowercase": "the boys",
         "rating": 9,
     })
     rating_ids.append(resp.get_json()["id"])
@@ -117,10 +110,10 @@ def suggested_shows_data(get_client, get_db):
         "followed_b_id": followed_b_id,
         "loner_id": loner_id,
         "stranger_id": stranger_id,
-        "show_already_rated": show_already_rated,
-        "show_from_followers": show_from_followers,
-        "show_from_both": show_from_both,
-        "show_popular": show_popular,
+        "show_already_rated": TMDB_SHOW_ALREADY_RATED,
+        "show_from_followers": TMDB_SHOW_FROM_FOLLOWERS,
+        "show_from_both": TMDB_SHOW_FROM_BOTH,
+        "show_popular": TMDB_SHOW_POPULAR,
         "rating_ids": rating_ids,
     }
 
@@ -156,6 +149,7 @@ def test_returns_follower_suggestions(get_client, suggested_shows_data):
     for s in follower_suggestions:
         assert "followers_rating_count" in s
         assert "followers_average_rating" in s
+        assert s.get("show_details") is not None
 
 
 def test_excludes_already_rated_shows(get_client, suggested_shows_data):
@@ -176,6 +170,7 @@ def test_no_follows_returns_popular(get_client, suggested_shows_data):
 
     for s in body["suggestions"]:
         assert s["source"] == "popular"
+        assert s.get("show_details") is not None
 
 
 def test_backfill_with_popular(get_client, suggested_shows_data):
@@ -189,6 +184,16 @@ def test_backfill_with_popular(get_client, suggested_shows_data):
     assert "followers" in sources
     if len(body["suggestions"]) > 2:
         assert "popular" in sources
+
+
+def test_all_suggestions_have_show_details(get_client, suggested_shows_data):
+    viewer_id = suggested_shows_data["viewer_id"]
+    response = get_client.get(f"/api/users/{viewer_id}/suggested-shows")
+    assert response.status_code == 200
+    body = response.get_json()
+
+    for s in body["suggestions"]:
+        assert s.get("show_details") is not None
 
 
 def test_user_not_found(get_client):

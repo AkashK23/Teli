@@ -1344,8 +1344,13 @@ def get_suggested_shows(user_id):
                     response = client.get(f"/api/shows/{suggestion['show_id']}")
                     if response.status_code == 200:
                         suggestion["show_details"] = response.get_json()
+                    else:
+                        suggestion["show_details"] = None
             except Exception as e:
                 logger.error(f"Error fetching show details for {suggestion['show_id']}: {e}")
+                suggestion["show_details"] = None
+
+        suggestions = [s for s in suggestions if s.get("show_details") is not None]
 
         result = {
             "suggestions": suggestions,
