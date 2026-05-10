@@ -485,3 +485,72 @@ class TestFeedEndpoints:
         response = client.get(f"/api/users/{setup_test_data['user1_id']}/feed?start_after=invalid-date")
         assert response.status_code == 400
         assert "error" in response.get_json()
+
+
+class TestEpisodeRatingFeed:
+    def test_episode_rating_appears_in_follower_feed(self, get_client, get_db):
+        client = get_client
+        db = get_db
+        ts = datetime.now().strftime("%Y%m%d%H%M%S%f")
+
+        follower = client.post("/api/add_user", json={
+            "email": f"ep_follower_{ts}@example.com",
+            "name": "EP Follower",
+            "username": f"ep_follower_{ts}",
+        }).get_json()
+
+        reviewer = client.post("/api/add_user", json={
+            "email": f"ep_reviewer_{ts}@example.com",
+            "name": "EP Reviewer",
+            "username": f"ep_reviewer_{ts}",
+        }).get_json()
+
+        follower_id = follower["id"]
+        reviewer_id = reviewer["id"]
+
+        client.post("/api/follow", json={
+            "follower_id": follower_id,
+            "followee_id": reviewer_id,
+        })
+
+        ep_rating_resp = client.post("/api/episode_ratings", json={
+            "user_id": reviewer_id,
+            "show_id": "1396",
+            "season_number": 1,
+            "episode_number": 1,
+            "rating": 9,
+            "comment": "Amazing pilot",
+        })
+        assert ep_rating_resp.status_code == 200
+        episode_rating_id = ep_rating_resp.get_json()["id"]
+
+        try:
+            feed_resp = client.get(f"/api/users/{follower_id}/feed")
+            assert feed_resp.status_code == 200
+            feed = feed_resp.get_json()["feed"]
+
+            episode_items = [
+                item for item in feed
+                if item.get("season_number") == 1
+                and item.get("episode_number") == 1
+                and item.get("show_id") == "1396"
+                and item.get("user_id") == reviewer_id
+            ]
+            assert len(episode_items) == 1
+            assert episode_items[0]["rating"] == 9
+            assert episode_items[0]["comment"] == "Amazing pilot"
+
+        finally:
+            db.collection("episode_ratings").document(episode_rating_id).delete()
+            feed_docs = db.collection("feeds").document(follower_id).collection("items").stream()
+            for doc in feed_docs:
+                doc.reference.delete()
+            follows = db.collection("follows").where(
+                "follower_id", "==", follower_id).stream()
+            for doc in follows:
+                doc.reference.delete()
+            for uid in [follower_id, reviewer_id]:
+                try:
+                    db.collection("users").document(uid).delete()
+                except Exception:
+                    pass

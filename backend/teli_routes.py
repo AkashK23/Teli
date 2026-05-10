@@ -437,17 +437,22 @@ def add_episode_rating():
             # If rating exists, update it
             existing_rating.reference.update(rating_data)
             rating_id = existing_rating.id
+            is_new_rating = False
         else:
             # If rating does not exist, create a new one
             rating_ref = episode_ratings_ref.add(rating_data)
             rating_id = rating_ref[1].id
+            is_new_rating = True
+
+        if is_new_rating:
+            update_feeds_with_rating(req_data.user_id, rating_id, rating_data)
 
         return jsonify({"message": "Rating added successfully!", "id": rating_id})
-    
+
     except Exception as e:
         logger.error(f"Error adding episode rating: {e}")
         return jsonify({"error": str(e)}), 500
-    
+
 def update_feeds_with_rating(user_id, rating_id, rating_data):
     """Update the feeds of all followers with this new rating"""
     try:
