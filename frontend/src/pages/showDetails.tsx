@@ -11,16 +11,23 @@ import {
   useUserWatchStatus,
   useEpisodeReviews,
 } from "../hooks/useUser";
-import { useFollowedShowReviews, useAllShowRatings } from "../hooks/useShow"; // adjust if you put them in a different file
+import { useFollowedShowReviews, useAllShowRatings } from "../hooks/useShow";
 import {
   useUpdateWatchStatus,
   useDeleteWatchStatus,
   useSubmitRating,
 } from "../hooks/useMutations";
-import { getShowSeason } from "../api/shows";
+import { getShowSeason, getSeasonEpisodeRatings } from "../api/shows";
 
 type WatchStatus = "want_to_watch" | "currently_watching" | "watched" | "";
 type ReviewTab = "you" | "following" | "all";
+
+// Shape returned by GET /shows/:show_id/season/:season_number/episode-ratings
+// e.g. { "1": { average_rating: 7.4, total_ratings: 12 }, "2": { ... } }
+type EpisodeRatingsMap = Record<
+  string,
+  { average_rating: number; total_ratings: number }
+>;
 
 export default function ShowDetails() {
   const user_id = useUser().userId;
@@ -29,9 +36,12 @@ export default function ShowDetails() {
   const [reviewTab, setReviewTab] = useState<ReviewTab>(
     user_id ? "you" : "all",
   );
-  const [showEpisodes, setShowEpisodes] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
   const [seasonEpisodes, setSeasonEpisodes] = useState<any>({});
+  // Cache episode ratings per season so we only fetch once per season visit
+  const [episodeRatingsMap, setEpisodeRatingsMap] = useState<
+    Record<number, EpisodeRatingsMap>
+  >({});
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState(0);
   const [submitted, setSubmitted] = useState(false);
@@ -53,8 +63,14 @@ export default function ShowDetails() {
     id,
     selectedSeason,
   );
-  const { data: followedReviews = [], isLoading: followedLoading } =
-    useFollowedShowReviews(user_id, id);
+  const {
+    data: followedReviews = {
+      results: [],
+      followers_average_rating: null,
+      followers_total_ratings: 0,
+    },
+    isLoading: followedLoading,
+  } = useFollowedShowReviews(user_id, id);
   const { data: allReviews = [], isLoading: allReviewsLoading } =
     useAllShowRatings(id);
 
@@ -67,6 +83,11 @@ export default function ShowDetails() {
   const avgRating = avgRatingData?.average_rating ?? null;
   const ratingCount = avgRatingData?.total_ratings ?? 0;
 
+  const followersAvgRating =
+    (followedReviews as any)?.followers_average_rating ?? null;
+  const followersTotalRatings =
+    (followedReviews as any)?.followers_total_ratings ?? 0;
+
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   React.useEffect(() => {
@@ -75,7 +96,6 @@ export default function ShowDetails() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Sync watch status from query into local state once on load
   React.useEffect(() => {
     if (!watchStatusLoading && watchStatusData?.status) {
       setWatchStatus(watchStatusData.status as WatchStatus);
@@ -83,16 +103,15 @@ export default function ShowDetails() {
     }
   }, [watchStatusLoading, watchStatusData]);
 
-  // Reset local state only when show ID changes
   React.useEffect(() => {
     setSelectedSeason(null);
     setSeasonEpisodes({});
+    setEpisodeRatingsMap({});
     setWatchStatusSynced(false);
     setIsEditingReview(false);
     setReviewTab(user_id ? "you" : "all");
   }, [id]);
 
-  // Load Season 1 automatically once show data arrives
   React.useEffect(() => {
     if (showData?.seasons?.some((s: any) => s.season_number === 1)) {
       fetchSeason(1);
@@ -100,23 +119,46 @@ export default function ShowDetails() {
   }, [showData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchSeason = async (seasonNumber: number) => {
-    if (seasonEpisodes[seasonNumber]) {
-      setSelectedSeason(seasonNumber);
-      return;
+    setSelectedSeason(seasonNumber);
+
+    const alreadyHasEpisodes = !!seasonEpisodes[seasonNumber];
+    const alreadyHasRatings = !!episodeRatingsMap[seasonNumber];
+
+    // Step 1: get the episode list if we don't have it yet
+    let episodes: Array<{ episode_number: number }> =
+      seasonEpisodes[seasonNumber]?.episodes ?? [];
+
+    if (!alreadyHasEpisodes) {
+      try {
+        const data = await getShowSeason(id!, seasonNumber);
+        episodes = data.episodes;
+        setSeasonEpisodes((prev: any) => ({
+          ...prev,
+          [seasonNumber]: {
+            episodes: data.episodes,
+            overview: data.overview,
+            poster_path: data.poster_path,
+          },
+        }));
+      } catch (err) {
+        console.error(`Failed to fetch season ${seasonNumber} episodes:`, err);
+        return;
+      }
     }
-    try {
-      const data = await getShowSeason(id!, seasonNumber);
-      setSeasonEpisodes((prev: any) => ({
-        ...prev,
-        [seasonNumber]: {
-          episodes: data.episodes,
-          overview: data.overview,
-          poster_path: data.poster_path,
-        },
-      }));
-      setSelectedSeason(seasonNumber);
-    } catch (err) {
-      console.error(`Failed to fetch season ${seasonNumber} episodes:`, err);
+
+    // Step 2: fan out one rating request per episode in parallel
+    if (!alreadyHasRatings && episodes.length > 0) {
+      getSeasonEpisodeRatings(id!, seasonNumber, episodes)
+        .then((ratingsData: EpisodeRatingsMap) => {
+          setEpisodeRatingsMap((prev) => ({
+            ...prev,
+            [seasonNumber]: ratingsData,
+          }));
+          console.log(ratingsData);
+        })
+        .catch(() => {
+          // Ratings are non-critical — silently ignore failures
+        });
     }
   };
 
@@ -125,7 +167,6 @@ export default function ShowDetails() {
   );
   const userHasRated = !!userReview;
 
-  // Populate review form when existing review is found
   React.useEffect(() => {
     if (userReview && !isEditingReview) {
       setRating(userReview.rating);
@@ -221,9 +262,7 @@ export default function ShowDetails() {
   const seasons =
     showData.seasons?.filter((s: any) => s.season_number > 0) || [];
 
-  // ── Helper: render a list of ReviewCards or an empty state ──────────────────
   const renderReviewList = (reviews: any[], isLoading: boolean) => {
-    console.log(reviews)
     if (isLoading) {
       return (
         <div className="loading-container">
@@ -252,7 +291,6 @@ export default function ShowDetails() {
             userId={review.user_id}
             comment={review.comment}
             rating={review.rating}
-            compact={false}
             reviewDate={formatRelativeTime(review.timestamp)}
           />
         ))}
@@ -262,9 +300,31 @@ export default function ShowDetails() {
 
   const effectiveReviewTab = user_id ? reviewTab : "all";
 
+  const ratingsRow = (
+    <div className="show-ratings-row">
+      {avgRating !== null && (
+        <div className="show-data-rating">
+          <div className="show-data-rating-score">{avgRating.toFixed(1)}</div>
+          <div className="show-data-rating-reviews">
+            ({ratingCount} ratings)
+          </div>
+        </div>
+      )}
+      {user_id && followersAvgRating !== null && followersTotalRatings > 0 && (
+        <div className="show-data-rating show-data-rating--followers">
+          <div className="show-data-rating-score">
+            {(followersAvgRating as number).toFixed(1)}
+          </div>
+          <div className="show-data-rating-reviews">
+            ({followersTotalRatings} following)
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="show-details-container">
-      {/* Show information */}
       {!isMobile ? (
         <div className="show-details-upper">
           <img
@@ -296,42 +356,36 @@ export default function ShowDetails() {
                     <strong>Network:</strong> {showData.networks[0].name}
                   </p>
                 )}
-              </div>
-              {avgRating !== null && (
-                <div className="show-data-rating">
-                  <div className="show-data-rating-score">
-                    {avgRating.toFixed(1)}
+                <p>
+                  <strong>Overview:</strong>{" "}
+                  {showData.overview || "No description available."}
+                </p>
+                {user_id && !loadingReview && (
+                  <div className="watch-status-row">
+                    <strong>Watch Status:</strong>
+                    <select
+                      id="watchStatus"
+                      value={watchStatus}
+                      onChange={handleWatchStatusChange}
+                      className="watch-status-dropdown"
+                    >
+                      <option value="">Select...</option>
+                      <option value="want_to_watch">Want to Watch</option>
+                      <option value="currently_watching">
+                        Currently Watching
+                      </option>
+                      <option value="watched">Watched</option>
+                    </select>
+                    {showStatusMessage && statusMessage && (
+                      <span className="watch-status-label">
+                        {statusMessage}
+                      </span>
+                    )}
                   </div>
-                  <div className="show-data-rating-reviews">
-                    ({ratingCount} ratings)
-                  </div>
-                </div>
-              )}
-            </div>
-            <p>
-              <strong>Overview:</strong>{" "}
-              {showData.overview || "No description available."}
-            </p>
-
-            {user_id && !loadingReview && (
-              <div className="watch-status-row">
-                <strong>Watch Status:</strong>
-                <select
-                  id="watchStatus"
-                  value={watchStatus}
-                  onChange={handleWatchStatusChange}
-                  className="watch-status-dropdown"
-                >
-                  <option value="">Select...</option>
-                  <option value="want_to_watch">Want to Watch</option>
-                  <option value="currently_watching">Currently Watching</option>
-                  <option value="watched">Watched</option>
-                </select>
-                {showStatusMessage && statusMessage && (
-                  <span className="watch-status-label">{statusMessage}</span>
                 )}
               </div>
-            )}
+              {ratingsRow}
+            </div>
           </div>
         </div>
       ) : (
@@ -344,31 +398,22 @@ export default function ShowDetails() {
             />
             <div className="mobile-show-info">
               <div className="mobile-show-top">
-                <div className="show-title-row">
-                  <h1 className="mobile-title">{showData.name}</h1>
-                  <ShareButton
-                    title={showData.name}
-                    text={`Check out ${showData.name} on Teli!`}
-                    url={`${window.location.origin}/show/${id}`}
-                  />
-                </div>
-                <p className="mobile-date">
-                  {showData.first_air_date?.slice(0, 4)}–
-                  {showData.last_air_date?.slice(0, 4)}
-                </p>
-              </div>
-              {avgRating !== null && (
-                <div className="mobile-rating-wrapper">
-                  <div className="show-data-rating">
-                    <div className="show-data-rating-score">
-                      {avgRating.toFixed(1)}
-                    </div>
-                    <div className="show-data-rating-reviews">
-                      ({ratingCount} ratings)
-                    </div>
+                <div className="mobile-title-block">
+                  <div className="show-title-row">
+                    <h1 className="mobile-title">{showData.name}</h1>
+                    <ShareButton
+                      title={showData.name}
+                      text={`Check out ${showData.name} on Teli!`}
+                      url={`${window.location.origin}/show/${id}`}
+                    />
                   </div>
+                  <p className="mobile-date">
+                    {showData.first_air_date?.slice(0, 4)}–
+                    {showData.last_air_date?.slice(0, 4)}
+                  </p>
                 </div>
-              )}
+                <div className="mobile-rating-wrapper">{ratingsRow}</div>
+              </div>
             </div>
           </div>
 
@@ -399,7 +444,6 @@ export default function ShowDetails() {
       {/* ================= REVIEWS SECTION ================= */}
       <h2 className="section-header">Reviews</h2>
 
-      {/* 🔥 Keep your original slider UI */}
       {user_id && (
         <div className="activity-tabContainer">
           <div
@@ -429,7 +473,6 @@ export default function ShowDetails() {
         </div>
       )}
 
-      {/* ===== YOUR REVIEW ===== */}
       {effectiveReviewTab === "you" && (
         <div>
           {!user_id ? (
@@ -442,82 +485,74 @@ export default function ShowDetails() {
             </div>
           ) : (
             <>
+              {/* YOUR REVIEW (same as other tabs) */}
               {userHasRated && (
-                <>
-                  <div className="rating-cards-container">
-                    <div className="rating-card">
-                      <div className="rating-details">
-                        <div className="rating-score">{userReview.rating}</div>
-                        <div className="rating-text">
-                          <p>{userReview.comment}</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setIsEditingReview((prev) => !prev)}
-                        className="edit-review-button"
+                <div className="review-cards-container">
+                  <ReviewCard
+                    showId={userReview.show_id}
+                    userId={userReview.user_id}
+                    comment={userReview.comment}
+                    rating={userReview.rating}
+                    reviewDate={formatRelativeTime(userReview.timestamp)}
+                  />
+                </div>
+              )}
+
+              {/* ALWAYS VISIBLE EDITOR */}
+              <div>
+                {!userHasRated && (
+                  <h3 className="show-details-headings">Leave a Review</h3>
+                )}
+
+                <div className="write-review-container">
+                  <div className="slider-container">
+                    <div
+                      className="slider-wrapper"
+                      style={
+                        {
+                          "--slider-fill": `${rating * 10}%`,
+                          "--thumb-color": thumbColor(rating),
+                        } as React.CSSProperties
+                      }
+                    >
+                      <input
+                        type="range"
+                        min="0"
+                        max="10"
+                        value={rating}
+                        onChange={(e) => setRating(Number(e.target.value))}
+                      />
+                      <span
+                        className="slider-thumb-label"
+                        data-value={rating}
+                        style={{ left: thumbLeft(rating) }}
                       >
-                        {isEditingReview ? "Cancel" : "Update"}
+                        {rating}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="review-input-group">
+                    <textarea
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      rows={4}
+                      placeholder="What did you think?"
+                      className="review-textbox"
+                    />
+
+                    <div className="submit-button-row">
+                      <button
+                        onClick={handleReviewSubmit}
+                        className="submit-review-button"
+                      >
+                        {userHasRated ? "Update" : "Submit"}
                       </button>
                     </div>
                   </div>
-                </>
-              )}
-
-              {(!userHasRated || isEditingReview) && (
-                <div>
-                  {!userHasRated && (
-                    <h3 className="show-details-headings">Leave a Review</h3>
-                  )}
-
-                  <div className="write-review-container">
-                    <div className="slider-container">
-                      <div
-                        className="slider-wrapper"
-                        style={
-                          {
-                            "--slider-fill": `${rating * 10}%`,
-                            "--thumb-color": thumbColor(rating),
-                          } as React.CSSProperties
-                        }
-                      >
-                        <input
-                          type="range"
-                          min="0"
-                          max="10"
-                          value={rating}
-                          onChange={(e) => setRating(Number(e.target.value))}
-                        />
-                        <span
-                          className="slider-thumb-label"
-                          data-value={rating}
-                          style={{ left: thumbLeft(rating) }}
-                        >
-                          {rating}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="review-input-group">
-                      <textarea
-                        value={reviewText}
-                        onChange={(e) => setReviewText(e.target.value)}
-                        rows={4}
-                        placeholder="What did you think?"
-                        className="review-textbox"
-                      />
-
-                      <div className="submit-button-row">
-                        <button
-                          onClick={handleReviewSubmit}
-                          className="submit-review-button"
-                        >
-                          {userHasRated ? "Update" : "Submit"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
                 </div>
-              )}
+              </div>
+
               {submitted && (
                 <div className="review-submit-message">
                   <p>Review submitted!</p>
@@ -528,14 +563,15 @@ export default function ShowDetails() {
         </div>
       )}
 
-      {/* ===== FOLLOWING ===== */}
       {effectiveReviewTab === "following" && (
         <div>
-          {renderReviewList(followedReviews.results as any[], followedLoading)}
+          {renderReviewList(
+            ((followedReviews as any)?.results ?? []) as any[],
+            followedLoading,
+          )}
         </div>
       )}
 
-      {/* ===== ALL ===== */}
       {effectiveReviewTab === "all" && (
         <div>{renderReviewList(allReviews as any[], allReviewsLoading)}</div>
       )}
@@ -543,7 +579,6 @@ export default function ShowDetails() {
       {/* ================= EPISODES SECTION ================= */}
       <h2 className="section-header">Episodes</h2>
 
-      {/* Season selector */}
       <div className="season-ticker-container">
         <div className="ticker-container">
           {seasons.map((season: any) => (
@@ -560,7 +595,6 @@ export default function ShowDetails() {
         </div>
       </div>
 
-      {/* Season info */}
       {selectedSeason && seasonEpisodes[selectedSeason] && (
         <div className="season-info-container">
           {seasonEpisodes[selectedSeason].poster_path && (
@@ -579,7 +613,6 @@ export default function ShowDetails() {
         </div>
       )}
 
-      {/* Episodes list */}
       {selectedSeason && seasonEpisodes[selectedSeason] && (
         <div className="episode-list-container">
           {seasonEpisodes[selectedSeason].episodes.map((episode: any) => {
@@ -590,6 +623,11 @@ export default function ShowDetails() {
             const hasEpisodeReview = (episodeReviews as any[]).some(
               (review: any) => review.episode_number === episode.episode_number,
             );
+
+            const epRatingData =
+              episodeRatingsMap[selectedSeason]?.[
+                String(episode.episode_number)
+              ];
 
             return (
               <Link
@@ -605,9 +643,15 @@ export default function ShowDetails() {
                       <Tv size={20} /> No Image
                     </div>
                   )}
+
                   <div style={{ flex: 1 }}>
-                    <strong>
+                    <strong className="episode-title-row">
                       {episode.episode_number}. {episode.name}
+                      {epRatingData && epRatingData.total_ratings > 0 && (
+                        <span className="episode-rating-badge">
+                          {epRatingData.average_rating.toFixed(1)}
+                        </span>
+                      )}
                     </strong>
                     <p>{episode.overview}</p>
                   </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useUser } from "../UserContext";
 import ReviewCard from "../components/ReviewCard";
+import EpisodeReviewCard from "../components/EpisodeReviewCard";
 import { Link, useLocation } from "react-router-dom";
 import { MessageSquare } from "lucide-react";
 import { formatRelativeTime } from "../components/formatRelativeTime";
@@ -49,23 +50,41 @@ export default function Activity() {
       <div className="empty-state-card">
         <MessageSquare className="empty-state-icon" />
         <p>No reviews yet</p>
-        <Link to="/browse" className="empty-state-cta">Browse Shows</Link>
+        <Link to="/browse" className="empty-state-cta">
+          Browse Shows
+        </Link>
       </div>
     ) : (
       <div className="review-container">
         <div className="user-ratings">
-          <div className="review-cards-container-activity">
-            {reviews.map((rating: any) => (
-              <ReviewCard
-                key={rating.id}
-                showId={rating.show_id}
-                userId={rating.user_id}
-                comment={rating.comment}
-                rating={rating.rating}
-                compact={false}
-                reviewDate={formatRelativeTime(rating.timestamp)}
-              />
-            ))}
+          <div className="review-cards-container">
+            {reviews.map((rating: any) =>
+              rating.episode_number ? (
+                <EpisodeReviewCard
+                  key={
+                    rating.id ??
+                    rating.rating_id ??
+                    `${rating.user_id}-${rating.episode_number}`
+                  }
+                  showId={rating.show_id}
+                  userId={rating.user_id}
+                  seasonNumber={rating.season_number}
+                  episodeNumber={rating.episode_number}
+                  comment={rating.comment}
+                  rating={rating.rating}
+                  reviewDate={formatRelativeTime(rating.timestamp)}
+                />
+              ) : (
+                <ReviewCard
+                  key={`${rating.user_id}-${rating.show_id}`}
+                  showId={rating.show_id}
+                  userId={rating.user_id}
+                  comment={rating.comment}
+                  rating={rating.rating}
+                  reviewDate={formatRelativeTime(rating.timestamp)}
+                />
+              ),
+            )}
           </div>
         </div>
       </div>

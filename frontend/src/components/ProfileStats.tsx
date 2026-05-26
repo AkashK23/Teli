@@ -26,12 +26,10 @@ interface ProfileStatsProps {
   isLoadingShows: boolean;
 }
 
-// Build the 365-day heatmap grid anchored to today
 function buildHeatmapGrid(activityByDate: Record<string, number>) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Start from the Sunday of the week 52 full weeks ago
   const startDate = new Date(today);
   startDate.setDate(today.getDate() - 364);
   const dayOfWeek = startDate.getDay();
@@ -45,7 +43,9 @@ function buildHeatmapGrid(activityByDate: Record<string, number>) {
     cells.push({
       date: iso,
       count: activityByDate[iso] ?? 0,
-      inRange: cursor >= new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()),
+      inRange:
+        cursor >=
+        new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()),
     });
     cursor.setDate(cursor.getDate() + 1);
   }
@@ -61,7 +61,20 @@ function intensityClass(count: number, inRange: boolean): string {
   return "heatmap-cell heatmap-cell--l3";
 }
 
-const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 export default function ProfileStats({
   ratings,
@@ -69,9 +82,11 @@ export default function ProfileStats({
   watchedCount,
   isLoadingShows,
 }: ProfileStatsProps) {
-  const [hoveredCell, setHoveredCell] = useState<{ date: string; count: number } | null>(null);
+  const [hoveredCell, setHoveredCell] = useState<{
+    date: string;
+    count: number;
+  } | null>(null);
 
-  // Rating distribution: count per score 1–10
   const ratingDistribution = useMemo(() => {
     const dist: Record<number, number> = {};
     for (let i = 1; i <= 10; i++) dist[i] = 0;
@@ -84,7 +99,6 @@ export default function ProfileStats({
     }));
   }, [ratings]);
 
-  // Activity by calendar date
   const activityByDate = useMemo(() => {
     const map: Record<string, number> = {};
     ratings.forEach((r) => {
@@ -94,7 +108,6 @@ export default function ProfileStats({
     return map;
   }, [ratings]);
 
-  // Top 6 genres from watched shows
   const genreBreakdown = useMemo(() => {
     const counts: Record<string, number> = {};
     watchedShows.forEach((show) => {
@@ -108,7 +121,6 @@ export default function ProfileStats({
       .map(([genre, count]) => ({ genre, count }));
   }, [watchedShows]);
 
-  // Hours watched from watched shows
   const hoursWatched = useMemo(() => {
     const mins = watchedShows.reduce((total, show) => {
       const episodes = show.number_of_episodes ?? 0;
@@ -118,11 +130,9 @@ export default function ProfileStats({
     return Math.round(mins / 60);
   }, [watchedShows]);
 
-  // Average rating
   const avgRating = useMemo(() => {
     if (!ratings.length) return 0;
-    const sum = ratings.reduce((acc, r) => acc + r.rating, 0);
-    return sum / ratings.length;
+    return ratings.reduce((acc, r) => acc + r.rating, 0) / ratings.length;
   }, [ratings]);
 
   const criticLabel = useMemo(() => {
@@ -133,9 +143,11 @@ export default function ProfileStats({
     return `You're a generous rater — ${avg} avg ★`;
   }, [avgRating, ratings.length]);
 
-  const heatmapCells = useMemo(() => buildHeatmapGrid(activityByDate), [activityByDate]);
+  const heatmapCells = useMemo(
+    () => buildHeatmapGrid(activityByDate),
+    [activityByDate],
+  );
 
-  // Build month label positions for heatmap
   const monthPositions = useMemo(() => {
     const positions: Array<{ label: string; colIndex: number }> = [];
     let lastMonth = -1;
@@ -155,149 +167,172 @@ export default function ProfileStats({
 
   if (ratings.length === 0 && watchedCount === 0) {
     return (
-      <div className="profile-stats-section">
-        <h3 className="shows-label">Your Stats</h3>
-        <p className="stats-empty-msg">
-          Start watching and rating shows to unlock your personal stats!
-        </p>
+      <div className="profile-stats-card">
+        <div className="psc-header">
+          <span className="psc-title">Your Stats</span>
+        </div>
+        <div className="psc-body">
+          <p className="stats-empty-msg">
+            Start watching and rating shows to unlock your personal stats!
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="profile-stats-section">
-      <h3 className="shows-label">Your Stats</h3>
-
-      {/* Summary Cards */}
-      <div className="stats-summary-cards">
-        <div className="stats-summary-card">
-          <div className="stats-card-number">{watchedCount}</div>
-          <div className="stats-card-label">Shows Watched</div>
-        </div>
-        <div className="stats-summary-card">
-          {isLoadingShows ? (
-            <div className="stats-card-number stats-card-loading">—</div>
-          ) : (
-            <div className="stats-card-number">{hoursWatched.toLocaleString()}h</div>
-          )}
-          <div className="stats-card-label">Est. Hours Watched</div>
-        </div>
-        <div className="stats-summary-card">
-          <div className="stats-card-number">{ratings.length}</div>
-          <div className="stats-card-label">Reviews Given</div>
-        </div>
-        <div className="stats-summary-card">
-          <div className="stats-card-number">
-            {ratings.length ? avgRating.toFixed(1) : "—"}
-          </div>
-          <div className="stats-card-label">Avg Rating</div>
-        </div>
+    <div className="profile-stats-card">
+      <div className="psc-header">
+        <span className="psc-title">Your Stats</span>
       </div>
-
-      {/* Charts Row */}
-      {ratings.length > 0 && (
-        <div className="stats-charts-row">
-          {/* Rating Distribution */}
-          <div className="stats-chart-container">
-            <h4 className="stats-chart-title">Rating Distribution</h4>
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={ratingDistribution} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
-                <XAxis dataKey="score" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                <Tooltip
-                  formatter={(value: number | undefined) => [value ?? 0, "Reviews"]}
-                  labelFormatter={(label) => `Score: ${label}`}
-                  contentStyle={{ fontSize: 12, borderRadius: 6 }}
-                />
-                <Bar dataKey="count" radius={[3, 3, 0, 0]} fill="#333" />
-              </BarChart>
-            </ResponsiveContainer>
+      <div className="psc-body">
+        {/* Summary Cards */}
+        <div className="stats-summary-cards">
+          <div className="stats-summary-card">
+            <div className="stats-card-number">{watchedCount}</div>
+            <div className="stats-card-label">Shows Watched</div>
           </div>
-
-          {/* Top Genres */}
-          {genreBreakdown.length > 0 && (
-            <div className="stats-chart-container">
-              <h4 className="stats-chart-title">Top Genres</h4>
-              {isLoadingShows ? (
-                <div className="stats-chart-loading">Loading...</div>
-              ) : (
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart
-                    data={genreBreakdown}
-                    layout="vertical"
-                    margin={{ top: 4, right: 16, bottom: 0, left: 4 }}
-                  >
-                    <XAxis type="number" tick={{ fontSize: 12 }} allowDecimals={false} />
-                    <YAxis
-                      type="category"
-                      dataKey="genre"
-                      tick={{ fontSize: 11 }}
-                      width={72}
-                    />
-                    <Tooltip
-                      formatter={(value: number | undefined) => [value ?? 0, "Shows"]}
-                      contentStyle={{ fontSize: 12, borderRadius: 6 }}
-                    />
-                    <Bar dataKey="count" fill="#333" radius={[0, 3, 3, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
+          <div className="stats-summary-card">
+            {isLoadingShows ? (
+              <div className="stats-card-number stats-card-loading">—</div>
+            ) : (
+              <div className="stats-card-number">
+                {hoursWatched.toLocaleString()}h
+              </div>
+            )}
+            <div className="stats-card-label">Est. Hours Watched</div>
+          </div>
+          <div className="stats-summary-card">
+            <div className="stats-card-number">{ratings.length}</div>
+            <div className="stats-card-label">Reviews Given</div>
+          </div>
+          <div className="stats-summary-card">
+            <div className="stats-card-number">
+              {ratings.length ? avgRating.toFixed(1) : "—"}
             </div>
-          )}
+            <div className="stats-card-label">Avg Rating</div>
+          </div>
         </div>
-      )}
 
-      {/* Activity Heatmap */}
-      {ratings.length > 0 && (
-        <div className="stats-chart-container stats-heatmap-container">
-          <h4 className="stats-chart-title">Activity — Past Year</h4>
-          <div className="heatmap-wrapper">
-            {/* Month labels */}
-            <div
-              className="heatmap-month-labels"
-              style={{ gridTemplateColumns: `repeat(${totalCols}, 13px)` }}
-            >
-              {monthPositions.map(({ label, colIndex }) => (
-                <span
-                  key={`${label}-${colIndex}`}
-                  className="heatmap-month-label"
-                  style={{ gridColumnStart: colIndex + 1 }}
+        {/* Charts Row */}
+        {ratings.length > 0 && (
+          <div className="stats-charts-row">
+            <div className="stats-chart-container">
+              <h4 className="stats-chart-title">Rating Distribution</h4>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart
+                  data={ratingDistribution}
+                  margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
                 >
-                  {label}
-                </span>
-              ))}
+                  <XAxis dataKey="score" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                  <Tooltip
+                    formatter={(value: number | undefined) => [
+                      value ?? 0,
+                      "Reviews",
+                    ]}
+                    labelFormatter={(label) => `Score: ${label}`}
+                    contentStyle={{ fontSize: 12, borderRadius: 6 }}
+                  />
+                  <Bar dataKey="count" radius={[3, 3, 0, 0]} fill="#333" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-            {/* Grid */}
-            <div
-              className="heatmap-grid"
-              style={{ gridTemplateColumns: `repeat(${totalCols}, 13px)` }}
-            >
-              {heatmapCells.map((cell) => (
-                <div
-                  key={cell.date}
-                  className={intensityClass(cell.count, cell.inRange)}
-                  onMouseEnter={() => cell.inRange && setHoveredCell({ date: cell.date, count: cell.count })}
-                  onMouseLeave={() => setHoveredCell(null)}
-                  title={cell.inRange ? `${cell.date}: ${cell.count} review${cell.count !== 1 ? "s" : ""}` : ""}
-                />
-              ))}
-            </div>
-            {hoveredCell && (
-              <div className="heatmap-tooltip">
-                <strong>{hoveredCell.date}</strong>
-                <span>
-                  {hoveredCell.count} review{hoveredCell.count !== 1 ? "s" : ""}
-                </span>
+
+            {genreBreakdown.length > 0 && (
+              <div className="stats-chart-container">
+                <h4 className="stats-chart-title">Top Genres</h4>
+                {isLoadingShows ? (
+                  <div className="stats-chart-loading">Loading...</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart
+                      data={genreBreakdown}
+                      layout="vertical"
+                      margin={{ top: 4, right: 16, bottom: 0, left: 4 }}
+                    >
+                      <XAxis
+                        type="number"
+                        tick={{ fontSize: 12 }}
+                        allowDecimals={false}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="genre"
+                        tick={{ fontSize: 11 }}
+                        width={72}
+                      />
+                      <Tooltip
+                        formatter={(value: number | undefined) => [
+                          value ?? 0,
+                          "Shows",
+                        ]}
+                        contentStyle={{ fontSize: 12, borderRadius: 6 }}
+                      />
+                      <Bar dataKey="count" fill="#333" radius={[0, 3, 3, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Critic Label */}
-      {criticLabel && (
-        <p className="stats-critic-label">{criticLabel}</p>
-      )}
+        {/* Activity Heatmap */}
+        {ratings.length > 0 && (
+          <div className="stats-chart-container stats-heatmap-container">
+            <h4 className="stats-chart-title">Activity — Past Year</h4>
+            <div className="heatmap-wrapper">
+              <div
+                className="heatmap-month-labels"
+                style={{ gridTemplateColumns: `repeat(${totalCols}, 13px)` }}
+              >
+                {monthPositions.map(({ label, colIndex }) => (
+                  <span
+                    key={`${label}-${colIndex}`}
+                    className="heatmap-month-label"
+                    style={{ gridColumnStart: colIndex + 1 }}
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+              <div
+                className="heatmap-grid"
+                style={{ gridTemplateColumns: `repeat(${totalCols}, 13px)` }}
+              >
+                {heatmapCells.map((cell) => (
+                  <div
+                    key={cell.date}
+                    className={intensityClass(cell.count, cell.inRange)}
+                    onMouseEnter={() =>
+                      cell.inRange &&
+                      setHoveredCell({ date: cell.date, count: cell.count })
+                    }
+                    onMouseLeave={() => setHoveredCell(null)}
+                    title={
+                      cell.inRange
+                        ? `${cell.date}: ${cell.count} review${cell.count !== 1 ? "s" : ""}`
+                        : ""
+                    }
+                  />
+                ))}
+              </div>
+              {hoveredCell && (
+                <div className="heatmap-tooltip">
+                  <strong>{hoveredCell.date}</strong>
+                  <span>
+                    {hoveredCell.count} review
+                    {hoveredCell.count !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {criticLabel && <p className="stats-critic-label">{criticLabel}</p>}
+      </div>
     </div>
   );
 }

@@ -1,20 +1,24 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import ShowTooltip from "../components/ShowTooltip";
-import { useShowDetails, useShowAverageRating } from "../hooks/useShow";
+import { useShowDetails, useShowAverageRating, useShowSeason } from "../hooks/useShow";
 import { useUserProfile } from "../hooks/useUser";
 
-interface ReviewCardProps {
+interface EpisodeReviewCardProps {
   showId: string;
   userId: string;
+  seasonNumber: number;
+  episodeNumber: number;
   comment?: string;
   rating?: number;
   reviewDate?: string;
 }
 
-const ReviewCard: React.FC<ReviewCardProps> = ({
+const EpisodeReviewCard: React.FC<EpisodeReviewCardProps> = ({
   showId,
   userId,
+  seasonNumber,
+  episodeNumber,
   comment,
   rating,
   reviewDate,
@@ -23,7 +27,10 @@ const ReviewCard: React.FC<ReviewCardProps> = ({
   const { data: show } = useShowDetails(showId);
   const { data: ratingData } = useShowAverageRating(showId);
   const { data: user } = useUserProfile(userId);
-
+  const { data: seasonData } = useShowSeason(showId, seasonNumber);
+  const episodeData = (seasonData?.episodes ?? []).find(
+    (e: any) => e.episode_number === episodeNumber,
+  );
   const commentRef = React.useRef<HTMLParagraphElement>(null);
   const [isOverflowing, setIsOverflowing] = React.useState(false);
 
@@ -54,13 +61,22 @@ const ReviewCard: React.FC<ReviewCardProps> = ({
     navigate(`/show/${encodeURIComponent(showId)}`);
   };
 
+  const goToEpisode = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(
+      `/show/${encodeURIComponent(showId)}/season/${seasonNumber}/episode/${episodeNumber}`,
+    );
+  };
+
   const goToProfile = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/profile/${userId}`);
   };
 
   const goToReview = () => {
-    navigate(`/show/${encodeURIComponent(showId)}/review/${userId}`);
+    navigate(
+      `/show/${encodeURIComponent(showId)}/season/${seasonNumber}/episode/${episodeNumber}/review/${userId}`,
+    );
   };
 
   const scoreColor = (n?: number) => {
@@ -71,8 +87,14 @@ const ReviewCard: React.FC<ReviewCardProps> = ({
     return "#2d8a2d";
   };
 
+  if (!show || !user || !episodeData) {
+    console.log(episodeData);
+
+    return <div>Not found</div>;
+  }
+
   return (
-    <div className="rc-row" onClick={goToReview}>
+    <div className="rc-row rc-row--episode" onClick={goToReview}>
       {/* Poster */}
       <ShowTooltip
         show={{
@@ -97,9 +119,17 @@ const ReviewCard: React.FC<ReviewCardProps> = ({
 
       {/* Main content */}
       <div className="rc-body">
-        <div className="rc-top">
-          <span className="rc-show-name" onClick={goToShow}>
-            {showName}
+        <div className="rc-top rc-episode-top-row">
+          {showName && (
+            <span className="rc-episode-name" onClick={goToEpisode}>
+              {showName} (S{seasonNumber}:E{episodeNumber})
+            </span>
+          )}
+          <span
+            className="rc-show-name rc-show-name--episode"
+            onClick={goToShow}
+          >
+            <span className="rc-show-name-text">{episodeData.name}</span>
           </span>
         </div>
 
@@ -142,4 +172,4 @@ const ReviewCard: React.FC<ReviewCardProps> = ({
   );
 };
 
-export default ReviewCard;
+export default EpisodeReviewCard;

@@ -3,10 +3,16 @@ import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Tv } from "lucide-react";
 import ShowsGrid from "../components/ShowsGrid";
 import { useEnrichedWatchList } from "../hooks/useUser";
+import { useSuggestedShows } from "../hooks/useShow";
+import ShowPosterCard from "../components/ShowPosterCard";
 
 export default function YourShows() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialList = (searchParams.get("list") as "want_to_watch" | "currently_watching" | "watched") || "want_to_watch";
+  const initialList =
+    (searchParams.get("list") as
+      | "want_to_watch"
+      | "currently_watching"
+      | "watched") || "want_to_watch";
   const [watchStatus, setWatchStatus] = useState<
     "want_to_watch" | "currently_watching" | "watched"
   >(initialList);
@@ -16,7 +22,14 @@ export default function YourShows() {
 
   const { data: shows, isLoading } = useEnrichedWatchList(userId, watchStatus);
 
-  const changeTab = (status: "want_to_watch" | "currently_watching" | "watched") => {
+  const { data: suggestedShows = [], isLoading: suggestedLoading } =
+    useSuggestedShows(userId);
+
+  console.log(suggestedShows.suggestions);
+
+  const changeTab = (
+    status: "want_to_watch" | "currently_watching" | "watched",
+  ) => {
     setWatchStatus(status);
     setCurrentPage(1);
     setSearchParams({ list: status });
@@ -71,7 +84,9 @@ export default function YourShows() {
             <div className="empty-state-card">
               <Tv className="empty-state-icon" />
               <p>No shows in this list yet</p>
-              <Link to="/browse" className="empty-state-cta">Browse Shows</Link>
+              <Link to="/browse" className="empty-state-cta">
+                Browse Shows
+              </Link>
             </div>
           ) : (
             <ShowsGrid
@@ -82,6 +97,29 @@ export default function YourShows() {
               onPageChange={setCurrentPage}
             />
           )}
+
+          {/* Suggested Shows */}
+          <div className="home-section yourshows-suggested">
+            <h1 className="headings">Suggested Shows</h1>
+
+            {suggestedLoading ? (
+              <div className="skeleton-row">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="skeleton-poster" />
+                ))}
+              </div>
+            ) : (
+              <div className="scroll-container">
+                {suggestedShows.suggestions.map((show: any) => (
+                  <ShowPosterCard
+                    key={show.show_id}
+                    showId={show.show_id}
+                    className="show-icon home-icon"
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -2,10 +2,14 @@ import { useParams, Link } from "react-router-dom";
 import React, { useState } from "react";
 import { MessageSquare } from "lucide-react";
 import ShareButton from "../components/ShareButton";
-import ReviewCard from "../components/ReviewCard";
+import EpisodeReviewCard from "../components/EpisodeReviewCard";
 import { formatRelativeTime } from "../components/formatRelativeTime";
 import { useUser } from "../UserContext";
-import { useShowDetails, useShowSeason } from "../hooks/useShow";
+import {
+  useShowDetails,
+  useShowSeason,
+  useEpisodeAverageRating,
+} from "../hooks/useShow";
 import { useUserRatings, useEpisodeReviews } from "../hooks/useUser";
 import {
   useFollowedEpisodeReviews,
@@ -46,19 +50,26 @@ export default function EpisodeDetails() {
     id,
     seasonNumber,
   );
-
+  const { data: avgRatingData } = useEpisodeAverageRating(
+    id,
+    seasonNumber,
+    episodeNumber,
+  );
   const { data: userRatings = [], isLoading: ratingsLoading } =
     useUserRatings(user_id);
-
   const { data: episodeReviews = [] } = useEpisodeReviews(
     user_id,
     id,
     seasonNumber,
   );
-
-  const { data: followedReviews = [], isLoading: followedLoading } =
-    useFollowedEpisodeReviews(user_id, id, seasonNumber, episodeNumber);
-
+  const {
+    data: followedReviews = {
+      results: [],
+      followers_average_rating: null,
+      followers_total_ratings: 0,
+    },
+    isLoading: followedLoading,
+  } = useFollowedEpisodeReviews(user_id, id, seasonNumber, episodeNumber);
   const { data: allReviews = [], isLoading: allReviewsLoading } =
     useAllEpisodeRatings(user_id, id, seasonNumber, episodeNumber);
 
@@ -71,19 +82,24 @@ export default function EpisodeDetails() {
   const userReview = (episodeReviews as any[]).find(
     (r: any) => r.episode_number === episodeNumber,
   );
-
   const userHasRated = !!userReview;
 
+  const avgRating = avgRatingData?.average_rating ?? null;
+  const ratingCount = avgRatingData?.total_ratings ?? 0;
+  const followersAvgRating =
+    (followedReviews as any)?.followers_average_rating ?? null;
+  const followersTotalRatings =
+    (followedReviews as any)?.followers_total_ratings ?? 0;
+
   React.useEffect(() => {
-    if (userReview && !isEditingReview) {
+    if (userReview) {
       setRating(userReview.rating);
       setReviewText(userReview.comment || "");
+      console.log(userReview);
     }
   }, [userReview?.episode_number]); // eslint-disable-line
 
   React.useEffect(() => {
-    setRating(0);
-    setReviewText("");
     setSubmitted(false);
     setIsEditingReview(false);
     setReviewTab(user_id ? "you" : "all");
@@ -91,7 +107,6 @@ export default function EpisodeDetails() {
 
   const handleReviewSubmit = () => {
     if (!user_id) return;
-
     submitEpisodeRatingMutation.mutate(
       {
         user_id,
@@ -123,7 +138,6 @@ export default function EpisodeDetails() {
   const thumbLeft = (val: number) => `calc(${val / 10} * (100% - 3rem))`;
 
   const renderReviewList = (reviews: any[], isLoading: boolean) => {
-    console.log(reviews)
     if (isLoading) {
       return (
         <div className="loading-container">
@@ -131,7 +145,6 @@ export default function EpisodeDetails() {
         </div>
       );
     }
-
     if (!Array.isArray(reviews) || reviews.length === 0) {
       return (
         <div className="empty-state-card">
@@ -140,11 +153,10 @@ export default function EpisodeDetails() {
         </div>
       );
     }
-
     return (
       <div className="review-cards-container">
         {reviews.map((review: any) => (
-          <ReviewCard
+          <EpisodeReviewCard
             key={
               review.id ??
               review.rating_id ??
@@ -152,9 +164,10 @@ export default function EpisodeDetails() {
             }
             showId={review.show_id}
             userId={review.user_id}
+            seasonNumber={review.season_number}
+            episodeNumber={review.episode_number}
             comment={review.comment}
             rating={review.rating}
-            compact={false}
             reviewDate={formatRelativeTime(review.timestamp)}
           />
         ))}
@@ -179,9 +192,33 @@ export default function EpisodeDetails() {
 
   const effectiveReviewTab = user_id ? reviewTab : "all";
 
+  const ratingsRow = (
+    <div className="show-ratings-row">
+      {avgRating !== null && ratingCount > 0 && (
+        <div className="show-data-rating">
+          <div className="show-data-rating-score">
+            {(avgRating as number).toFixed(1)}
+          </div>
+          <div className="show-data-rating-reviews">
+            ({ratingCount} ratings)
+          </div>
+        </div>
+      )}
+      {user_id && followersAvgRating !== null && followersTotalRatings > 0 && (
+        <div className="show-data-rating show-data-rating--followers">
+          <div className="show-data-rating-score">
+            {(followersAvgRating as number).toFixed(1)}
+          </div>
+          <div className="show-data-rating-reviews">
+            ({followersTotalRatings} following)
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <div className="show-details-container">
-      {/* ===== HEADER (mobile + desktop unchanged) ===== */}
+    <div className="episode-details-container">
       {isMobile ? (
         <>
           <div className="episode-banner-wrapper">
@@ -192,29 +229,28 @@ export default function EpisodeDetails() {
             )}
           </div>
 
-          <div className="mobile-show-info">
-            <div className="show-title-row">
-              <div>
-                <Link to={`/show/${id}`} className="episode-show-link">
-                  {showData.name}
-                </Link>
-                <p className="episode-meta">
-                  S{season} E{episode}
+          <div className="mobile-show-upper">
+            <Link to={`/show/${id}`} className="episode-show-link">
+              {showData.name} S{season}:E{episode}
+            </Link>
+
+            <div className="mobile-show-top">
+              <div className="mobile-title-block">
+                <h1 className="mobile-title">
+                  {episodeData.name}
+                  <ShareButton
+                    title={episodeData.name}
+                    text={`Check out ${episodeData.name}`}
+                    url={window.location.href}
+                  />
+                </h1>
+                <p className="episode-mobile-overview">
+                  {episodeData.overview}
                 </p>
               </div>
-
-              <h1 className="ep-title-with-share">
-                {episodeData.name}
-                <ShareButton
-                  title={episodeData.name}
-                  text={`Check out ${episodeData.name}`}
-                  url={window.location.href}
-                />
-              </h1>
+              <div className="mobile-rating-wrapper">{ratingsRow}</div>
             </div>
           </div>
-
-          <p>{episodeData.overview}</p>
         </>
       ) : (
         <div className="show-details-upper">
@@ -225,14 +261,16 @@ export default function EpisodeDetails() {
           )}
 
           <div className="show-details-info">
-            <Link to={`/show/${id}`} className="episode-show-link">
-              {showData.name}
-            </Link>
-            <p>
-              S{season} E{episode}
-            </p>
-            <h1>{episodeData.name}</h1>
-            <p>{episodeData.overview}</p>
+            <div className="show-data">
+              <div className="show-data-text">
+                <Link to={`/show/${id}`} className="episode-show-link">
+                  {showData.name} S{season}:E{episode}
+                </Link>
+                <h1>{episodeData.name}</h1>
+                <p>{episodeData.overview}</p>
+              </div>
+              {ratingsRow}
+            </div>
           </div>
         </div>
       )}
@@ -269,83 +307,73 @@ export default function EpisodeDetails() {
         </div>
       )}
 
-      {/* YOU */}
       {effectiveReviewTab === "you" && (
         <div>
           {user_id && !ratingsLoading ? (
             <>
               {userHasRated && (
-                <div className="rating-cards-container">
-                  <div className="rating-card">
-                    <div className="rating-details">
-                      <div className="rating-score">{userReview.rating}</div>
-                      <div className="rating-text">
-                        <p>{userReview.comment}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setIsEditingReview((prev) => !prev)}
-                      className="edit-review-button"
-                    >
-                      {isEditingReview ? "Cancel" : "Update"}
-                    </button>
-                  </div>
+                <div className="review-cards-container">
+                  <EpisodeReviewCard
+                    showId={userReview.show_id}
+                    userId={userReview.user_id}
+                    seasonNumber={userReview.season_number}
+                    episodeNumber={userReview.episode_number}
+                    comment={userReview.comment}
+                    rating={userReview.rating}
+                    reviewDate={formatRelativeTime(userReview.timestamp)}
+                  />
                 </div>
               )}
 
-              {(!userHasRated || isEditingReview) && (
-                <div>
-                  <div className="write-review-container">
-                    <div className="slider-container">
-                      <div
-                        className="slider-wrapper"
-                        style={
-                          {
-                            "--slider-fill": `${rating * 10}%`,
-                            "--thumb-color": thumbColor(rating),
-                          } as React.CSSProperties
-                        }
-                      >
-                        <input
-                          type="range"
-                          min="0"
-                          max="10"
-                          step="1"
-                          value={rating}
-                          onChange={(e) => setRating(Number(e.target.value))}
-                        />
-                        <span
-                          className="slider-thumb-label"
-                          style={{ left: thumbLeft(rating) }}
-                          data-value={rating}
-                        >
-                          {rating}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="review-input-group">
-                      <textarea
-                        value={reviewText}
-                        onChange={(e) => setReviewText(e.target.value)}
-                        rows={4}
-                        placeholder="What did you think of this episode?"
-                        className="review-textbox"
+              <div>
+                <div className="write-review-container">
+                  <div className="slider-container">
+                    <div
+                      className="slider-wrapper"
+                      style={
+                        {
+                          "--slider-fill": `${rating * 10}%`,
+                          "--thumb-color": thumbColor(rating),
+                        } as React.CSSProperties
+                      }
+                    >
+                      <input
+                        type="range"
+                        min="0"
+                        max="10"
+                        value={rating}
+                        onChange={(e) => setRating(Number(e.target.value))}
                       />
+                      <span
+                        className="slider-thumb-label"
+                        data-value={rating}
+                        style={{ left: thumbLeft(rating) }}
+                      >
+                        {rating}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="review-input-group">
+                    <textarea
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      rows={4}
+                      placeholder="What did you think?"
+                      className="review-textbox"
+                    />
+
+                    <div className="submit-button-row">
                       <button
                         onClick={handleReviewSubmit}
                         className="submit-review-button"
-                        disabled={submitEpisodeRatingMutation.isPending}
                       >
-                        {submitEpisodeRatingMutation.isPending
-                          ? "Submitting..."
-                          : userHasRated
-                            ? "Update"
-                            : "Submit"}
+                        {userHasRated ? "Update" : "Submit"}
                       </button>
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
               {submitted && (
                 <div className="review-submit-message">
                   <p>Review submitted!</p>
@@ -360,12 +388,19 @@ export default function EpisodeDetails() {
         </div>
       )}
 
-      {/* FOLLOWING */}
       {effectiveReviewTab === "following" &&
-        renderReviewList(followedReviews.results, followedLoading)}
+        renderReviewList(
+          ((followedReviews as any)?.results ?? []) as any[],
+          followedLoading,
+        )}
 
-      {/* ALL */}
-      {effectiveReviewTab === "all" && renderReviewList(allReviews, allReviewsLoading)}
+      {effectiveReviewTab === "all" &&
+        renderReviewList(
+          Array.isArray(allReviews)
+            ? allReviews
+            : ((allReviews as any)?.results ?? []),
+          allReviewsLoading,
+        )}
     </div>
   );
 }

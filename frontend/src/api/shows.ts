@@ -55,6 +55,39 @@ export const getFollowedEpisodeReviews = (userId: string, showId: string, season
 // Fetches all user ratings/reviews for a specific show
 export const getAllEpisodeRatings = (userId: string, showId: string, season: number, episode: number) =>
   axios
-    .get(`${BASE_URL}/users/${userId}/shows/${showId}/season/${season}/ratings?episode_number=${episode}`)
+    .get(`${BASE_URL}/shows/${showId}/season/${season}/episode/${episode}/ratings`)
+    .then((r) => r.data);
+
+export const getEpisodeAverageRating =  (showId: string, seasonNumber: number, episodeNumber: number) => 
+  axios
+  .get(`${BASE_URL}/shows/${showId}/season/${seasonNumber}/episode/${episodeNumber}/average-rating`)
+  .then((r) => r.data);
+
+export const getSeasonEpisodeRatings = async (
+  showId: string,
+  seasonNumber: number,
+  episodes: Array<{ episode_number: number }>,
+): Promise<Record<string, { average_rating: number; total_ratings: number }>> => {
+  const results = await Promise.allSettled(
+    episodes.map((ep) =>
+      getEpisodeAverageRating(showId, seasonNumber, ep.episode_number).then(
+        (data) => ({ episodeNumber: ep.episode_number, data }),
+      ),
+    ),
+  );
+
+  const map: Record<string, { average_rating: number; total_ratings: number }> = {};
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      map[String(result.value.episodeNumber)] = result.value.data;
+    }
+  }
+  return map;
+};
+
+// Fetches all user ratings/reviews for a specific show
+export const getSuggestedShows = (userId: string) =>
+  axios
+    .get(`${BASE_URL}/users/${userId}/suggested-shows`)
     .then((r) => r.data);
  

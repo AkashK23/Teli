@@ -8,6 +8,8 @@ import Profile from "./pages/profile";
 import Login from "./pages/login";
 import ShowDetails from './pages/showDetails';
 import EpisodeDetails from "./pages/episodeDetails";
+import ReviewDetails from "./pages/reviewDetails";
+import EpisodeReviewDetails from "./pages/episodeReviewDetails";
 import Followers from './pages/followers';
 import Following from './pages/following';
 import Onboarding from "./pages/onboarding";
@@ -42,6 +44,8 @@ function App() {
               <Route path="/browse" element={<Browse />} />
               <Route path="/show/:id" element={<ShowDetails />} />
               <Route path="/show/:id/season/:season/episode/:episode" element={<EpisodeDetails />} />
+              <Route path="/show/:id/review/:userId" element={<ReviewDetails />} />
+              <Route path="/show/:id/season/:season/episode/:episode/review/:userId" element={<EpisodeReviewDetails />} />
               <Route path="/search" element={<Search />} />
               <Route path="/login" element={<Login />} />
               <Route path="/users/:userId/followers" element={<Followers />} />

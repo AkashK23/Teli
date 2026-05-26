@@ -9,7 +9,9 @@ import {
   getFollowedShowReviews, 
   getAllShowRatings,
   getFollowedEpisodeReviews, 
-  getAllEpisodeRatings
+  getAllEpisodeRatings,
+  getEpisodeAverageRating,
+  getSuggestedShows,
 } from "../api/shows";
 
 export function useShowDetails(showId: string | number | undefined) {
@@ -111,6 +113,30 @@ export const useAllEpisodeRatings = (
     queryKey: ["allEpisodeRatings", userId, showId, season, episode],
     queryFn: () => getAllEpisodeRatings(userId!, showId!, season!, episode!),
     enabled: !!showId && !!season && !!episode,
+    staleTime: 1000 * 60 * 2,
+  });
+};
+
+export const useEpisodeAverageRating = (
+  showId: string | undefined,
+  seasonNumber: number | null,
+  episodeNumber: number | null,
+) => {
+  return useQuery({
+    queryKey: ["episodeAverageRating", showId, seasonNumber, episodeNumber],
+    queryFn: () => getEpisodeAverageRating(showId!, seasonNumber!, episodeNumber!),
+    enabled: !!showId && seasonNumber !== null && episodeNumber !== null,
+    staleTime: 1000 * 60 * 2,
+  });
+};
+
+export const useSuggestedShows = (
+  userId: string | null | undefined,
+) => {
+  return useQuery({
+    queryKey: ["suggestedShows", userId],
+    queryFn: () => getSuggestedShows(userId!),
+    enabled: !!userId,
     staleTime: 1000 * 60 * 2,
   });
 };
