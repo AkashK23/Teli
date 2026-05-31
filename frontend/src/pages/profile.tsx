@@ -82,7 +82,7 @@ export default function Profile() {
     );
   }
 
-  const recentRatings = (ratings as any[]).slice(0, 10);
+  const recentRatings = (ratings as any[]).slice(0, 12);
 
   return (
     <div className="profile-page">
@@ -104,8 +104,7 @@ export default function Profile() {
           <div className="profile-hdr-name-row">
             <div className="profile-hdr-name-left">
               <h1 className="profile-hdr-name">{userInfo?.name}</h1>
-
-              {user_id !== loggedInUserId ? (
+              {loggedInUserId && user_id !== loggedInUserId ? (
                 <button
                   className={`profile-follow-btn ${isFollowing ? "is-following" : ""}`}
                   onClick={handleFollowToggle}
@@ -121,14 +120,14 @@ export default function Profile() {
                       ? "Following"
                       : "+ Follow"}
                 </button>
-              ) : (
+              ) : loggedInUserId && user_id === loggedInUserId ? (
                 <button
                   className="profile-follow-btn is-following"
                   onClick={() => navigate("/editprofile")}
                 >
                   Edit Profile
                 </button>
-              )}
+              ) : null}
 
               <ShareButton
                 title={`${userInfo?.name} on Teli`}
@@ -196,58 +195,16 @@ export default function Profile() {
       <div className="profile-body-grid">
         {/* LEFT COLUMN */}
         <div className="profile-main-col">
-          {/* Currently Watching */}
-          {(cwList as any[]).length > 0 ? (
-            <div className="profile-section-card">
-              <div className="psc-header">
-                <span className="psc-title">Currently Watching</span>
-                <Link to={`/users/${user_id}/yourshows`} className="psc-more">
-                  All shows →
-                </Link>
-              </div>
-              <div className="psc-body">
-                <div className="show-poster-strip">
-                  {(cwList as any[]).map((show: any) => (
-                    <ShowPosterCard
-                      key={show.show_id}
-                      showId={show.show_id}
-                      className="strip-poster"
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="profile-section-card">
-              <div className="psc-header">
-                <span className="psc-title">Currently Watching</span>
-              </div>
-              <div className="psc-body">
-                <div className="psc-empty">
-                  <Tv className="psc-empty-icon" />
-                  {isOwnProfile ? (
-                    <>
-                      <p>Start tracking shows you're watching</p>
-                      <Link to="/browse" className="psc-empty-cta">
-                        Browse Shows
-                      </Link>
-                    </>
-                  ) : (
-                    <p>{firstName} isn’t watching any shows right now</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Recent Reviews */}
           {recentRatings.length > 0 ? (
             <div className="profile-section-card">
               <div className="psc-header">
                 <span className="psc-title">Recent Reviews</span>
-                <Link to={`/activity`} className="psc-more">
-                  All reviews →
-                </Link>
+                {isOwnProfile && (
+                  <Link to={`/activity`} className="psc-more">
+                    All reviews →
+                  </Link>
+                )}
               </div>
               <div className="psc-body psc-body--reviews">
                 {recentRatings.map((rating: any) => (
@@ -328,12 +285,14 @@ export default function Profile() {
             <div className="profile-section-card">
               <div className="psc-header">
                 <span className="psc-title">Currently Watching</span>
-                <Link
-                  to={`/users/${user_id}/yourshows?list=currently_watching`}
-                  className="psc-more"
-                >
-                  See all →
-                </Link>
+                {isOwnProfile && (
+                  <Link
+                    to={`/users/${user_id}/yourshows?list=currently_watching`}
+                    className="psc-more"
+                  >
+                    See all →
+                  </Link>
+                )}
               </div>
               <div className="psc-body psc-body--w2w">
                 <div className="w2w-poster-list">
@@ -354,12 +313,14 @@ export default function Profile() {
             <div className="profile-section-card">
               <div className="psc-header">
                 <span className="psc-title">Want to Watch</span>
-                <Link
-                  to={`/users/${user_id}/yourshows?list=want_to_watch`}
-                  className="psc-more"
-                >
-                  See all →
-                </Link>
+                {isOwnProfile && (
+                  <Link
+                    to={`/users/${user_id}/yourshows?list=want_to_watch`}
+                    className="psc-more"
+                  >
+                    See all →
+                  </Link>
+                )}
               </div>
               <div className="psc-body psc-body--w2w">
                 <div className="w2w-poster-list">
@@ -380,12 +341,14 @@ export default function Profile() {
             <div className="profile-section-card">
               <div className="psc-header">
                 <span className="psc-title">Recently Watched</span>
-                <Link
-                  to={`/users/${user_id}/yourshows?list=watched`}
-                  className="psc-more"
-                >
-                  See all →
-                </Link>
+                {isOwnProfile && (
+                  <Link
+                    to={`/users/${user_id}/yourshows?list=watched`}
+                    className="psc-more"
+                  >
+                    See all →
+                  </Link>
+                )}
               </div>
               <div className="psc-body psc-body--w2w">
                 <div className="w2w-poster-list">

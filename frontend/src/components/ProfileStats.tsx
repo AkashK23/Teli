@@ -169,7 +169,7 @@ export default function ProfileStats({
     return (
       <div className="profile-stats-card">
         <div className="psc-header">
-          <span className="psc-title">Your Stats</span>
+          <span className="psc-title">Profile Stats</span>
         </div>
         <div className="psc-body">
           <p className="stats-empty-msg">
@@ -183,7 +183,7 @@ export default function ProfileStats({
   return (
     <div className="profile-stats-card">
       <div className="psc-header">
-        <span className="psc-title">Your Stats</span>
+        <span className="psc-title">Profile Stats</span>
       </div>
       <div className="psc-body">
         {/* Summary Cards */}

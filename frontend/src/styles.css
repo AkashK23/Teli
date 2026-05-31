@@ -2898,7 +2898,7 @@ body {
   border-bottom: .05rem solid var(--color-accent-components);
   cursor: pointer;
   transition: background-color 0.15s ease;
-  height: 6rem;
+  height: 6.5rem;
 }
 
 .rc-row:last-child {
@@ -3029,6 +3029,7 @@ body {
   align-items: center;
   gap: 0.4rem;
   margin-top: 0.1rem;
+  line-height: 1.3;
 }
 
 .rc-avatar {
@@ -3145,6 +3146,11 @@ body {
   text-overflow: ellipsis;
   flex-shrink: 1;
   min-width: 0;
+  line-height: 1.2;
+}
+
+.rc-episode-name-text {
+  display: inline-block;
 }
 
 .rc-show-name--episode {
