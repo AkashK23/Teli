@@ -51,32 +51,34 @@ export default function YourShows() {
       <div className="yourshows-padding">
         {/* Toggle Tabs for watch status */}
         <div className="toggle-container-yourshows">
-          <div
-            className={`toggle-option-yourshows ${
-              watchStatus === "want_to_watch" ? "active" : ""
-            }`}
-            onClick={() => changeTab("want_to_watch")}
-          >
-            Want To Watch
-          </div>
-          <div
-            className={`toggle-option-yourshows ${
-              watchStatus === "currently_watching" ? "active" : ""
-            }`}
-            onClick={() => changeTab("currently_watching")}
-          >
-            Currently Watching
-          </div>
-          <div
-            className={`toggle-option-yourshows ${
-              watchStatus === "watched" ? "active" : ""
-            }`}
-            onClick={() => changeTab("watched")}
-          >
-            Watched
-          </div>
+          <div className="toggle-track-yourshows">
+            <div
+              className={`toggle-option-yourshows ${
+                watchStatus === "want_to_watch" ? "active" : ""
+              }`}
+              onClick={() => changeTab("want_to_watch")}
+            >
+              Want To Watch
+            </div>
+            <div
+              className={`toggle-option-yourshows ${
+                watchStatus === "currently_watching" ? "active" : ""
+              }`}
+              onClick={() => changeTab("currently_watching")}
+            >
+              Currently Watching
+            </div>
+            <div
+              className={`toggle-option-yourshows ${
+                watchStatus === "watched" ? "active" : ""
+              }`}
+              onClick={() => changeTab("watched")}
+            >
+              Watched
+            </div>
 
-          <div className={`toggle-slider-yourshows ${watchStatus}`} />
+            <div className={`toggle-slider-yourshows ${watchStatus}`} />
+          </div>
         </div>
 
         <div className="yourshows-content">

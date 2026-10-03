@@ -64,6 +64,14 @@ function StaffPickCard({ showId }: { showId: number }) {
   );
 }
 
+function StaffPickBannerSlide({ showId }: { showId: number }) {
+  const { data: show } = useShowDetails(showId);
+
+  if (!show) return <div className="hero-banner-slide" />;
+
+  return <HeroBannerSlide show={{ ...show, id: showId }} />;
+}
+
 function HeroBannerSlide({ show }: { show: any }) {
   const { data: ratingData } = useShowAverageRating(show.id);
   return (
@@ -107,15 +115,19 @@ export default function Home() {
   const { data: suggestedShows = [], isLoading: suggestedLoading } =
     useSuggestedShows(user_id);
 
+  // Staff picks not already in popular shows (avoids duplicate slides)
+  const staffSlideIds = STAFF_PICK_IDS.filter(
+    (id) => !popularShows.some((s: any) => s.id === id),
+  );
+  const totalSlides = popularShows.length + staffSlideIds.length;
 
   useEffect(() => {
-    if (!popularShows.length) return;
-    const totalSlides = popularShows.length;
+    if (!totalSlides) return;
     const interval = setInterval(() => {
       setBannerIndex((prev) => (prev + 1) % totalSlides);
     }, 6000);
     return () => clearInterval(interval);
-  }, [popularShows.length]);
+  }, [totalSlides]);
 
   if (popularLoading) {
     return (
@@ -126,7 +138,6 @@ export default function Home() {
     );
   }
 
-  const totalSlides = popularShows.length + 1;
   const nextBanner = () => setBannerIndex((prev) => (prev + 1) % totalSlides);
   const prevBanner = () =>
     setBannerIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
@@ -137,14 +148,15 @@ export default function Home() {
 
   const feedReviews = (feed as any[]).slice(0, 4);
   const userReviews = (userRatings as any[]).slice(0, 4);
-  
+
   return (
     <div className="page-container fade-in">
       <div className="hero-staff-wrapper">
         {/* Hero Banner */}
         <div className="hero-banner-wrapper">
           <div className="hero-logo-overlay">
-            <img src="/teli-logo.svg" alt="Teli" />
+            {/* <img src="/teli-logo.svg" alt="Teli" /> */}
+            <h1>Popular Now</h1>
           </div>
           <div className="hero-tagline-overlay">
             <p>
@@ -158,6 +170,9 @@ export default function Home() {
           >
             {popularShows.map((show: any) => (
               <HeroBannerSlide key={show.id} show={show} />
+            ))}
+            {staffSlideIds.map((id) => (
+              <StaffPickBannerSlide key={`staff-${id}`} showId={id} />
             ))}
           </div>
           <button className="hero-banner-arrow left" onClick={prevBanner}>
@@ -350,7 +365,7 @@ export default function Home() {
                     rating={rating.rating}
                     reviewDate={formatRelativeTime(rating.timestamp)}
                   />
-                )
+                ),
               )}
             </div>
           </div>
@@ -428,7 +443,7 @@ export default function Home() {
                     </p>
                   </div>
                 </Link>
-                <Link to="/browse" className="feature-card">
+                <Link to="" className="feature-card">
                   <img
                     src="/features-showdetails.png"
                     alt="show details"

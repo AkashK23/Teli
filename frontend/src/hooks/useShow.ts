@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { queryKeys } from "./queryKeys";
 import {
   getShowDetails,
@@ -13,6 +13,7 @@ import {
   getEpisodeAverageRating,
   getSuggestedShows,
 } from "../api/shows";
+import { getUserWatchStatus } from "../api/users";
 
 export function useShowDetails(showId: string | number | undefined) {
   return useQuery({
@@ -140,3 +141,38 @@ export const useSuggestedShows = (
     staleTime: 1000 * 60 * 2,
   });
 };
+
+export function useHomePosterData(
+  showIds: Array<string | number>,
+  userId: string | null | undefined,
+) {
+  const queries = useQueries({
+    queries: showIds.flatMap((showId) => [
+      {
+        queryKey: queryKeys.show.details(showId),
+        queryFn: () => getShowDetails(showId),
+        staleTime: 60 * 60 * 1000,
+      },
+      {
+        queryKey: queryKeys.show.averageRating(showId),
+        queryFn: () => getShowAverageRating(showId),
+        staleTime: 3 * 60 * 1000,
+      },
+      ...(userId
+        ? [
+            {
+              queryKey: queryKeys.user.watchStatus(userId, String(showId)),
+              queryFn: () =>
+                getUserWatchStatus(userId, String(showId)),
+              staleTime: 2 * 60 * 1000,
+            },
+          ]
+        : []),
+    ]),
+  });
+
+  return {
+    isLoading: queries.some((query) => query.isLoading),
+    isFetching: queries.some((query) => query.isFetching),
+  };
+}

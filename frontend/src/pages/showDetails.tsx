@@ -51,6 +51,11 @@ export default function ShowDetails() {
   const [showStatusMessage, setShowStatusMessage] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const watchStatusOptions: { value: WatchStatus; label: string }[] = [
+    { value: "want_to_watch", label: "Want to Watch" },
+    { value: "currently_watching", label: "Currently Watching" },
+    { value: "watched", label: "Watched" },
+  ];
 
   const { data: showData, isLoading: showLoading } = useShowDetails(id);
   const { data: avgRatingData } = useShowAverageRating(id);
@@ -200,10 +205,7 @@ export default function ShowDetails() {
     });
   };
 
-  const handleWatchStatusChange = (
-    event: React.ChangeEvent<HTMLSelectElement>,
-  ) => {
-    const newStatus = event.target.value as WatchStatus;
+  const handleWatchStatusChange = (newStatus: WatchStatus) => {
     setWatchStatus(newStatus);
 
     if (!user_id || !id) return;
@@ -363,19 +365,26 @@ export default function ShowDetails() {
                 {user_id && !loadingReview && (
                   <div className="watch-status-row">
                     <strong>Watch Status:</strong>
-                    <select
-                      id="watchStatus"
-                      value={watchStatus}
-                      onChange={handleWatchStatusChange}
-                      className="watch-status-dropdown"
+                    <div
+                      className="watch-status-toggle"
+                      role="radiogroup"
+                      aria-label="Watch status"
                     >
-                      <option value="">Select...</option>
-                      <option value="want_to_watch">Want to Watch</option>
-                      <option value="currently_watching">
-                        Currently Watching
-                      </option>
-                      <option value="watched">Watched</option>
-                    </select>
+                      {watchStatusOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={watchStatus === option.value}
+                          className={`watch-status-option ${
+                            watchStatus === option.value ? "active" : ""
+                          }`}
+                          onClick={() => handleWatchStatusChange(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                     {showStatusMessage && statusMessage && (
                       <span className="watch-status-label">
                         {statusMessage}
@@ -425,17 +434,29 @@ export default function ShowDetails() {
           {user_id && !loadingReview && (
             <div className="watch-status-row">
               <strong>Watch Status:</strong>
-              <select
-                id="watchStatusMobile"
-                value={watchStatus}
-                onChange={handleWatchStatusChange}
-                className="watch-status-dropdown"
+              <div
+                className="watch-status-toggle"
+                role="radiogroup"
+                aria-label="Watch status"
               >
-                <option value="">Select...</option>
-                <option value="want_to_watch">Want to Watch</option>
-                <option value="currently_watching">Currently Watching</option>
-                <option value="watched">Watched</option>
-              </select>
+                {watchStatusOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={watchStatus === option.value}
+                    className={`watch-status-option ${
+                      watchStatus === option.value ? "active" : ""
+                    }`}
+                    onClick={() => handleWatchStatusChange(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              {showStatusMessage && statusMessage && (
+                <span className="watch-status-label">{statusMessage}</span>
+              )}
             </div>
           )}
         </>

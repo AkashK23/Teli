@@ -15,6 +15,7 @@ import Following from './pages/following';
 import Onboarding from "./pages/onboarding";
 import EditProfile from "./pages/editProfile";
 import YourShows from "./pages/yourShows";
+import ScrollToTop from "./components/ScrollToTop";
 
 import { Routes, Route } from "react-router-dom";
 import { UserProvider } from "./UserContext";
@@ -38,14 +39,24 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <UserProvider>
         <ToastProvider>
+          <ScrollToTop />
           <Navbar />
           <div>
             <Routes>
               <Route path="/browse" element={<Browse />} />
               <Route path="/show/:id" element={<ShowDetails />} />
-              <Route path="/show/:id/season/:season/episode/:episode" element={<EpisodeDetails />} />
-              <Route path="/show/:id/review/:userId" element={<ReviewDetails />} />
-              <Route path="/show/:id/season/:season/episode/:episode/review/:userId" element={<EpisodeReviewDetails />} />
+              <Route
+                path="/show/:id/season/:season/episode/:episode"
+                element={<EpisodeDetails />}
+              />
+              <Route
+                path="/show/:id/review/:userId"
+                element={<ReviewDetails />}
+              />
+              <Route
+                path="/show/:id/season/:season/episode/:episode/review/:userId"
+                element={<EpisodeReviewDetails />}
+              />
               <Route path="/search" element={<Search />} />
               <Route path="/login" element={<Login />} />
               <Route path="/users/:userId/followers" element={<Followers />} />

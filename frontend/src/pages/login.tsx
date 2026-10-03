@@ -256,7 +256,7 @@ export default function Login() {
               </div>
             </Link>
 
-            <Link to="/browse" className="feature-card">
+            <Link to= "" className="feature-card">
               <img
                 src="/features-showdetails.png"
                 alt="show details"
