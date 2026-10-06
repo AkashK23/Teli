@@ -74,8 +74,13 @@ function StaffPickBannerSlide({ showId }: { showId: number }) {
 
 function HeroBannerSlide({ show }: { show: any }) {
   const { data: ratingData } = useShowAverageRating(show.id);
+  const year = show.first_air_date?.slice(0, 4);
+  const rating = ratingData?.average_rating
+    ? parseFloat(ratingData.average_rating).toFixed(1)
+    : null;
+
   return (
-    <div key={show.id} className="hero-banner-slide">
+    <div className="hero-banner-slide">
       <Link to={`/show/${show.id}`} className="hero-card-link">
         <img
           src={`https://image.tmdb.org/t/p/original${
@@ -83,14 +88,15 @@ function HeroBannerSlide({ show }: { show: any }) {
           }`}
           alt={show.name}
         />
-        <div className="hero-top-right">
-          <div className="hero-title-row">
-            <h1>{show.name}</h1>
-            {ratingData?.average_rating && (
-              <div className="hero-rating-box">
-                {parseFloat(ratingData.average_rating).toFixed(1)}
-              </div>
+        <div className="hero-content">
+          <h2 className="hero-title">{show.name}</h2>
+          <div className="hero-meta">
+            {rating && (
+              <span className="hero-rating-pill">
+                <Star size={14} fill="currentColor" /> {rating}
+              </span>
             )}
+            {year && <span className="hero-year">{year}</span>}
           </div>
         </div>
       </Link>
@@ -101,6 +107,7 @@ function HeroBannerSlide({ show }: { show: any }) {
 
 export default function Home() {
   const [bannerIndex, setBannerIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
   const user_id = useUser().userId;
 
   const { data: popularShows = [], isLoading: popularLoading } =
@@ -122,12 +129,12 @@ export default function Home() {
   const totalSlides = popularShows.length + staffSlideIds.length;
 
   useEffect(() => {
-    if (!totalSlides) return;
-    const interval = setInterval(() => {
+    if (!totalSlides || paused) return;
+    const timeout = setTimeout(() => {
       setBannerIndex((prev) => (prev + 1) % totalSlides);
     }, 6000);
-    return () => clearInterval(interval);
-  }, [totalSlides]);
+    return () => clearTimeout(timeout);
+  }, [totalSlides, paused, bannerIndex]);
 
   if (popularLoading) {
     return (
@@ -153,17 +160,15 @@ export default function Home() {
     <div className="page-container fade-in">
       <div className="hero-staff-wrapper">
         {/* Hero Banner */}
-        <div className="hero-banner-wrapper">
+        <div
+          className="hero-banner-wrapper"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
           <div className="hero-logo-overlay">
-            {/* <img src="/teli-logo.svg" alt="Teli" /> */}
             <h1>Popular Now</h1>
           </div>
-          <div className="hero-tagline-overlay">
-            <p>
-              Discover Shows • Track What You're Watching • Share Reviews with
-              Friends
-            </p>
-          </div>
+
           <div
             className="hero-banner-slider"
             style={{ transform: `translateX(-${bannerIndex * 100}%)` }}
@@ -175,12 +180,32 @@ export default function Home() {
               <StaffPickBannerSlide key={`staff-${id}`} showId={id} />
             ))}
           </div>
-          <button className="hero-banner-arrow left" onClick={prevBanner}>
+
+          <button
+            className="hero-banner-arrow left"
+            onClick={prevBanner}
+            aria-label="Previous"
+          >
             ❮
           </button>
-          <button className="hero-banner-arrow right" onClick={nextBanner}>
+          <button
+            className="hero-banner-arrow right"
+            onClick={nextBanner}
+            aria-label="Next"
+          >
             ❯
           </button>
+
+          <div className="hero-dots">
+            {Array.from({ length: totalSlides }).map((_, i) => (
+              <button
+                key={i}
+                className={`hero-dot ${i === bannerIndex ? "active" : ""}`}
+                onClick={() => setBannerIndex(i)}
+                aria-label={`Go to slide ${i + 1}`}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Staff Picks — desktop sidebar */}
@@ -193,6 +218,10 @@ export default function Home() {
           </ul>
         </div>
       </div>
+
+      {/* <p className="hero-tagline">
+        Discover shows • Track what you're watching • Share reviews with friends
+      </p> */}
 
       {/* Mobile Staff Picks */}
       <div className="home-sections-row">
