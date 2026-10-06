@@ -542,6 +542,20 @@ def get_user_ratings(user_id):
         logger.error(f"Error getting user ratings: {e}")
         return jsonify({"error": str(e)}), 500
 
+@teli.route("/users/<user_id>/episode_ratings", methods=["GET"])
+def get_user_episode_ratings(user_id):
+    try:
+        user_ref = db.collection("users").document(user_id).get()
+        if not user_ref.exists:
+            response = (jsonify({"error": "User not found"}), 404)
+        else:
+            response = (jsonify(get_user_episode_ratings_list(user_id)), 200)
+    except Exception as e:
+        logger.error(f"Error getting user episode ratings: {e}")
+        response = (jsonify({"error": str(e)}), 500)
+    return response
+
+
 @teli.route("/users/<user_id>/shows/<show_id>/season/<season_number>/ratings", methods=["GET"])
 def get_episode_ratings(user_id, show_id, season_number):
     try:
@@ -955,18 +969,31 @@ def follow_user():
         logger.error(f"Error following user: {e}")
         return jsonify({"error": str(e)}), 500
 
+def get_user_episode_ratings_list(user_id, limit=None):
+    """Return a user's episode ratings, most recent first"""
+    docs = db.collection("episode_ratings").where(
+        filter=FieldFilter("user_id", "==", user_id)).stream()
+    episode_ratings = []
+    for doc in docs:
+        rating_data = doc.to_dict()
+        rating_data["id"] = doc.id
+        episode_ratings.append(rating_data)
+    episode_ratings.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
+    return episode_ratings[:limit] if limit else episode_ratings
+
+
 def populate_feed_from_follow(follower_id, followee_id):
-    """When a user follows someone, add that user's recent ratings to their feed"""
+    """When a user follows someone, add that user's recent show and episode ratings to their feed"""
     try:
-        # Get recent ratings from the followee
-        ratings = db.collection("ratings") \
+        # Get recent show ratings from the followee
+        show_ratings = db.collection("ratings") \
             .where("user_id", "==", followee_id) \
             .order_by("timestamp", direction=firestore.Query.DESCENDING) \
             .limit(20) \
             .stream()
 
         batch = db.batch()
-        for rating in ratings:
+        for rating in show_ratings:
             rating_data = rating.to_dict()
             rating_data["rating_id"] = rating.id
 
@@ -974,6 +1001,13 @@ def populate_feed_from_follow(follower_id, followee_id):
             # re-following the same user never creates duplicate feed items
             feed_ref = db.collection("feeds").document(follower_id).collection("items").document(rating.id)
             batch.set(feed_ref, rating_data)
+
+        # Get recent episode ratings from the followee
+        for episode_rating in get_user_episode_ratings_list(followee_id, limit=20):
+            episode_rating_id = episode_rating.pop("id")
+            feed_data = {**episode_rating, "rating_id": episode_rating_id}
+            feed_ref = db.collection("feeds").document(follower_id).collection("items").document(episode_rating_id)
+            batch.set(feed_ref, feed_data)
 
         batch.commit()
     except Exception as e:

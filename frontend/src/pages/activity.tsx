@@ -5,7 +5,11 @@ import EpisodeReviewCard from "../components/EpisodeReviewCard";
 import { Link, useLocation } from "react-router-dom";
 import { MessageSquare } from "lucide-react";
 import { formatRelativeTime } from "../components/formatRelativeTime";
-import { useUserFeed, useUserRatings } from "../hooks/useUser";
+import {
+  useUserFeed,
+  useUserRatings,
+  useUserEpisodeRatings,
+} from "../hooks/useUser";
 
 export default function Activity() {
   const location = useLocation();
@@ -32,7 +36,19 @@ export default function Activity() {
   const { data: userRatings = [], isLoading: ratingsLoading } =
     useUserRatings(user_id);
 
-  const loading = feedLoading || ratingsLoading;
+  const { data: userEpisodeRatings = [], isLoading: episodeRatingsLoading } =
+    useUserEpisodeRatings(user_id);
+
+  const loading = feedLoading || ratingsLoading || episodeRatingsLoading;
+
+  // Merge the user's show and episode reviews, most recent first
+  const userActivity = useMemo(
+    () =>
+      [...(userRatings as any[]), ...(userEpisodeRatings as any[])].sort(
+        (a, b) => (b.timestamp ?? "").localeCompare(a.timestamp ?? ""),
+      ),
+    [userRatings, userEpisodeRatings],
+  );
 
   // Deduplicate feed by rating_id (or id) to guard against legacy Firestore dupes
   const deduplicatedFeed = useMemo(() => {
@@ -127,7 +143,7 @@ export default function Activity() {
       <div key={activeTab} className="activity-contentContainer">
         {activeTab === "following"
           ? renderReviews(deduplicatedFeed)
-          : renderReviews(userRatings as any[])}
+          : renderReviews(userActivity)}
       </div>
     </div>
   );

@@ -554,3 +554,80 @@ class TestEpisodeRatingFeed:
                     db.collection("users").document(uid).delete()
                 except Exception:
                     pass
+
+    def test_follow_backfills_episode_ratings_into_feed(self, get_client, get_db):
+        client = get_client
+        db = get_db
+        ts = datetime.now().strftime("%Y%m%d%H%M%S%f")
+
+        follower = client.post("/api/add_user", json={
+            "email": f"bf_follower_{ts}@example.com",
+            "name": "BF Follower",
+            "username": f"bf_follower_{ts}",
+        }).get_json()
+
+        reviewer = client.post("/api/add_user", json={
+            "email": f"bf_reviewer_{ts}@example.com",
+            "name": "BF Reviewer",
+            "username": f"bf_reviewer_{ts}",
+        }).get_json()
+
+        follower_id = follower["id"]
+        reviewer_id = reviewer["id"]
+
+        # Reviewer rates an episode BEFORE being followed
+        ep_rating_resp = client.post("/api/episode_ratings", json={
+            "user_id": reviewer_id,
+            "show_id": "1396",
+            "season_number": 1,
+            "episode_number": 2,
+            "rating": 8,
+            "comment": "Great follow-up",
+        })
+        assert ep_rating_resp.status_code == 200
+        episode_rating_id = ep_rating_resp.get_json()["id"]
+
+        try:
+            follow_resp = client.post("/api/follow", json={
+                "follower_id": follower_id,
+                "followee_id": reviewer_id,
+            })
+            assert follow_resp.status_code == 200
+
+            feed = client.get(f"/api/users/{follower_id}/feed").get_json()["feed"]
+            episode_items = [
+                item for item in feed
+                if item.get("rating_id") == episode_rating_id
+            ]
+            assert len(episode_items) == 1
+            assert episode_items[0]["season_number"] == 1
+            assert episode_items[0]["episode_number"] == 2
+            assert episode_items[0]["rating"] == 8
+            assert episode_items[0]["comment"] == "Great follow-up"
+
+            # Reviewer's episode ratings are available via the user endpoint
+            ratings_resp = client.get(f"/api/users/{reviewer_id}/episode_ratings")
+            assert ratings_resp.status_code == 200
+            ratings = ratings_resp.get_json()
+            assert [r["id"] for r in ratings] == [episode_rating_id]
+            assert ratings[0]["episode_number"] == 2
+
+        finally:
+            db.collection("episode_ratings").document(episode_rating_id).delete()
+            feed_docs = db.collection("feeds").document(follower_id).collection("items").stream()
+            for doc in feed_docs:
+                doc.reference.delete()
+            follows = db.collection("follows").where(
+                "follower_id", "==", follower_id).stream()
+            for doc in follows:
+                doc.reference.delete()
+            for uid in [follower_id, reviewer_id]:
+                try:
+                    db.collection("users").document(uid).delete()
+                except Exception:
+                    pass
+
+    def test_get_user_episode_ratings_user_not_found(self, get_client):
+        resp = get_client.get("/api/users/nonexistent_user_xyz/episode_ratings")
+        assert resp.status_code == 404
+        assert resp.get_json()["error"] == "User not found"

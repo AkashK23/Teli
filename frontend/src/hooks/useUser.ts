@@ -3,6 +3,7 @@ import { queryKeys } from "./queryKeys";
 import {
   getUserProfile,
   getUserRatings,
+  getUserEpisodeRatings,
   getUserFeed,
   getUserWatchList,
   getUserFollowers,
@@ -24,6 +25,14 @@ export function useUserRatings(userId: string | null | undefined) {
   return useQuery({
     queryKey: queryKeys.user.ratings(userId ?? ""),
     queryFn: () => getUserRatings(userId!),
+    enabled: !!userId,
+  });
+}
+
+export function useUserEpisodeRatings(userId: string | null | undefined) {
+  return useQuery({
+    queryKey: queryKeys.user.allEpisodeRatings(userId ?? ""),
+    queryFn: () => getUserEpisodeRatings(userId!),
     enabled: !!userId,
   });
 }

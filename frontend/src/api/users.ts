@@ -8,6 +8,9 @@ export const getUserProfile = (userId: string) =>
 export const getUserRatings = (userId: string) =>
   axios.get(`${BASE_URL}/users/${userId}/ratings`).then((r) => r.data);
 
+export const getUserEpisodeRatings = (userId: string) =>
+  axios.get(`${BASE_URL}/users/${userId}/episode_ratings`).then((r) => r.data);
+
 export const getUserFeed = (userId: string) =>
   axios.get(`${BASE_URL}/users/${userId}/feed`).then((r) => r.data.feed);
 

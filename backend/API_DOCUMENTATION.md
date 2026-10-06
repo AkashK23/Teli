@@ -1485,7 +1485,7 @@ These endpoints manage social interactions between users.
 
 ### Follow User
 
-Follow another user.
+Follow another user. The followee's 20 most recent show ratings and 20 most recent episode ratings are added to the follower's feed.
 
 **URL**: `/follow`
 
@@ -2425,6 +2425,68 @@ curl -X POST "http://localhost:5001/episode_ratings" \
   ```json
   {
     "error": "Database error occurred"
+  }
+  ```
+
+### Get User Episode Ratings
+
+Get all of a user's episode ratings across every show, sorted by most recent rating date first.
+
+**URL**: `/users/:user_id/episode_ratings`
+
+**Method**: `GET`
+
+**URL Parameters**:
+
+| Parameter | Type   | Required | Description    |
+|-----------|--------|----------|----------------|
+| user_id   | string | Yes      | ID of the user |
+
+**Example Request**:
+
+```bash
+curl -X GET "http://localhost:5001/users/user123/episode_ratings"
+```
+
+**Example Response**:
+
+```json
+[
+  {
+    "id": "epRating456",
+    "user_id": "user123",
+    "show_id": "1396",
+    "season_number": 1,
+    "episode_number": 2,
+    "rating": 8,
+    "comment": "Great follow-up",
+    "timestamp": "2026-05-10T18:30:00.000000+00:00"
+  },
+  {
+    "id": "epRating123",
+    "user_id": "user123",
+    "show_id": "1396",
+    "season_number": 1,
+    "episode_number": 1,
+    "rating": 9,
+    "comment": "Amazing pilot",
+    "timestamp": "2026-05-09T12:00:00.000000+00:00"
+  }
+]
+```
+
+**Error Responses**:
+
+- `404 Not Found`: User not found
+  ```json
+  {
+    "error": "User not found"
+  }
+  ```
+- `500 Internal Server Error`: Database error
+  ```json
+  {
+    "error": "Error message details"
   }
   ```
 

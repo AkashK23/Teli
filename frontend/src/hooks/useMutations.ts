@@ -67,6 +67,9 @@ export function useSubmitEpisodeRating() {
           payload.season_number
         ),
       });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.user.allEpisodeRatings(payload.user_id),
+      });
     },
   });
 }
@@ -84,6 +87,9 @@ export function useFollowUser() {
     onSuccess: (_, { followerId, followeeId }) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.user.following(followerId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.user.feed(followerId),
       });
       queryClient.invalidateQueries({
         queryKey: queryKeys.user.followers(followeeId),

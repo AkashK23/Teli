@@ -12,6 +12,8 @@ export const queryKeys = {
   user: {
     profile: (id: string) => ["user", id, "profile"] as const,
     ratings: (id: string) => ["user", id, "ratings"] as const,
+    allEpisodeRatings: (id: string) =>
+      ["user", id, "all-episode-ratings"] as const,
     feed: (id: string) => ["user", id, "feed"] as const,
     watchList: (id: string, status: string) =>
       ["user", id, "watch-list", status] as const,
