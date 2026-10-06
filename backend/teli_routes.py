@@ -202,6 +202,24 @@ def get_prefix_range(prefix):
         return start, end
     return None, None
 
+
+FIRESTORE_IN_QUERY_LIMIT = 30
+
+
+def get_follower_counts(user_ids):
+    """Return a dict mapping each user ID to its number of followers."""
+    follower_counts = {user_id: 0 for user_id in user_ids}
+    for i in range(0, len(user_ids), FIRESTORE_IN_QUERY_LIMIT):
+        chunk = user_ids[i:i + FIRESTORE_IN_QUERY_LIMIT]
+        follows = db.collection("follows").where(
+            filter=FieldFilter("followee_id", "in", chunk)).select(["followee_id"]).stream()
+        for follow_doc in follows:
+            followee_id = follow_doc.to_dict().get("followee_id")
+            if followee_id in follower_counts:
+                follower_counts[followee_id] += 1
+    return follower_counts
+
+
 @teli.route('/users/search', methods=['GET'])
 def search_users():
     try:
@@ -274,22 +292,28 @@ def search_users():
             
             all_results[doc.id] = user_data
         
-        # Convert to list and sort by relevance
+        # Attach follower counts
+        follower_counts = get_follower_counts(list(all_results.keys()))
+        for user_id, user_data in all_results.items():
+            user_data["follower_count"] = follower_counts.get(user_id, 0)
+        
+        # Convert to list and sort by relevance, then follower count
         matching_users = list(all_results.values())
         query_lower = query.lower()
         
         def sort_key(user):
             username = user.get('username', '').lower()
             name = user.get('name', '').lower()
+            followers = -user.get('follower_count', 0)  # Most followers first
             
             if username == query_lower:
-                return (0, username)  # Exact username match first
+                return (0, followers, username)  # Exact username match first
             elif username.startswith(query_lower):
-                return (1, username)  # Username prefix match
+                return (1, followers, username)  # Username prefix match
             elif name.startswith(query_lower):
-                return (2, name)  # Name prefix match
+                return (2, followers, name)  # Name prefix match
             else:
-                return (3, username)  # Fallback
+                return (3, followers, username)  # Fallback
         
         matching_users.sort(key=sort_key)
         

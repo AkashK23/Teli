@@ -261,6 +261,49 @@ class TestUserSearch:
         # (though this depends on the specific implementation)
         assert 'john' in usernames or 'johndoe' in usernames
     
+    def test_search_users_follower_count_breaks_ties(self, get_client):
+        """Test that relevance wins and follower count breaks ties within a tier"""
+        johndoe_id, _, johnny_id, john_id, jsmith_id = self.test_user_ids
+        follows = [
+            (johndoe_id, johnny_id),
+            (jsmith_id, johnny_id),
+            (johndoe_id, jsmith_id),
+        ]
+        follow_ids = []
+        for follower_id, followee_id in follows:
+            _, follow_ref = self.db.collection("follows").add({
+                "follower_id": follower_id,
+                "followee_id": followee_id,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            follow_ids.append(follow_ref.id)
+        
+        try:
+            response = get_client.get("/api/users/search?query=john")
+            assert response.status_code == 200
+            data = json.loads(response.data)
+            
+            counts = {user['username']: user['follower_count'] for user in data['results']}
+            assert counts['johnny'] == 2
+            assert counts['jsmith'] == 1
+            assert counts['johndoe'] == 0
+            assert counts['john'] == 0
+            
+            usernames = [user['username'] for user in data['results']]
+            # Exact username match comes first despite having no followers
+            assert usernames.index('john') < usernames.index('johnny')
+            # Within username prefix matches, more followers ranks higher
+            # (johnny would sort after johndoe alphabetically)
+            assert usernames.index('johnny') < usernames.index('johndoe')
+            # Username prefix matches still beat name prefix matches
+            assert usernames.index('johndoe') < usernames.index('jsmith')
+        finally:
+            for follow_id in follow_ids:
+                try:
+                    self.db.collection("follows").document(follow_id).delete()
+                except Exception:
+                    pass
+    
     def test_search_users_no_results(self, get_client):
         """Test search with query that returns no results"""
         response = get_client.get("/api/users/search?query=xyz123nonexistent")

@@ -1319,21 +1319,24 @@ curl -X GET "http://localhost:5001/users/search?query=john&page=2&limit=10"
       "name": "John Doe",
       "username": "john",
       "bio": "TV show enthusiast",
-      "created_at": "2023-05-31T12:34:56.789Z"
+      "created_at": "2023-05-31T12:34:56.789Z",
+      "follower_count": 42
     },
     {
       "id": "user456",
       "name": "Johnny Smith",
       "username": "johnny_s",
       "bio": "Movie critic",
-      "created_at": "2023-05-30T10:20:30.456Z"
+      "created_at": "2023-05-30T10:20:30.456Z",
+      "follower_count": 17
     },
     {
       "id": "user789",
       "name": "John Wilson",
       "username": "jwilson",
       "bio": "Binge watcher",
-      "created_at": "2023-05-29T14:15:20.123Z"
+      "created_at": "2023-05-29T14:15:20.123Z",
+      "follower_count": 3
     }
   ],
   "total_results": 15,
@@ -1349,7 +1352,9 @@ curl -X GET "http://localhost:5001/users/search?query=john&page=2&limit=10"
   1. Exact username matches first
   2. Username prefix matches
   3. Name prefix matches
-  4. Alphabetical fallback
+- Within the same relevance tier, users with more followers come first
+- Remaining ties are sorted alphabetically
+- Each result includes a `follower_count` field
 - Sensitive fields (email, password) are automatically removed from results
 - Supports pagination for large result sets
 
