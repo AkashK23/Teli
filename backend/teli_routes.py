@@ -1317,6 +1317,27 @@ def get_watch_status(user_id, show_id):
         logger.error(f"Error retrieving watch status: {e}")
         return jsonify({"error": "Database error occurred"}), 500
 
+def _get_popular_show_counts(excluded_show_ids, start_date=None):
+    """Return (show_id, rating_count) pairs, most rated first.
+
+    Only ratings on or after start_date are counted; pass None for all time.
+    """
+    ratings_query = db.collection("ratings")
+    if start_date:
+        ratings_query = ratings_query.where(
+            filter=FieldFilter("timestamp", ">=", start_date))
+
+    popular_counts = {}
+    for doc in ratings_query.limit(10000).stream():
+        sid = doc.to_dict().get("show_id")
+        if sid and sid not in excluded_show_ids:
+            popular_counts[sid] = popular_counts.get(sid, 0) + 1
+
+    popular_ranked = sorted(
+        popular_counts.items(), key=lambda x: x[1], reverse=True)
+    return popular_ranked
+
+
 @teli.route("/users/<user_id>/suggested-shows", methods=["GET"])
 def get_suggested_shows(user_id):
     try:
@@ -1377,21 +1398,15 @@ def get_suggested_shows(user_id):
                 })
                 suggested_show_ids.add(sid)
 
-        if len(suggestions) < limit:
+        # Fill remaining slots with popular shows from the last 30 days,
+        # then fall back to all-time popular shows if still short
+        start_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+        for popular_start_date in [start_date, None]:
+            if len(suggestions) >= limit:
+                break
             remaining = limit - len(suggestions)
-            start_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-            recent_ratings = db.collection("ratings").where(
-                filter=FieldFilter("timestamp", ">=", start_date)).limit(10000)
-
-            popular_counts = {}
-            for doc in recent_ratings.stream():
-                data = doc.to_dict()
-                sid = data.get("show_id")
-                if sid and sid not in excluded_show_ids and sid not in suggested_show_ids:
-                    popular_counts[sid] = popular_counts.get(sid, 0) + 1
-
-            popular_ranked = sorted(
-                popular_counts.items(), key=lambda x: x[1], reverse=True)
+            popular_ranked = _get_popular_show_counts(
+                excluded_show_ids | suggested_show_ids, popular_start_date)
 
             for sid, count in popular_ranked[:remaining]:
                 suggestions.append({
@@ -1399,6 +1414,7 @@ def get_suggested_shows(user_id):
                     "source": "popular",
                     "rating_count": count
                 })
+                suggested_show_ids.add(sid)
 
         from flask import current_app
         for suggestion in suggestions:

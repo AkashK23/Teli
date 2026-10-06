@@ -2288,7 +2288,7 @@ curl -X GET "http://localhost:5001/shows/popular?num_most_popular=5"
 
 ### Get Suggested Shows
 
-Get personalized show suggestions for a user. Prioritizes shows highly rated by followed users that the user hasn't rated or added to their watchlist. Backfills with globally popular shows when the social pool is too small.
+Get personalized show suggestions for a user. Prioritizes shows highly rated by followed users that the user hasn't rated or added to their watchlist. Backfills with globally popular shows when the social pool is too small: first shows most rated in the last 30 days, then shows most rated of all time if there still aren't enough.
 
 **URL**: `/users/:user_id/suggested-shows`
 
@@ -2337,7 +2337,7 @@ curl -X GET "http://localhost:5001/api/users/user123/suggested-shows?limit=5"
 
 **Source Types**:
 - `"followers"` — show was rated by followed users. Includes `followers_rating_count` and `followers_average_rating`.
-- `"popular"` — show is globally popular (backfill). Includes `rating_count` (ratings in the last 30 days).
+- `"popular"` — show is globally popular (backfill). Includes `rating_count` (ratings in the last 30 days, or all-time ratings for shows added by the all-time fallback).
 
 **Error Responses**:
 

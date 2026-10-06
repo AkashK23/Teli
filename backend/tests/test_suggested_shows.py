@@ -201,3 +201,31 @@ def test_user_not_found(get_client):
         "/api/users/nonexistent-user-xyz/suggested-shows")
     assert response.status_code == 404
     assert response.get_json()["error"] == "User not found"
+
+
+def test_popular_counts_fall_back_to_all_time(get_db):
+    """Ratings older than 30 days only count in the all-time popular query"""
+    from datetime import timedelta
+    from teli_routes import _get_popular_show_counts
+
+    old_show_id = f"test_old_show_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+    old_timestamp = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
+    _, rating_ref = get_db.collection("ratings").add({
+        "user_id": "test_old_rater",
+        "show_id": old_show_id,
+        "rating": 8,
+        "timestamp": old_timestamp,
+    })
+
+    try:
+        start_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+        recent_ids = [sid for sid, _ in _get_popular_show_counts(set(), start_date)]
+        assert old_show_id not in recent_ids
+
+        all_time = dict(_get_popular_show_counts(set()))
+        assert all_time.get(old_show_id) == 1
+
+        excluded = dict(_get_popular_show_counts({old_show_id}))
+        assert old_show_id not in excluded
+    finally:
+        rating_ref.delete()
