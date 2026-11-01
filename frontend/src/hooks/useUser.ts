@@ -10,6 +10,7 @@ import {
   getUserFollowing,
   getUserWatchStatus,
   getEpisodeReviews,
+  getPopularUsers,
 } from "../api/users";
 import { getShowDetails } from "../api/shows";
 
@@ -26,6 +27,14 @@ export function useUserRatings(userId: string | null | undefined) {
     queryKey: queryKeys.user.ratings(userId ?? ""),
     queryFn: () => getUserRatings(userId!),
     enabled: !!userId,
+  });
+}
+
+export function usePopularUsers() {
+  return useQuery({
+    queryKey: queryKeys.user.popular(),
+    queryFn: getPopularUsers,
+    staleTime: 5 * 60 * 1000, // 5 minutes; this list changes slowly
   });
 }
 

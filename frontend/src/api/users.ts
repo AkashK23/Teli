@@ -80,3 +80,6 @@ export const updateUserProfile = (userId: string, data: object) =>
 
 export const deleteUser = (userId: string) =>
   axios.delete(`${BASE_URL}/user/${userId}`).then((r) => r.data);
+
+export const getPopularUsers= () =>
+  axios.get(`${BASE_URL}/users/popular`).then((r) => r.data);

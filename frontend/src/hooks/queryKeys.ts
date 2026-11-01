@@ -10,6 +10,7 @@ export const queryKeys = {
       ["shows", showId, "season", seasonNum] as const,
   },
   user: {
+    popular: () => ["users", "popular"] as const,
     profile: (id: string) => ["user", id, "profile"] as const,
     ratings: (id: string) => ["user", id, "ratings"] as const,
     allEpisodeRatings: (id: string) =>

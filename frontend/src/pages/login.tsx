@@ -1,11 +1,19 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useUser } from "../UserContext";
-import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
-import ShowTooltip from "../components/ShowTooltip";
+import { useNavigate, Link } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
+import { Star } from "lucide-react";
 import ShowPosterCard from "../components/ShowPosterCard";
-import { usePopularShows, useShowAverageRating, useShowDetails } from "../hooks/useShow";
+import ShowTooltip from "../components/ShowTooltip";
+import ShowPlaceholder from "../components/ShowPlaceholder";
+import FeaturedReviews from "../components/FeaturedReviews";
+import PopularUsers from "../components/PopularUsers";
+import {
+  usePopularShows,
+  useShowAverageRating,
+  useShowDetails,
+} from "../hooks/useShow";
 
 const STAFF_PICK_IDS = [66732, 125935, 136311, 201834];
 
@@ -20,8 +28,6 @@ function StaffPickCard({ showId }: { showId: number }) {
     ? `https://image.tmdb.org/t/p/w500${imagePath}`
     : show.image_url || show.thumbnail || null;
 
-  if (!imageUrl) return null;
-
   return (
     <Link to={`/show/${showId}`} className="staff-item">
       <ShowTooltip
@@ -32,25 +38,42 @@ function StaffPickCard({ showId }: { showId: number }) {
           rating: ratingData?.average_rating,
         }}
       >
-        <img
-          src={imageUrl}
-          alt={show.name}
-          className="staff-thumb"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
-        />
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={show.name}
+            className="staff-thumb"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        ) : (
+          <ShowPlaceholder className="staff-thumb" />
+        )}
       </ShowTooltip>
       <span className="staff-title">{show.name}</span>
-      <div className="staff-score">{Number(ratingData?.average_rating).toFixed(1)}</div>
+      <div className="staff-score">
+        {Number(ratingData?.average_rating).toFixed(1)}
+      </div>
     </Link>
   );
 }
 
+function StaffPickBannerSlide({ showId }: { showId: number }) {
+  const { data: show } = useShowDetails(showId);
+  if (!show) return <div className="hero-banner-slide" />;
+  return <HeroBannerSlide show={{ ...show, id: showId }} />;
+}
+
 function HeroBannerSlide({ show }: { show: any }) {
   const { data: ratingData } = useShowAverageRating(show.id);
+  const year = show.first_air_date?.slice(0, 4);
+  const rating = ratingData?.average_rating
+    ? parseFloat(ratingData.average_rating).toFixed(1)
+    : null;
+
   return (
-    <div key={show.id} className="hero-banner-slide">
+    <div className="hero-banner-slide">
       <Link to={`/show/${show.id}`} className="hero-card-link">
         <img
           src={`https://image.tmdb.org/t/p/original${
@@ -58,14 +81,15 @@ function HeroBannerSlide({ show }: { show: any }) {
           }`}
           alt={show.name}
         />
-        <div className="hero-top-right">
-          <div className="hero-title-row">
-            <h1>{show.name}</h1>
-            {ratingData?.average_rating && (
-              <div className="hero-rating-box">
-                {parseFloat(ratingData.average_rating).toFixed(1)}
-              </div>
+        <div className="hero-content">
+          <h2 className="hero-title">{show.name}</h2>
+          <div className="hero-meta">
+            {rating && (
+              <span className="hero-rating-pill">
+                <Star size={14} fill="currentColor" /> {rating}
+              </span>
             )}
+            {year && <span className="hero-year">{year}</span>}
           </div>
         </div>
       </Link>
@@ -80,19 +104,23 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bannerIndex, setBannerIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
 
   const { data: popularShows = [], isLoading: popularLoading } =
     usePopularShows(7, 4);
 
-  // Rotate banner
+  const staffSlideIds = STAFF_PICK_IDS.filter(
+    (id) => !popularShows.some((s: any) => s.id === id),
+  );
+  const totalSlides = popularShows.length + staffSlideIds.length;
+
   useEffect(() => {
-    if (!popularShows.length) return;
-    const totalSlides = popularShows.length;
-    const interval = setInterval(() => {
+    if (!totalSlides || paused) return;
+    const timeout = setTimeout(() => {
       setBannerIndex((prev) => (prev + 1) % totalSlides);
     }, 6000);
-    return () => clearInterval(interval);
-  }, [popularShows.length]);
+    return () => clearTimeout(timeout);
+  }, [totalSlides, paused, bannerIndex]);
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
     if (!credentialResponse.credential) {
@@ -129,7 +157,6 @@ export default function Login() {
     setError("Google login failed. Please try again.");
   };
 
-  const totalSlides = popularShows.length;
   const nextBanner = () => setBannerIndex((prev) => (prev + 1) % totalSlides);
   const prevBanner = () =>
     setBannerIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
@@ -143,58 +170,76 @@ export default function Login() {
     );
   }
 
+  const googleButton = (
+    <div className="login-google">
+      <GoogleLogin
+        onSuccess={handleGoogleSuccess}
+        onError={handleGoogleError}
+        theme="filled_blue"
+        size="large"
+        text="continue_with"
+        shape="rectangular"
+        width="260"
+      />
+    </div>
+  );
+
+  const trendingIds = popularShows.slice(0, 12).map((s: any) => s.id);
+
   return (
     <div className="page-container fade-in">
       <div className="hero-staff-wrapper">
-        {/* Hero Banner */}
-        <div className="hero-banner-wrapper">
-          {/* 🔥 Top-left logo */}
+        {/* Hero carousel (same as Home) */}
+        <div
+          className="hero-banner-wrapper"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
           <div className="hero-logo-overlay">
-            <img src="/teli-logo.svg" alt="Teli" />
-          </div>
-
-          {/* 🔥 Bottom-center tagline */}
-          <div className="hero-tagline-overlay">
-            <p>
-              Discover Shows • Track What You're Watching • Share Reviews with
-              Friends
-            </p>
+            <h1>Popular Now</h1>
           </div>
 
           <div
             className="hero-banner-slider"
             style={{ transform: `translateX(-${bannerIndex * 100}%)` }}
           >
-            {/* Slide 0: Teli Title Card */}
-            {/* <div className="hero-banner-slide hero-banner-teli">
-              <img
-                src="/teli-slide.jpg"
-                alt="Teli Slide"
-                className="hero-background-img"
-              />
-              <div className="hero-text">
-                <h1 className="teli-title">Teli</h1>
-                <h2 className="teli-subtitle">Channel What You Love</h2>
-              </div>
-            </div> */}
-
-            {/* Slides 1+: Popular Shows */}
             {popularShows.map((show: any) => (
               <HeroBannerSlide key={show.id} show={show} />
             ))}
+            {staffSlideIds.map((id) => (
+              <StaffPickBannerSlide key={`staff-${id}`} showId={id} />
+            ))}
           </div>
 
-          <button className="hero-banner-arrow left" onClick={prevBanner}>
+          <button
+            className="hero-banner-arrow left"
+            onClick={prevBanner}
+            aria-label="Previous"
+          >
             ❮
           </button>
-          <button className="hero-banner-arrow right" onClick={nextBanner}>
+          <button
+            className="hero-banner-arrow right"
+            onClick={nextBanner}
+            aria-label="Next"
+          >
             ❯
           </button>
+
+          <div className="hero-dots">
+            {Array.from({ length: totalSlides }).map((_, i) => (
+              <button
+                key={i}
+                className={`hero-dot ${i === bannerIndex ? "active" : ""}`}
+                onClick={() => setBannerIndex(i)}
+                aria-label={`Go to slide ${i + 1}`}
+              />
+            ))}
+          </div>
         </div>
 
-        {/* Staff Picks — desktop sidebar */}
         <div className="staff-picks-container desktop-only">
-          <h2 className="staff-picks-title">Staff Picks</h2>
+          <h2 className="staff-picks-title">Our Picks</h2>
           <ul className="staff-list">
             {STAFF_PICK_IDS.map((id) => (
               <StaffPickCard key={id} showId={id} />
@@ -203,121 +248,62 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Mobile Staff Picks */}
+      {/* How it works */}
       <div className="home-sections-row">
-        <div className="staff-mobile home-section">
-          <h1 className="headings">Staff Picks</h1>
-          <div className="scroll-container">
-            {STAFF_PICK_IDS.map((id) => (
-              <ShowPosterCard
-                key={id}
-                showId={id}
-                className="show-icon home-icon"
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Features Section */}
-      <h2 className="features-title">Features</h2>
-
-      <div className="features-columns">
-        {/* LEFT: Available Now */}
-        <div className="features-column">
-          <h3 className="column-title">Start Exploring</h3>
-          <div className="features-grid">
-            <Link to="/browse" className="feature-card">
+        <div className="home-section home-section-full login-left">
+          {/* <h1 className="headings">How Teli works</h1> */}
+          <div className="steps-row">
+            <Link to="/browse" className="step-item">
               <img
-                src="/features-browse.png"
-                alt="Discover shows"
+                src="/features-search.png"
+                alt=""
                 className="feature-icon-img"
               />
-              <div className="feature-text">
-                <h3>Discover Shows</h3>
+              <div>
+                <h3>Find something to watch</h3>
                 <p>
                   Browse trending and popular TV shows to find your next watch
                 </p>
               </div>
             </Link>
-
-            <Link to="/search" className="feature-card">
-              <img
-                src="/features-search.png"
-                alt="search"
-                className="feature-icon-img"
-              />
-              <div className="feature-text">
-                <h3>Search</h3>
-                <p>
-                  Quickly search for TV shows and users to find exactly what
-                  you're looking for
-                </p>
-              </div>
-            </Link>
-
-            <Link to= "" className="feature-card">
-              <img
-                src="/features-showdetails.png"
-                alt="show details"
-                className="feature-icon-img"
-              />
-              <div className="feature-text">
-                <h3>Show Details</h3>
-                <p>See more information about every show</p>
-              </div>
-            </Link>
-          </div>
-        </div>
-
-        {/* RIGHT: Requires Login */}
-        <div className="features-column">
-          <h3 className="column-title">Login to Unlock</h3>
-          <div className="features-grid">
-            <div className="feature-card-off">
-              <img
-                src="/features-activity.png"
-                alt="reviews"
-                className="feature-icon-img"
-              />
-              <div className="feature-text">
-                <h3>Reviews</h3>
-                <p>
-                  Rate and comment on your favorite shows, then see what your
-                  friends are saying
-                </p>
-              </div>
-            </div>
-
-            <div className="feature-card-off">
-              <img
-                src="/features-profile.png"
-                alt="profile"
-                className="feature-icon-img"
-              />
-              <div className="feature-text">
-                <h3>Profile</h3>
-                <p>Customize your profile to show what you're watching</p>
-              </div>
-            </div>
-
-            <div className="feature-card-off">
+            <div className="step-item">
               <img
                 src="/features-watchlists.png"
-                alt="watchlists"
+                alt=""
                 className="feature-icon-img"
               />
-              <div className="feature-text">
-                <h3>Watchlists</h3>
+              <div>
+                <h3>Keep your watchlists</h3>
+                <p>Sort shows into want to watch, watching, and watched</p>
+              </div>
+            </div>
+            <div className="step-item">
+              <img
+                src="/features-activity.png"
+                alt=""
+                className="feature-icon-img"
+              />
+              <div>
+                <h3>Rate and review</h3>
                 <p>
-                  Manage the shows you want to watch, are currently watching and
-                  have watched
+                  Rate shows and episodes, then read what your friends think
                 </p>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <FeaturedReviews />
+
+      <PopularUsers />
+
+      {/* Closing CTA */}
+      <section className="closing-cta">
+        <h2>Ready to start your watchlist?</h2>
+        <p>Sign in with Google and pick your first shows in under a minute.</p>
+        {googleButton}
+      </section>
     </div>
   );
 }

@@ -760,7 +760,7 @@ body {
   gap: 1rem;
   align-items: flex-start;
   justify-content: space-between;
-  margin: 0 auto;
+  margin: 0s auto;
 }
 
 .home-section {
@@ -2974,6 +2974,129 @@ body {
   margin: 0 auto;
 }
 
+/* #Login */
+
+.signup-card {
+  height: 30rem;
+  width: 20rem;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1rem;
+  border-radius: 0.75rem;
+  color: var(--color-text-primary);
+  background: var(--color-bg-components);
+  border: 0.1rem solid var(--color-accent-components);
+}
+
+.signup-title {
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.signup-text {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
+.login-google {
+  max-width: 100%;
+}
+
+.signup-status {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.signup-error {
+  color: #d93025;
+}
+
+.signup-note {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.65;
+  line-height: 1.4;
+}
+
+/* Left-aligned sections on this page */
+.login-left {
+  align-items: flex-start;
+}
+
+.login-left .headings {
+  text-align: left;
+  font-size: 1.5rem;
+  margin: 1.5rem 0 0.25rem;
+  padding-left: 1rem;
+}
+
+/* How it works */
+.steps-row {
+  display: flex;
+  gap: 2.5rem;
+  width: 100%;
+  padding: 1rem;
+  box-sizing: border-box;
+  margin: 1rem auto;
+}
+
+.step-item {
+  flex: 1;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  text-decoration: none;
+  color: inherit;
+}
+
+.step-item h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+}
+
+.step-item p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  opacity: 0.8;
+}
+
+/* Closing CTA band */
+.closing-cta {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 3rem auto 2rem;
+  padding: 3rem 1.5rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+  border-radius: 0.75rem;
+  background: var(--color-bg-components);
+  border: 0.1rem solid var(--color-accent-components);
+}
+
+.closing-cta h2 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.closing-cta p {
+  margin: 0 0 0.75rem;
+  opacity: 0.8;
+}
+
 /* !Components */
 
 /* #Loader */
@@ -3695,6 +3818,285 @@ body {
   z-index: 100;
 }
 
+/* Featured Reviews */
+.fr-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.fr-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.fr-poster {
+  flex-shrink: 0;
+}
+
+.fr-poster .show-icon.home-icon {
+  margin: 0;
+}
+
+/* Connector: line draws left to right, then the dot lands, then the card appears */
+.fr-connector {
+  flex: 1;
+  min-width: 2rem;
+  max-width: 14rem;
+  position: relative;
+  height: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.fr-line {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: var(--color-accent-components);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.9s ease-out;
+}
+
+.fr-dot {
+  position: absolute;
+  right: 0;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--color-accent-components);
+  transform: scale(0);
+  transition: transform 0.25s ease-out 0.85s;
+}
+
+.fr-card {
+  flex: 1;
+  max-width: 36rem;
+  box-sizing: border-box;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  background: var(--color-bg-components);
+  border: 0.1rem solid var(--color-accent-components);
+  opacity: 0;
+  transform: translateX(-0.75rem);
+  transition: opacity 0.4s ease-out 0.9s, transform 0.4s ease-out 0.9s;
+}
+
+.fr-row.in-view .fr-line {
+  transform: scaleX(1);
+}
+.fr-row.in-view .fr-dot {
+  transform: scale(1);
+}
+.fr-row.in-view .fr-card {
+  opacity: 1;
+  transform: none;
+}
+
+/* Review card contents */
+.fr-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.fr-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.fr-avatar-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-navbar);
+}
+
+.fr-author {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.fr-author span {
+  font-size: 0.85rem;
+  opacity: 0.65;
+}
+
+.fr-rating {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 0.4rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-navbar);
+}
+
+.fr-rating svg {
+  color: #f5c518;
+}
+
+.fr-comment {
+  margin: 0;
+  line-height: 1.5;
+  padding-left: calc(2.5rem + 0.75rem);
+}
+
+.fr-card,
+.fr-author,
+.fr-comment {
+  text-align: left;
+}
+
+/* Mobile: stack vertically, line draws downward */
+@media (max-width: 700px) {
+  .fr-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .fr-connector {
+    flex: none;
+    width: 1rem;
+    height: 3rem;
+    min-width: 0;
+    max-width: none;
+    margin-left: 4.25rem; /* centers under the poster */
+    flex-direction: column;
+  }
+  .fr-line {
+    width: 2px;
+    height: 100%;
+    transform: scaleY(0);
+    transform-origin: top center;
+  }
+  .fr-row.in-view .fr-line {
+    transform: scaleY(1);
+  }
+  .fr-dot {
+    right: auto;
+    top: auto;
+    bottom: 0;
+  }
+  .fr-card {
+    width: 100%;
+    max-width: none;
+    transform: translateY(-0.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fr-line,
+  .fr-dot,
+  .fr-card {
+    transition: none;
+  }
+}
+
+/* ===== Mirrored rows (poster on the right, card on the left) ===== */
+.fr-row.reverse {
+  flex-direction: row-reverse;
+}
+
+/* Line grows out of the poster, so it draws right to left */
+.fr-row.reverse .fr-line {
+  transform-origin: right center;
+}
+
+/* Dot lands at the card end, which is now the left */
+.fr-row.reverse .fr-dot {
+  right: auto;
+  left: 0;
+}
+
+.fr-row.reverse:not(.in-view) .fr-card {
+  transform: translateX(0.75rem);
+}
+
+/* #PopularUsers */
+
+.pu-row {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  gap: 1.5rem;
+  width: 100%;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.pu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1 1 0;
+  /* share the row equally and shrink if needed */
+  min-width: 0;
+  max-width: 6.5rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.pu-avatar {
+  width: 100%;
+  max-width: 5.5rem;
+  aspect-ratio: 1;
+  height: auto;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  border: 0.15rem solid var(--color-accent-components);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pu-item:hover .pu-avatar {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.25);
+}
+
+.pu-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-navbar);
+}
+
+.pu-name {
+  max-width: 100%;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pu-skeleton {
+  background: linear-gradient(90deg,
+      var(--color-bg-components) 25%,
+      var(--color-bg-components-hover) 50%,
+      var(--color-bg-components) 75%);
+  background-size: 200% 100%;
+  animation: pu-shimmer 1.4s infinite;
+}
+
 /* -------------------------- */
 /* MOBILE BREAKPOINT */
 /* -------------------------- */
@@ -3824,6 +4226,16 @@ body {
     width: 100%;
     margin: 0;
     padding: 0;
+  }
+  
+  .signup-card {
+    width: 100%;
+    height: auto;
+  }
+
+  .steps-row {
+    flex-direction: column;
+    gap: 1.5rem;
   }
 
   .hero-banner-wrapper {
@@ -4864,4 +5276,42 @@ body {
   .psc-body--reviews {
     padding: 0.25rem 0;
   }
+
+  /* #Featured Reviews */
+  .fr-row.reverse {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .fr-row.reverse .fr-connector {
+    margin-left: 0;
+    margin-right: 4.25rem;
+  }
+
+  .fr-row.reverse .fr-line {
+    transform-origin: top center;
+  }
+
+  .fr-row.reverse .fr-dot {
+    left: auto;
+  }
+
+  .fr-row.reverse:not(.in-view) .fr-card {
+    transform: translateY(-0.5rem);
+  }
+  
+  /* #PopularUsers */
+  .pu-row {
+    gap: 1.25rem;
+  }
+
+  .pu-avatar {
+    width: 4.5rem;
+    height: 4.5rem;
+  }
+
+  .pu-item {
+    width: 5rem;
+  }
+  
 }

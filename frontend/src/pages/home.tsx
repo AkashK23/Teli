@@ -8,6 +8,7 @@ import ShowPosterCard from "../components/ShowPosterCard";
 import { formatRelativeTime } from "../components/formatRelativeTime";
 import ShowTooltip from "../components/ShowTooltip";
 import ShowPlaceholder from "../components/ShowPlaceholder";
+import PopularUsers from "../components/PopularUsers";
 import {
   usePopularShows,
   useShowAverageRating,
@@ -436,6 +437,8 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      <PopularUsers />
 
       {/* Features */}
       <div className="home-sections-row">
