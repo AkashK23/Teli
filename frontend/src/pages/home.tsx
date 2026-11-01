@@ -9,6 +9,7 @@ import { formatRelativeTime } from "../components/formatRelativeTime";
 import ShowTooltip from "../components/ShowTooltip";
 import ShowPlaceholder from "../components/ShowPlaceholder";
 import PopularUsers from "../components/PopularUsers";
+import { usePopularUsers } from "../hooks/useUser";
 import {
   usePopularShows,
   useShowAverageRating,
@@ -113,6 +114,7 @@ export default function Home() {
 
   const { data: popularShows = [], isLoading: popularLoading } =
     usePopularShows(7, 4);
+  const { isLoading: usersLoading } = usePopularUsers();
   const { data: cwList = [], isLoading: cwLoading } = useUserWatchList(
     user_id,
     "currently_watching",
@@ -137,7 +139,7 @@ export default function Home() {
     return () => clearTimeout(timeout);
   }, [totalSlides, paused, bannerIndex]);
 
-  if (popularLoading) {
+  if (popularLoading || usersLoading) {
     return (
       <div className="loading-container">
         <div className="spinner"></div>

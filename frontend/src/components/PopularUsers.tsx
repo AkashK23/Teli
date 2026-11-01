@@ -37,8 +37,12 @@ function UserAvatar({ user }: { user: PopularUser }) {
 }
 
 export default function PopularUsers() {
-  const { data, isLoading } = usePopularUsers();
-  const users = (data.popular_users ?? []) as PopularUser[];
+  const { data, isLoading, isError, error } = usePopularUsers();
+  console.log("2. hook result:", { data, isLoading, isError, error });
+  const users: PopularUser[] = Array.isArray(data?.popular_users)
+    ? data.popular_users
+    : [];
+  
 
   // Hide the section entirely if there's nothing to show
   if (!isLoading && users.length === 0) return null;

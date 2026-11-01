@@ -81,5 +81,8 @@ export const updateUserProfile = (userId: string, data: object) =>
 export const deleteUser = (userId: string) =>
   axios.delete(`${BASE_URL}/user/${userId}`).then((r) => r.data);
 
-export const getPopularUsers= () =>
-  axios.get(`${BASE_URL}/users/popular`).then((r) => r.data);
+export const getPopularUsers = () =>
+  axios.get(`${BASE_URL}/users/popular`).then((r) => {
+    console.log("popular users:", r.status, r.data);
+    return r.data;
+  });

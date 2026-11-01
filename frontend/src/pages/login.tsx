@@ -9,6 +9,7 @@ import ShowTooltip from "../components/ShowTooltip";
 import ShowPlaceholder from "../components/ShowPlaceholder";
 import FeaturedReviews from "../components/FeaturedReviews";
 import PopularUsers from "../components/PopularUsers";
+import { usePopularUsers } from "../hooks/useUser";
 import {
   usePopularShows,
   useShowAverageRating,
@@ -20,6 +21,7 @@ const STAFF_PICK_IDS = [66732, 125935, 136311, 201834];
 function StaffPickCard({ showId }: { showId: number }) {
   const { data: show } = useShowDetails(showId);
   const { data: ratingData } = useShowAverageRating(showId);
+  
 
   if (!show) return null;
 
@@ -108,6 +110,7 @@ export default function Login() {
 
   const { data: popularShows = [], isLoading: popularLoading } =
     usePopularShows(7, 4);
+  const { isLoading: usersLoading } = usePopularUsers();
 
   const staffSlideIds = STAFF_PICK_IDS.filter(
     (id) => !popularShows.some((s: any) => s.id === id),
@@ -161,7 +164,7 @@ export default function Login() {
   const prevBanner = () =>
     setBannerIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
 
-  if (popularLoading) {
+  if (popularLoading || usersLoading) {
     return (
       <div className="loading-container">
         <div className="spinner"></div>
