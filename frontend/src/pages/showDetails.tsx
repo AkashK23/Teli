@@ -102,20 +102,20 @@ export default function ShowDetails() {
   }, []);
 
   React.useEffect(() => {
-    if (!watchStatusLoading && watchStatusData?.status) {
-      setWatchStatus(watchStatusData.status as WatchStatus);
-      setWatchStatusSynced(true);
-    }
-  }, [watchStatusLoading, watchStatusData]);
-
-  React.useEffect(() => {
     setSelectedSeason(null);
     setSeasonEpisodes({});
     setEpisodeRatingsMap({});
-    setWatchStatusSynced(false);
     setIsEditingReview(false);
-    setReviewTab(user_id ? "you" : "all");
   }, [id]);
+
+  React.useEffect(() => {
+    setReviewTab(user_id ? "you" : "all");
+  }, [id, user_id]);
+
+  React.useEffect(() => {
+    if (watchStatusLoading) return;
+    setWatchStatus((watchStatusData?.status as WatchStatus) ?? "");
+  }, [id, watchStatusLoading, watchStatusData]);
 
   React.useEffect(() => {
     if (showData?.seasons?.some((s: any) => s.season_number === 1)) {
@@ -172,12 +172,12 @@ export default function ShowDetails() {
   );
   const userHasRated = !!userReview;
 
+  // Keep the editor in sync with this show's review; clear it if there isn't one
   React.useEffect(() => {
-    if (userReview && !isEditingReview) {
-      setRating(userReview.rating);
-      setReviewText(userReview.comment || "");
-    }
-  }, [userReview?.show_id]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (isEditingReview) return;
+    setRating(userReview?.rating ?? 0);
+    setReviewText(userReview?.comment ?? "");
+  }, [id, userReview?.show_id, userReview?.rating, userReview?.comment]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleReviewSubmit = async () => {
     if (!user_id) return;
